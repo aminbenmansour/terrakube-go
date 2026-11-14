@@ -1,0 +1,174 @@
+package api
+
+import (
+	"context"
+	"encoding/json"
+	"io"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/aminbenmansour/terrakube-go/internal/store"
+)
+
+// stubQuerier embeds the generated interface so tests only implement the
+// methods they exercise. Unimplemented methods panic, which is what we want.
+type stubQuerier struct {
+	store.Querier
+	orgs    []store.Organization
+	org     store.Organization
+	err     error
+	created *store.CreateOrganizationParams
+}
+
+func (s *stubQuerier) ListOrganizations(context.Context) ([]store.Organization, error) {
+	return s.orgs, s.err
+}
+
+func (s *stubQuerier) GetOrganization(context.Context, string) (store.Organization, error) {
+	return s.org, s.err
+}
+
+func (s *stubQuerier) CreateOrganization(_ context.Context, arg store.CreateOrganizationParams) (store.Organization, error) {
+	s.created = &arg
+	return s.org, s.err
+}
+
+func newTestAPI(t *testing.T, q store.Querier) http.Handler {
+	t.Helper()
+	return New(Deps{
+		Store:  q,
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+}
+
+func TestListOrganizationsJSONAPI(t *testing.T) {
+	q := &stubQuerier{orgs: []store.Organization{
+		{ID: "1", Name: "alpha", ExecutionMode: "remote"},
+		{ID: "2", Name: "beta", ExecutionMode: "remote"},
+	}}
+	handler := newTestAPI(t, q)
+
+	req := httptest.NewRequest(http.MethodGet, "/organization?sort=-name&page[size]=1&page[number]=1&page[totals]", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body = %s", rec.Code, rec.Body.String())
+	}
+
+	var doc struct {
+		Data []struct {
+			Type       string         `json:"type"`
+			ID         string         `json:"id"`
+			Attributes map[string]any `json:"attributes"`
+		} `json:"data"`
+		Meta map[string]any `json:"meta"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(doc.Data) != 1 {
+		t.Fatalf("data length = %d, want 1", len(doc.Data))
+	}
+	if doc.Data[0].Attributes["name"] != "beta" {
+		t.Errorf("first name = %v, want beta (descending sort)", doc.Data[0].Attributes["name"])
+	}
+	if doc.Meta["totals"] != float64(2) {
+		t.Errorf("meta.totals = %v, want 2", doc.Meta["totals"])
+	}
+}
+
+func TestGetOrganizationNotFound(t *testing.T) {
+	handler := newTestAPI(t, &stubQuerier{err: pgx.ErrNoRows})
+
+	req := httptest.NewRequest(http.MethodGet, "/organization/missing", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", rec.Code)
+	}
+	var doc struct {
+		Errors []struct {
+			Status string `json:"status"`
+		} `json:"errors"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(doc.Errors) != 1 || doc.Errors[0].Status != "404" {
+		t.Errorf("errors = %+v, want one 404", doc.Errors)
+	}
+}
+
+func TestCreateOrganizationRequiresName(t *testing.T) {
+	q := &stubQuerier{}
+	handler := newTestAPI(t, q)
+
+	body := `{"data":{"type":"organization","attributes":{"description":"no name"}}}`
+	req := httptest.NewRequest(http.MethodPost, "/organization", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want 422; body = %s", rec.Code, rec.Body.String())
+	}
+	if q.created != nil {
+		t.Error("CreateOrganization was called for an invalid request")
+	}
+}
+
+func TestCreateOrganization(t *testing.T) {
+	q := &stubQuerier{org: store.Organization{ID: "new-id", Name: "simple", ExecutionMode: "remote"}}
+	handler := New(Deps{
+		Store:  q,
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
+
+	body := `{"data":{"type":"organization","attributes":{"name":"simple"}}}`
+	req := httptest.NewRequest(http.MethodPost, "/organization", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201; body = %s", rec.Code, rec.Body.String())
+	}
+	if q.created == nil {
+		t.Fatal("CreateOrganization was not called")
+	}
+	if q.created.ExecutionMode != "remote" {
+		t.Errorf("ExecutionMode = %q, want remote", q.created.ExecutionMode)
+	}
+	if q.created.ID == "" {
+		t.Error("ID is empty")
+	}
+}
+
+func TestAuthMiddleware(t *testing.T) {
+	q := &stubQuerier{}
+	handler := New(Deps{
+		Store:     q,
+		Logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		AuthToken: "secret",
+	})
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/organization", nil))
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("without token status = %d, want 401", rec.Code)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/organization", nil)
+	req.Header.Set("Authorization", "Bearer secret")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("with token status = %d, want 200", rec.Code)
+	}
+}
