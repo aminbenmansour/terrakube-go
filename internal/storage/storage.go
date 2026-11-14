@@ -7,6 +7,8 @@ import (
 	"errors"
 	"io"
 	"time"
+
+	"github.com/aminbenmansour/terrakube-go/internal/config"
 )
 
 // ErrNotFound is returned when a key does not exist.
@@ -29,4 +31,14 @@ type Backend interface {
 	Delete(ctx context.Context, key string) error
 	Stat(ctx context.Context, key string) (Object, error)
 	Health(ctx context.Context) error
+}
+
+// New builds the configured backend.
+func New(ctx context.Context, cfg config.Storage) (Backend, error) {
+	switch cfg.Type {
+	case config.StorageTypeS3:
+		return NewS3(ctx, cfg.S3)
+	default:
+		return NewLocal(cfg.LocalPath)
+	}
 }
