@@ -14,16 +14,16 @@ LDFLAGS := -s -w \
 	-X $(MODULE)/internal/version.Commit=$(COMMIT) \
 	-X $(MODULE)/internal/version.Date=$(DATE)
 
-.PHONY: help all build api executor registry test test-race vet fmt lint tidy clean check \
+.PHONY: help all build api executor registry migrate test test-race vet fmt lint tidy clean check \
 	services-up services-down services-status services-wipe run-api run-executor run-registry \
-	docker-build
+	db-migrate docker-build
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
 all: build ## Build every binary
 
-build: api executor registry ## Build every binary
+build: api executor registry migrate ## Build every binary
 
 api: ## Build the API server
 	@mkdir -p $(BIN_DIR)
@@ -36,6 +36,10 @@ executor: ## Build the executor
 registry: ## Build the registry
 	@mkdir -p $(BIN_DIR)
 	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/terrakube-registry ./cmd/registry
+
+migrate: ## Build the migration command
+	@mkdir -p $(BIN_DIR)
+	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/terrakube-migrate ./cmd/migrate
 
 test: ## Run the unit tests
 	$(GO) test ./...
@@ -82,5 +86,8 @@ run-executor: ## Run the executor from source
 run-registry: ## Run the registry from source
 	$(GO) run ./cmd/registry
 
-docker-build: ## Build the container image (SERVICE=api|executor|registry)
+db-migrate: ## Apply database migrations
+	$(GO) run ./cmd/migrate
+
+docker-build: ## Build the container image (SERVICE=api|executor|registry|migrate)
 	$(PODMAN) build --build-arg SERVICE=$(or $(SERVICE),api) -t terrakube-$(or $(SERVICE),api):$(VERSION) -f deploy/docker/Dockerfile .
