@@ -16,7 +16,7 @@ LDFLAGS := -s -w \
 
 .PHONY: help all build api executor registry migrate test test-race vet fmt lint tidy clean check \
 	services-up services-down services-status services-wipe run-api run-executor run-registry \
-	db-migrate docker-build
+	db-migrate docker-build tools generate smoke
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -89,5 +89,14 @@ run-registry: ## Run the registry from source
 db-migrate: ## Apply database migrations
 	$(GO) run ./cmd/migrate
 
-docker-build: ## Build the container image (SERVICE=api|executor|registry|migrate)
+docker-build: ## Build the container image (SERVICE=api|executor|registry)
 	$(PODMAN) build --build-arg SERVICE=$(or $(SERVICE),api) -t terrakube-$(or $(SERVICE),api):$(VERSION) -f deploy/docker/Dockerfile .
+
+tools: ## Install code generation tools
+	$(GO) install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
+
+generate: ## Regenerate sqlc code
+	sqlc generate
+
+smoke: ## Run the management API smoke test against a running server
+	./scripts/smoke.sh
