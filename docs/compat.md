@@ -1,0 +1,186 @@
+# Compatibility contract
+
+Terrakube Go is a rewrite, but not a redesign. Every surface below was verified
+against the upstream Java implementation (`terrakube-io/terrakube`, `main` on
+2026-11-14). When in doubt, upstream behaviour wins.
+
+## Discovery
+
+`GET /.well-known/terraform.json` — implemented by
+`api/.../plugin/state/WellKnownWebServiceImpl.java`.
+
+```json
+{
+  "login.v1": { "client": "...", "grant_types": ["authz_code"], "authz": "...", "token": "...", "ports": [10000, 10001] },
+  "state.v2": "/remote/state/v2/",
+  "tfe.v2": "/remote/tfe/v2/",
+  "tfe.v2.1": "/remote/tfe/v2/"
+}
+```
+
+Notes:
+
+- `login.v1` comes from Dex unless the optional OAuth broker is enabled.
+- Upstream advertises `state.v2` at `/remote/state/v2/` but the state handler is
+  mounted at `/tfstate/v1` (`TerraformStateController`). We mirror the discovery
+  document byte-for-byte and serve state under `/tfstate/v1`; validate what the
+  real CLI requests during M3.
+
+## TFE API — `/remote/tfe/v2/`
+
+Source: `api/.../plugin/state/RemoteTfeController.java`. All responses use
+`application/vnd.api+json`.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/ping` | Health probe used by the CLI |
+| GET | `/organizations/{org}` | Organization lookup by name |
+| GET | `/organizations/{org}/entitlement-set` | Feature entitlement stub |
+| GET | `/organizations/{org}/capacity` | Organization capacity |
+| GET | `/organizations/{org}/workspaces` | List workspaces (filters, tags) |
+| POST | `/organizations/{org}/workspaces` | Create a workspace (implicit creation) |
+| GET | `/organizations/{org}/workspaces/{ws}` | Workspace by name |
+| PATCH | `/workspaces/{id}` | Update workspace |
+| POST | `/organizations/{org}/projects` | Search projects by name (needed on create) |
+| GET | `/workspaces/{id}/tag-bindings` | List tag bindings |
+| PATCH | `/workspaces/{id}/tag-bindings` | Set tag bindings |
+| POST | `/workspaces/{id}/relationships/tags` | Replace workspace tags |
+| POST | `/workspaces/{id}/actions/lock` | Lock workspace |
+| POST | `/workspaces/{id}/actions/unlock` | Unlock workspace |
+| POST | `/workspaces/{id}/state-versions` | Create state version |
+| GET | `/state-versions/{id}` | Read state version |
+| GET | `/workspaces/{id}/current-state-version` | Current state version |
+| GET | `/workspaces/{id}/current-state-version-outputs` | Outputs |
+| POST | `/workspaces/{id}/configuration-versions` | Create configuration upload |
+| GET | `/configuration-versions/{id}` | Configuration status |
+| PUT | `/configuration-versions/{id}` | Upload configuration tarball |
+| GET | `/configuration-versions/{id}/terraformContent.tar.gz` | Download configuration |
+| POST | `/runs` | Create run |
+| GET | `/workspaces/{id}/runs` | List workspace runs |
+| GET | `/organizations/{org}/runs/queue` | Organization run queue |
+| GET | `/runs/{id}` | Read run |
+| GET | `/runs/{id}/run-events` | Run event stream |
+| POST | `/runs/{id}/actions/apply` | Approve/apply |
+| POST | `/runs/{id}/actions/discard` | Discard |
+| GET | `/runs/{id}/policy-checks` | Policy checks |
+| GET | `/policy-checks/{id}` | Policy check |
+| GET | `/policy-checks/{id}/output` | Policy output |
+| POST | `/policy-checks/{id}/actions/override` | Override policy |
+| GET | `/plans/{id}` | Plan status/log reference |
+| GET | `/applies/{id}` | Apply status/log reference |
+| GET | `/plans/logs/{a}/{b}` | Plan log |
+| GET | `/applies/logs/{a}/{b}` | Apply log |
+
+## State backend — `/tfstate/v1`
+
+Source: `api/.../plugin/storage/controller/TerraformStateController.java`.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/organization/{orgId}/workspace/{wsId}/backend/terraform.tfstate` | HTTP backend read; `204` when absent |
+| POST/PUT | same | Store state; validates `Content-MD5` |
+| DELETE | same | Delete state |
+| LOCK/UNLOCK | same | Terraform HTTP backend locking (`method` on the same path) |
+| GET | `/organization/{orgId}/workspace/{wsId}/state/terraform.tfstate` | Current state |
+| GET | `/organization/{orgId}/workspace/{wsId}/state/{name}.json` | Archived state |
+| GET | `/organization/{orgId}/workspace/{wsId}/jobId/{jobId}/step/{stepId}/terraform.tfstate` | Plan artifact |
+| PUT | `/archive/{archiveId}/terraform.tfstate` | Hosted state upload |
+| PUT | `/archive/{archiveId}/terraform.json.tfstate` | JSON hosted state upload |
+| PUT | `/organization/{orgId}/workspace/{wsId}/rollback/{name}.json` | Rollback |
+
+Auth for executor calls is HTTP Basic with username `terraform` and a
+workspace-scoped executor token as the password.
+
+## Management API — `/api/v1`
+
+Elide-generated JSON:API. Reference specification (upstream, v2.27.0) is at
+`openapi-spec/v2_27_0.yml`; resources include organization, project, workspace,
+variable, tag, workspacetag, job, step, template, history, team, token, vcs,
+module, provider, schedule, agent, webhook and policy objects.
+
+Query conventions:
+
+- `filter[type]=...` uses RSQL: `name==prod*`, `status=in=(failed,cancelled)`,
+  `a==1;b==2` (AND), comma between expressions (OR).
+- `sort=name`, `sort=-name`.
+- `page[size]`, `page[number]`, `page[totals]` (adds `meta.totals`).
+- `include=step`, `fields[workspace]=name`.
+- Content type `application/vnd.api+json`; errors use a JSON:API `errors`
+  array. `DELETE` must not send a body or content type.
+
+Our initial implementation targets the resources needed by the CLI workflow and
+the UI's core screens. Anything missing is filled in against the upstream spec.
+
+### Implemented in M1
+
+| Resource | Routes |
+| --- | --- |
+| organization | `GET/POST /organization`, `GET/PATCH/DELETE /organization/{id}` |
+| project | `GET/POST /organization/{id}/project`, `GET/PATCH/DELETE /project/{id}`, `GET /project/{id}/workspace` |
+| workspace | `GET/POST /organization/{id}/workspace`, `GET/PATCH/DELETE /workspace/{id}` |
+| variable | `GET/POST /workspace/{id}/variable`, `GET/PATCH/DELETE /variable/{id}` |
+
+Current M1 limitations (tracked for later milestones):
+
+- Filters, sorting and paging run in memory over the full collection. This is
+  fine for smoke tests but must become SQL before production use.
+- Authentication is a single static bearer token (`TERRAKUBE_AUTH_TOKEN`).
+  PATs, team tokens, executor tokens and Dex JWTs are not implemented yet.
+- `include=`, sparse fieldsets, relationship endpoints and RSQL beyond
+  `attr==value` / `attr==prefix*` are not implemented.
+- Variable values are stored in plaintext. Upstream encrypts them with
+  `io.terrakube.encryption.*`; this must land before anything is exposed.
+- `tag` and `workspacetag` tables exist but have no handlers yet.
+
+## Executor contract
+
+- API enqueues a run; executor claims it.
+- Executor fetches the configuration tarball, injects variables, runs
+  `terraform`/`tofu`, and reports step/job status.
+- Live output goes to Redis; final output and state go to object storage.
+- Storage keys and the state archive layout must remain compatible with
+  upstream history rows (`history.md5`, `history.serial`, `history.lineage`).
+
+## Database
+
+Migrations intentionally use upstream table and column names so that existing
+data can be imported and the UI's assumptions hold. Core tables implemented in
+`migrations/0001_core.sql`:
+
+`organization`, `project`, `workspace`, `variable`, `tag`, `workspacetag`,
+`template`, `job`, `step`, `history`.
+
+Differences from upstream at this stage:
+
+- UUID primary keys stay `varchar(36)` as upstream.
+- Audit columns use upstream names (`created_date`, `created_by`,
+  `updated_date`, `updated_by`).
+- Additional upstream tables (VCS, teams, tokens, registry, policies) arrive in
+  later migrations rather than all at once.
+
+## UI contract
+
+The React UI talks REST/JSON:API plus:
+
+- **GraphQL over HTTP** at `/graphql/api/v1`. This is not optional: the UI uses
+  it for workspace and project lists, organization summaries, tags and more
+  (`ui/src/modules/workspaces/workspaceService.ts`,
+  `ui/src/modules/projects/projectService.ts`,
+  `ui/src/modules/organizations/organizationService.ts`). Only the organization
+  list currently uses REST.
+- **GraphQL subscriptions** at `/subscriptions` via **graphql-ws** for live job
+  updates (`ui/src/modules/api/subscriptionClient.ts`).
+- **SSE** event streams for run logs (`eventStream.ts`, `Last-Event-ID`
+  support).
+
+Consequence: M5 must implement a GraphQL query/subscription surface, not just a
+WebSocket. Budget for it explicitly, or plan a UI rewrite instead.
+
+## Open questions
+
+- GraphQL schema and subscriptions used by the UI (M5) — the biggest hidden
+  cost of reusing the upstream UI.
+- Exact JSON:API error objects and RSQL edge cases (differential tests).
+- Terraform login/OAuth broker behaviour (M3/M5).
+- Kubernetes ephemeral executor contract (M4/M6).
+- Variable encryption and key management (before variable values are exposed).
