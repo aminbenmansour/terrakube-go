@@ -1,0 +1,25 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "formatter": true,
+  "instructions": ["CONTRIBUTING.md"],
+  "watcher": {
+    "ignore": ["bin/**", ".data/**", "coverage.out", "coverage.html"]
+  },
+  "experimental": {
+    "todo": true
+  },
+  "permissions": [
+    { "action": "read", "resource": "*.env", "effect": "ask" },
+    { "action": "read", "resource": "*.env.*", "effect": "ask" },
+    { "action": "read", "resource": "*.env.example", "effect": "allow" },
+    { "action": "shell", "resource": "git push *", "effect": "ask" },
+    { "action": "shell", "resource": "git reset --hard *", "effect": "ask" },
+    { "action": "shell", "resource": "git clean *", "effect": "ask" },
+    { "action": "shell", "resource": "gh pr *", "effect": "ask" },
+    { "action": "shell", "resource": "podman *", "effect": "ask" },
+    { "action": "shell", "resource": "docker *", "effect": "ask" },
+    { "action": "shell", "resource": "rm -rf *", "effect": "ask" },
+    { "action": "shell", "resource": "make services-wipe", "effect": "ask" },
+    { "action": "shell", "resource": "./scripts/dev-services.sh wipe", "effect": "ask" }
+  ]
+}
