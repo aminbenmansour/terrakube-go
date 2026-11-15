@@ -22,9 +22,11 @@ Notes:
 
 - `login.v1` comes from Dex unless the optional OAuth broker is enabled.
 - Upstream advertises `state.v2` at `/remote/state/v2/` but the state handler is
-  mounted at `/tfstate/v1` (`TerraformStateController`). We mirror the discovery
-  document byte-for-byte and serve state under `/tfstate/v1`; validate what the
-  real CLI requests during M3.
+  mounted at `/tfstate/v1` (`TerraformStateController`). The executor generates
+  a `backend "http"` override pointing at
+  `/tfstate/v1/organization/{orgId}/workspace/{wsId}/backend/terraform.tfstate`;
+  the discovery `state.v2` entry is not the path the CLI uses. We mirror the
+  discovery document byte-for-byte and serve state under `/tfstate/v1`.
 
 ## TFE API — `/remote/tfe/v2/`
 
@@ -73,23 +75,54 @@ Source: `api/.../plugin/state/RemoteTfeController.java`. All responses use
 
 ## State backend — `/tfstate/v1`
 
-Source: `api/.../plugin/storage/controller/TerraformStateController.java`.
+Source: `api/.../plugin/storage/controller/TerraformStateController.java`,
+`api/.../plugin/security/state/StateService.java` and
+`executor/.../plugin/tfstate/http/HttpTerraformStateImpl.java`.
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| GET | `/organization/{orgId}/workspace/{wsId}/backend/terraform.tfstate` | HTTP backend read; `204` when absent |
-| POST/PUT | same | Store state; validates `Content-MD5` |
-| DELETE | same | Delete state |
-| LOCK/UNLOCK | same | Terraform HTTP backend locking (`method` on the same path) |
+| GET | `/organization/{orgId}/workspace/{wsId}/backend/terraform.tfstate` | HTTP backend read; `204` when absent, otherwise `200` `application/json` |
+| POST/PUT | same | Store current state; returns `200`; validates `Content-MD5`; `400` for empty body or bad MD5; `413` above the size limit |
+| DELETE | same | Delete current state; returns `200` |
 | GET | `/organization/{orgId}/workspace/{wsId}/state/terraform.tfstate` | Current state |
-| GET | `/organization/{orgId}/workspace/{wsId}/state/{name}.json` | Archived state |
+| GET | `/organization/{orgId}/workspace/{wsId}/state/{name}.json` | Archived JSON state |
 | GET | `/organization/{orgId}/workspace/{wsId}/jobId/{jobId}/step/{stepId}/terraform.tfstate` | Plan artifact |
-| PUT | `/archive/{archiveId}/terraform.tfstate` | Hosted state upload |
+| PUT | `/archive/{archiveId}/terraform.tfstate` | Hosted state upload; `201` on success, `403` for an unknown archive |
 | PUT | `/archive/{archiveId}/terraform.json.tfstate` | JSON hosted state upload |
-| PUT | `/organization/{orgId}/workspace/{wsId}/rollback/{name}.json` | Rollback |
+| PUT | `/organization/{orgId}/workspace/{wsId}/rollback/{name}.json` | Rollback; `201` on success |
 
-Auth for executor calls is HTTP Basic with username `terraform` and a
-workspace-scoped executor token as the password.
+Notes:
+
+- There is **no `LOCK`/`UNLOCK` handler** upstream. The executor writes an
+  HTTP backend with only `address`, so Terraform does not perform state
+  locking. Workspace locking is the TFE action
+  `POST /workspaces/{id}/actions/lock`.
+- `POST`/`PUT` on the backend path only update the current state object. The
+  `history` rows are created by the TFE state-version and executor apply flows.
+- `GET` on the `/state/...` and plan-artifact paths returns an empty `200`
+  response when the object is missing, because the controller returns the
+  storage byte slice directly.
+
+Auth for executor calls is HTTP Basic with username `terraform` and an
+internal JWT as the password (bearer tokens are also accepted). The JWT is
+issued with `iss=TerrakubeInternal`, `sub=TerrakubeInternal (EXECUTOR)`,
+`aud=TerrakubeInternal`, and `organizationId`, `workspaceId`, `jobId` and
+`stepId` claims. The signing key is the base64url-decoded
+`io.terrakube.token.internal` secret; HMAC algorithm selection follows key
+length (HS256, HS384, HS512). Missing or invalid credentials return `401`;
+wrong organization/workspace scope or a non-executor token returns `403`.
+Writes additionally require an active step.
+
+Storage keys mirror upstream per backend:
+
+- Local: `backend/{orgId}/{wsId}/terraform.tfstate`,
+  `state/{orgId}/{wsId}/state/{historyId}.raw.json`,
+  `state/{orgId}/{wsId}/state/{historyId}.json` and
+  `state/{orgId}/{wsId}/{jobId}/{stepId}/terraformLibrary.tfPlan`.
+- S3: `tfstate/{orgId}/{wsId}/terraform.tfstate`,
+  `tfstate/{orgId}/{wsId}/state/{historyId}.raw.json`,
+  `tfstate/{orgId}/{wsId}/state/{historyId}.json` and
+  `tfstate/{orgId}/{wsId}/{jobId}/{stepId}/terraformLibrary.tfPlan`.
 
 ## Management API — `/api/v1`
 

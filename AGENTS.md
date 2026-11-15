@@ -43,6 +43,7 @@ export PATH=$PATH:/usr/local/go/bin
 | Regenerate sqlc | `make generate` |
 | Install pinned sqlc | `make tools` |
 | API smoke test | `make smoke` (API must be running; requires `jq`) |
+| State backend smoke test | `make state-smoke` (API must be running; see script header) |
 
 `scripts/dev-services.sh` uses plain podman. There is no `podman compose`
 provider on the development machine; use the script or Docker Compose. The
@@ -56,6 +57,8 @@ available in this environment. `.data/` holds local state and is git-ignored.
 - `cmd/registry` — private module/provider registry (M6)
 - `cmd/migrate` — applies embedded migrations and exits
 - `internal/api` — `/api/v1` management resources
+- `internal/auth` — internal JWT minting and validation for executor calls
+- `internal/tfstate` — `/tfstate/v1` executor state backend
 - `internal/store` — sqlc-generated queries (do not edit)
 - `internal/store/queries` — hand-written SQL for sqlc
 - `internal/db` — pgx pool and migration runner
@@ -96,6 +99,10 @@ available in this environment. `.data/` holds local state and is git-ignored.
 - Discovery advertises `state.v2` at `/remote/state/v2/`, but the upstream
   state handler is mounted at `/tfstate/v1`. Verify with the real CLI before
   changing either path.
+- The upstream `/tfstate/v1` handler has no `LOCK`/`UNLOCK` methods. The
+  executor configures a plain HTTP backend address; workspace locking is the
+  TFE action `POST /workspaces/{id}/actions/lock`. Do not invent a state-lock
+  endpoint.
 - The upstream UI uses GraphQL at `/graphql/api/v1` (plus graphql-ws
   `/subscriptions`) for most screens; only the organization list uses REST.
   M5 needs a GraphQL implementation, not just a WebSocket.
