@@ -82,6 +82,12 @@ type Tag struct {
 	UpdatedBy      *string            `json:"updated_by"`
 }
 
+type TempArchive struct {
+	ID        string  `json:"id"`
+	Type      *string `json:"type"`
+	HistoryID string  `json:"history_id"`
+}
+
 type Template struct {
 	ID             string  `json:"id"`
 	Name           string  `json:"name"`
