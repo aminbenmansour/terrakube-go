@@ -16,10 +16,12 @@ type Querier interface {
 	DeleteOrganization(ctx context.Context, id string) error
 	DeleteProject(ctx context.Context, id string) error
 	DeleteVariable(ctx context.Context, id string) error
+	GetJob(ctx context.Context, id int64) (Job, error)
 	GetOrganization(ctx context.Context, id string) (Organization, error)
 	GetOrganizationByName(ctx context.Context, name string) (Organization, error)
 	GetProject(ctx context.Context, id string) (Project, error)
 	GetProjectByName(ctx context.Context, arg GetProjectByNameParams) (Project, error)
+	GetStep(ctx context.Context, id string) (Step, error)
 	GetVariable(ctx context.Context, id string) (Variable, error)
 	GetWorkspace(ctx context.Context, id string) (Workspace, error)
 	GetWorkspaceByName(ctx context.Context, arg GetWorkspaceByNameParams) (Workspace, error)
