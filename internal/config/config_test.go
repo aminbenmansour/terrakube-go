@@ -16,6 +16,10 @@ var allKeys = []string{
 	"TERRAKUBE_REDIS_URL",
 	"REDIS_URL",
 	"TERRAKUBE_AUTH_TOKEN",
+	"TERRAKUBE_INTERNAL_TOKEN_SECRET",
+	"IO_TERRAKUBE_TOKEN_INTERNAL",
+	"TERRAKUBE_STATE_MAX_SIZE_BYTES",
+	"IO_TERRAKUBE_STATE_MAX_SIZE_BYTES",
 	"TERRAKUBE_SHUTDOWN_TIMEOUT",
 	"TERRAKUBE_HTTP_ADDR",
 	"TERRAKUBE_EXECUTOR_HTTP_ADDR",
@@ -66,6 +70,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.PublicURL != "http://localhost:8080" {
 		t.Errorf("PublicURL = %q, want http://localhost:8080", cfg.PublicURL)
 	}
+	if cfg.StateMaxSizeBytes != 104857600 {
+		t.Errorf("StateMaxSizeBytes = %d, want 104857600", cfg.StateMaxSizeBytes)
+	}
 }
 
 func TestLoadOverrides(t *testing.T) {
@@ -93,6 +100,23 @@ func TestLoadOverrides(t *testing.T) {
 	}
 	if cfg.PublicURL != "https://terrakube.example.com" {
 		t.Errorf("PublicURL = %q, want trailing slash trimmed", cfg.PublicURL)
+	}
+}
+
+func TestLoadStateSettings(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("TERRAKUBE_INTERNAL_TOKEN_SECRET", "secret")
+	t.Setenv("TERRAKUBE_STATE_MAX_SIZE_BYTES", "2048")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.InternalTokenSecret != "secret" {
+		t.Errorf("InternalTokenSecret = %q, want secret", cfg.InternalTokenSecret)
+	}
+	if cfg.StateMaxSizeBytes != 2048 {
+		t.Errorf("StateMaxSizeBytes = %d, want 2048", cfg.StateMaxSizeBytes)
 	}
 }
 

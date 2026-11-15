@@ -23,14 +23,16 @@ const (
 // Config is the configuration shared by the api, executor and registry
 // binaries. Individual binaries only read the fields they need.
 type Config struct {
-	Env             string
-	PublicURL       string
-	LogLevel        slog.Level
-	DatabaseURL     string
-	AutoMigrate     bool
-	RedisURL        string
-	AuthToken       string
-	ShutdownTimeout time.Duration
+	Env                 string
+	PublicURL           string
+	LogLevel            slog.Level
+	DatabaseURL         string
+	AutoMigrate         bool
+	RedisURL            string
+	AuthToken           string
+	InternalTokenSecret string
+	StateMaxSizeBytes   int64
+	ShutdownTimeout     time.Duration
 
 	HTTPAddr         string
 	ExecutorHTTPAddr string
@@ -65,17 +67,19 @@ func Load() (Config, error) {
 	}
 
 	cfg := Config{
-		Env:              env("TERRAKUBE_ENV", "dev"),
-		PublicURL:        strings.TrimRight(env("TERRAKUBE_PUBLIC_URL", "http://localhost:8080"), "/"),
-		LogLevel:         level,
-		DatabaseURL:      envFirst([]string{"TERRAKUBE_DATABASE_URL", "DATABASE_URL"}, "postgres://terrakube@localhost:5432/terrakube?sslmode=disable"),
-		AutoMigrate:      envBool("TERRAKUBE_AUTO_MIGRATE", true),
-		RedisURL:         envFirst([]string{"TERRAKUBE_REDIS_URL", "REDIS_URL"}, "redis://localhost:6379/0"),
-		AuthToken:        env("TERRAKUBE_AUTH_TOKEN", ""),
-		ShutdownTimeout:  envDuration("TERRAKUBE_SHUTDOWN_TIMEOUT", 15*time.Second),
-		HTTPAddr:         env("TERRAKUBE_HTTP_ADDR", ":8080"),
-		ExecutorHTTPAddr: env("TERRAKUBE_EXECUTOR_HTTP_ADDR", ":8081"),
-		RegistryHTTPAddr: env("TERRAKUBE_REGISTRY_HTTP_ADDR", ":8082"),
+		Env:                 env("TERRAKUBE_ENV", "dev"),
+		PublicURL:           strings.TrimRight(env("TERRAKUBE_PUBLIC_URL", "http://localhost:8080"), "/"),
+		LogLevel:            level,
+		DatabaseURL:         envFirst([]string{"TERRAKUBE_DATABASE_URL", "DATABASE_URL"}, "postgres://terrakube@localhost:5432/terrakube?sslmode=disable"),
+		AutoMigrate:         envBool("TERRAKUBE_AUTO_MIGRATE", true),
+		RedisURL:            envFirst([]string{"TERRAKUBE_REDIS_URL", "REDIS_URL"}, "redis://localhost:6379/0"),
+		AuthToken:           env("TERRAKUBE_AUTH_TOKEN", ""),
+		InternalTokenSecret: envFirst([]string{"TERRAKUBE_INTERNAL_TOKEN_SECRET", "IO_TERRAKUBE_TOKEN_INTERNAL"}, ""),
+		StateMaxSizeBytes:   envInt64([]string{"TERRAKUBE_STATE_MAX_SIZE_BYTES", "IO_TERRAKUBE_STATE_MAX_SIZE_BYTES"}, 104857600),
+		ShutdownTimeout:     envDuration("TERRAKUBE_SHUTDOWN_TIMEOUT", 15*time.Second),
+		HTTPAddr:            env("TERRAKUBE_HTTP_ADDR", ":8080"),
+		ExecutorHTTPAddr:    env("TERRAKUBE_EXECUTOR_HTTP_ADDR", ":8081"),
+		RegistryHTTPAddr:    env("TERRAKUBE_REGISTRY_HTTP_ADDR", ":8082"),
 		Storage: Storage{
 			Type:      strings.ToLower(env("TERRAKUBE_STORAGE_TYPE", StorageTypeLocal)),
 			LocalPath: env("TERRAKUBE_STORAGE_LOCAL_PATH", ".data"),
@@ -167,4 +171,18 @@ func envDuration(key string, fallback time.Duration) time.Duration {
 		return fallback
 	}
 	return parsed
+}
+
+func envInt64(keys []string, fallback int64) int64 {
+	for _, key := range keys {
+		v, ok := os.LookupEnv(key)
+		if !ok || v == "" {
+			continue
+		}
+		parsed, err := strconv.ParseInt(v, 10, 64)
+		if err == nil && parsed > 0 {
+			return parsed
+		}
+	}
+	return fallback
 }
