@@ -5,16 +5,20 @@ package tfstate
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
+	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 
 	internalauth "github.com/aminbenmansour/terrakube-go/internal/auth"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
@@ -31,6 +35,7 @@ type Deps struct {
 	Layout            Layout
 	Auth              *internalauth.Validator
 	MaxStateSizeBytes int64
+	PublicURL         string
 }
 
 // Handler serves the /tfstate/v1 routes.
@@ -60,8 +65,11 @@ func New(deps Deps) http.Handler {
 		r.Get("/state/terraform.tfstate", h.getCurrentState)
 		r.Get("/state/{stateFilename}", h.getStateJSON)
 		r.Get("/jobId/{jobID}/step/{stepID}/terraform.tfstate", h.getPlan)
+		r.Put("/rollback/{stateFilename}", h.rollback)
 	})
 
+	r.Put("/archive/{archiveID}/terraform.tfstate", h.uploadHostedState)
+	r.Put("/archive/{archiveID}/terraform.json.tfstate", h.uploadJSONHostedState)
 	return r
 }
 
@@ -232,6 +240,188 @@ func (h *Handler) getPlan(w http.ResponseWriter, r *http.Request) {
 	}
 	key := h.deps.Layout.Plan(organizationID, workspaceID, chi.URLParam(r, "jobID"), chi.URLParam(r, "stepID"))
 	h.writeObject(w, r, key, "application/octet-stream")
+}
+
+func (h *Handler) uploadHostedState(w http.ResponseWriter, r *http.Request) {
+	archive, ok := h.lookupArchive(w, r)
+	if !ok {
+		return
+	}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.serverError(w, "read hosted state", err)
+		return
+	}
+	if err := h.uploadState(r.Context(), archive.OrganizationID, archive.WorkspaceID, archive.HistoryID, body); err != nil {
+		h.serverError(w, "upload hosted state", err)
+		return
+	}
+	if err := h.deps.Store.DeleteArchive(r.Context(), archive.ID); err != nil {
+		h.serverError(w, "delete hosted state archive", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (h *Handler) uploadJSONHostedState(w http.ResponseWriter, r *http.Request) {
+	archive, ok := h.lookupArchive(w, r)
+	if !ok {
+		return
+	}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.serverError(w, "read hosted JSON state", err)
+		return
+	}
+	key := h.deps.Layout.JSONState(archive.OrganizationID, archive.WorkspaceID, archive.HistoryID)
+	if err := h.deps.Storage.Put(r.Context(), key, bytes.NewReader(body), int64(len(body)), "application/json"); err != nil {
+		h.serverError(w, "upload hosted JSON state", err)
+		return
+	}
+	if err := h.deps.Store.DeleteArchive(r.Context(), archive.ID); err != nil {
+		h.serverError(w, "delete hosted JSON state archive", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (h *Handler) rollback(w http.ResponseWriter, r *http.Request) {
+	claims, ok := h.requestClaims(w, r)
+	if !ok {
+		return
+	}
+	organizationID, workspaceID := pathIDs(r)
+	if !h.authorizeManageState(w, claims, organizationID, workspaceID) {
+		return
+	}
+
+	filename := chi.URLParam(r, "stateFilename")
+	if !strings.HasSuffix(filename, ".json") {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	filename = strings.TrimSuffix(filename, ".json")
+	if filename == "" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	jsonState, found, err := h.readObject(r.Context(), h.deps.Layout.JSONState(organizationID, workspaceID, filename))
+	if err != nil {
+		h.rollbackFailed(w, err)
+		return
+	}
+	if !found {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = io.WriteString(w, "JSON state not found")
+		return
+	}
+	rawState, found, err := h.readObject(r.Context(), h.deps.Layout.JSONState(organizationID, workspaceID, filename+".raw"))
+	if err != nil {
+		h.rollbackFailed(w, err)
+		return
+	}
+	if !found {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = io.WriteString(w, "Raw Terraform state not found")
+		return
+	}
+
+	historyID, err := newUUID()
+	if err != nil {
+		h.rollbackFailed(w, err)
+		return
+	}
+	jobReference := filename
+	output := ""
+	if _, err := h.deps.Store.CreateHistory(r.Context(), store.CreateHistoryParams{
+		ID:           historyID,
+		WorkspaceID:  workspaceID,
+		JobReference: &jobReference,
+		Output:       &output,
+		Serial:       1,
+		Md5:          "0",
+		Lineage:      "0",
+	}); err != nil {
+		h.rollbackFailed(w, err)
+		return
+	}
+
+	if err := h.deps.Storage.Put(r.Context(), h.deps.Layout.JSONState(organizationID, workspaceID, historyID), bytes.NewReader(jsonState), int64(len(jsonState)), "application/json"); err != nil {
+		h.rollbackFailed(w, err)
+		return
+	}
+	if err := h.uploadState(r.Context(), organizationID, workspaceID, historyID, rawState); err != nil {
+		h.rollbackFailed(w, err)
+		return
+	}
+
+	output = strings.TrimRight(h.deps.PublicURL, "/") + "/tfstate/v1/organization/" + organizationID + "/workspace/" + workspaceID + "/state/" + historyID + ".json"
+	if err := h.deps.Store.UpdateHistoryOutput(r.Context(), store.UpdateHistoryOutputParams{ID: historyID, Output: &output}); err != nil {
+		h.rollbackFailed(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_, _ = io.WriteString(w, "Rollback successful")
+}
+
+func (h *Handler) lookupArchive(w http.ResponseWriter, r *http.Request) (store.GetArchiveRow, bool) {
+	archive, err := h.deps.Store.GetArchive(r.Context(), chi.URLParam(r, "archiveID"))
+	if errors.Is(err, pgx.ErrNoRows) {
+		w.WriteHeader(http.StatusForbidden)
+		return store.GetArchiveRow{}, false
+	}
+	if err != nil {
+		h.serverError(w, "load hosted state archive", err)
+		return store.GetArchiveRow{}, false
+	}
+	return archive, true
+}
+
+func (h *Handler) uploadState(ctx context.Context, organizationID, workspaceID, historyID string, data []byte) error {
+	if err := h.deps.Storage.Put(ctx, h.deps.Layout.CurrentState(organizationID, workspaceID), bytes.NewReader(data), int64(len(data)), "application/json"); err != nil {
+		return err
+	}
+	return h.deps.Storage.Put(ctx, h.deps.Layout.RawState(organizationID, workspaceID, historyID), bytes.NewReader(data), int64(len(data)), "application/json")
+}
+
+func (h *Handler) readObject(ctx context.Context, key string) ([]byte, bool, error) {
+	rc, err := h.deps.Storage.Get(ctx, key)
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	defer rc.Close()
+	data, err := io.ReadAll(rc)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(data) == 0 {
+		return nil, false, nil
+	}
+	return data, true, nil
+}
+
+func (h *Handler) rollbackFailed(w http.ResponseWriter, err error) {
+	h.deps.Logger.Error("state rollback failed", "error", err)
+	w.WriteHeader(http.StatusInternalServerError)
+	_, _ = io.WriteString(w, "Rollback failed")
+}
+
+func newUUID() (string, error) {
+	var b [16]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", fmt.Errorf("generate history id: %w", err)
+	}
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16]), nil
 }
 
 func (h *Handler) writeObject(w http.ResponseWriter, r *http.Request, key, contentType string) {
