@@ -33,6 +33,9 @@ type Config struct {
 	InternalTokenSecret string
 	StateMaxSizeBytes   int64
 	ShutdownTimeout     time.Duration
+	DexClientID         string
+	DexIssuerURL        string
+	TerraformLogin      bool
 
 	HTTPAddr         string
 	ExecutorHTTPAddr string
@@ -77,6 +80,9 @@ func Load() (Config, error) {
 		InternalTokenSecret: envFirst([]string{"TERRAKUBE_INTERNAL_TOKEN_SECRET", "IO_TERRAKUBE_TOKEN_INTERNAL"}, ""),
 		StateMaxSizeBytes:   envInt64([]string{"TERRAKUBE_STATE_MAX_SIZE_BYTES", "IO_TERRAKUBE_STATE_MAX_SIZE_BYTES"}, 104857600),
 		ShutdownTimeout:     envDuration("TERRAKUBE_SHUTDOWN_TIMEOUT", 15*time.Second),
+		DexClientID:         env("TERRAKUBE_DEX_CLIENT_ID", "terrakube"),
+		DexIssuerURL:        strings.TrimRight(env("TERRAKUBE_DEX_ISSUER_URL", "http://localhost:5556/dex"), "/"),
+		TerraformLogin:      envBool("TERRAKUBE_TERRAFORM_LOGIN_ENABLED", false),
 		HTTPAddr:            env("TERRAKUBE_HTTP_ADDR", ":8080"),
 		ExecutorHTTPAddr:    env("TERRAKUBE_EXECUTOR_HTTP_ADDR", ":8081"),
 		RegistryHTTPAddr:    env("TERRAKUBE_REGISTRY_HTTP_ADDR", ":8082"),
