@@ -89,7 +89,7 @@ Set `TERRAKUBE_STORAGE_TYPE=s3` for S3/MinIO.
 | --- | --- | --- |
 | M0 | Repo, config, migrations, storage, queue, health, CI | done |
 | M1 | JSON:API management API: org, project, workspace, variable, tag | done (core REST; tags pending) |
-| M2 | State backend `/tfstate/v1` with locking | planned |
+| M2 | State backend `/tfstate/v1` (executor HTTP backend) | in progress (HTTP backend; archive/rollback and state-version creation pending) |
 | M3 | TFE v2 remote CLI workflow (`terraform init/plan/apply`) | planned |
 | M4 | Executor: clone, run, stream logs, store state | planned |
 | M5 | Upstream UI compatibility, GraphQL + subscriptions | planned |
@@ -100,7 +100,12 @@ Set `TERRAKUBE_STORAGE_TYPE=s3` for S3/MinIO.
 - `make generate` runs `sqlc generate`. Install the pinned tool once with
   `make tools`.
 - `make check` formats, vets and tests.
-- `scripts/smoke.sh` exercises the API against a running server.
+- `scripts/smoke.sh` exercises the management API against a running server.
+- `scripts/state-smoke.sh` exercises the state backend against a dedicated
+  workspace; see the script header for the required IDs and signing key.
+- `scripts/tofu-state-conformance.sh` runs a real OpenTofu HTTP backend
+  `init/apply/state pull/destroy` cycle and checks that no `LOCK`/`UNLOCK`
+  requests are sent.
 - The upstream reference checkout used to verify compatibility lives outside
   this repo; see `docs/compat.md` for the source paths.
 

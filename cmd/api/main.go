@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aminbenmansour/terrakube-go/internal/api"
+	internalauth "github.com/aminbenmansour/terrakube-go/internal/auth"
 	"github.com/aminbenmansour/terrakube-go/internal/config"
 	"github.com/aminbenmansour/terrakube-go/internal/db"
 	"github.com/aminbenmansour/terrakube-go/internal/httpapi"
@@ -19,6 +20,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/queue"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
+	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
 	"github.com/aminbenmansour/terrakube-go/migrations"
 )
 
@@ -73,6 +75,16 @@ func run() error {
 	}
 	logger.Info("storage configured", "type", cfg.Storage.Type)
 
+	var internalAuth *internalauth.Validator
+	if cfg.InternalTokenSecret == "" {
+		logger.Warn("internal token authentication is disabled: set TERRAKUBE_INTERNAL_TOKEN_SECRET to enable /tfstate/v1")
+	} else {
+		internalAuth, err = internalauth.NewValidator(cfg.InternalTokenSecret)
+		if err != nil {
+			return fmt.Errorf("configure internal token authentication: %w", err)
+		}
+	}
+
 	handler := httpapi.New(httpapi.Deps{
 		Logger:  logger,
 		Service: "api",
@@ -86,6 +98,14 @@ func run() error {
 		Logger:    logger,
 		PublicURL: cfg.PublicURL,
 		AuthToken: cfg.AuthToken,
+	}))
+	handler.Mount("/tfstate/v1", tfstate.New(tfstate.Deps{
+		Store:             store.New(pool),
+		Storage:           storeBackend,
+		Logger:            logger,
+		Layout:            tfstate.NewLayout(cfg.Storage.Type),
+		Auth:              internalAuth,
+		MaxStateSizeBytes: cfg.StateMaxSizeBytes,
 	}))
 
 	return httpapi.Serve(ctx, logger, cfg.HTTPAddr, handler, cfg.ShutdownTimeout)
