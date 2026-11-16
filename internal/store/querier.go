@@ -11,8 +11,10 @@ import (
 type Querier interface {
 	CreateArchive(ctx context.Context, arg CreateArchiveParams) (TempArchive, error)
 	CreateHistory(ctx context.Context, arg CreateHistoryParams) (History, error)
+	CreateJob(ctx context.Context, arg CreateJobParams) (Job, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
+	CreateStep(ctx context.Context, arg CreateStepParams) (Step, error)
 	CreateTag(ctx context.Context, arg CreateTagParams) (Tag, error)
 	CreateVariable(ctx context.Context, arg CreateVariableParams) (Variable, error)
 	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (Workspace, error)
@@ -34,6 +36,7 @@ type Querier interface {
 	GetVariable(ctx context.Context, id string) (Variable, error)
 	GetWorkspace(ctx context.Context, id string) (Workspace, error)
 	GetWorkspaceByName(ctx context.Context, arg GetWorkspaceByNameParams) (Workspace, error)
+	ListArchivesByHistory(ctx context.Context, historyID string) ([]TempArchive, error)
 	ListOrganizations(ctx context.Context) ([]Organization, error)
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
 	ListTagsByOrganization(ctx context.Context, organizationID string) ([]Tag, error)
