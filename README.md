@@ -89,8 +89,8 @@ Set `TERRAKUBE_STORAGE_TYPE=s3` for S3/MinIO.
 | --- | --- | --- |
 | M0 | Repo, config, migrations, storage, queue, health, CI | done |
 | M1 | JSON:API management API: org, project, workspace, variable, tag | done (core REST; tags pending) |
-| M2 | State backend `/tfstate/v1` (executor HTTP backend) | in progress (HTTP backend, archive/rollback; state-version creation pending) |
-| M3 | TFE v2 remote CLI workflow (`terraform init/plan/apply`) | planned |
+| M2 | State backend `/tfstate/v1` (executor HTTP backend) | done — [v0.2.0](https://github.com/aminbenmansour/terrakube-go/releases/tag/v0.2.0) (state-version history follows in M3) |
+| M3 | TFE v2 remote CLI workflow (`terraform init/plan/apply`) | in progress |
 | M4 | Executor: clone, run, stream logs, store state | planned |
 | M5 | Upstream UI compatibility, GraphQL + subscriptions | planned |
 | M6 | RBAC, templates, VCS, policies, registry, parity | planned |
