@@ -116,6 +116,32 @@ func TestRelationshipIDNull(t *testing.T) {
 	}
 }
 
+func TestRelationshipIdentifiers(t *testing.T) {
+	body := `{"data":{"type":"workspaces","relationships":{"tags":{"data":[{"type":"tags","attributes":{"name":"env"}},{"type":"tags","attributes":{"name":"team"}}]},"project":{"data":{"type":"projects","id":"p1"}}}}}`
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
+
+	data, err := DecodeRequest(req)
+	if err != nil {
+		t.Fatalf("DecodeRequest() error = %v", err)
+	}
+	ids, present, err := RelationshipIdentifiers(data, "tags")
+	if err != nil {
+		t.Fatalf("RelationshipIdentifiers() error = %v", err)
+	}
+	if !present || len(ids) != 2 {
+		t.Fatalf("RelationshipIdentifiers() = (%v, %v), want 2 present", ids, present)
+	}
+	if string(ids[0].Attributes["name"]) != `"env"` {
+		t.Errorf("first tag name = %s", ids[0].Attributes["name"])
+	}
+
+	// The same document still decodes the to-one project relationship.
+	id, present, err := RelationshipID(data, "project")
+	if err != nil || !present || id != "p1" {
+		t.Errorf("RelationshipID(project) = (%q, %v, %v)", id, present, err)
+	}
+}
+
 func TestDecodeRequestRejectsBadJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{"))
 	if _, err := DecodeRequest(req); err == nil {

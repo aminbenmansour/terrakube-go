@@ -33,10 +33,13 @@ type Relationship struct {
 	Meta  map[string]any      `json:"meta,omitempty"`
 }
 
-// ResourceIdentifier identifies a related resource.
+// ResourceIdentifier identifies a related resource. Attributes is only used
+// when decoding the non-standard tag relationship payloads go-tfe sends on
+// workspace creation; response links leave it empty.
 type ResourceIdentifier struct {
-	Type string `json:"type"`
-	ID   string `json:"id"`
+	Type       string                     `json:"type"`
+	ID         string                     `json:"id"`
+	Attributes map[string]json.RawMessage `json:"attributes,omitempty"`
 }
 
 // Document is a JSON:API top-level document.
@@ -70,9 +73,35 @@ type RequestData struct {
 	Relationships map[string]RequestRelationship `json:"relationships,omitempty"`
 }
 
-// RequestRelationship is a to-one relationship in an incoming document.
+// RequestRelationship is a relationship in an incoming document. Data holds a
+// to-one relationship; DataList holds a to-many relationship.
 type RequestRelationship struct {
-	Data *ResourceIdentifier `json:"data"`
+	Data     *ResourceIdentifier
+	DataList []ResourceIdentifier
+}
+
+// UnmarshalJSON accepts both JSON:API to-one objects and to-many arrays. The
+// standard request model only needs to-one relationships, but workspace
+// creation carries tag lists in relationship arrays.
+func (r *RequestRelationship) UnmarshalJSON(body []byte) error {
+	var raw struct {
+		Data json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return err
+	}
+	if len(raw.Data) == 0 || string(raw.Data) == "null" {
+		return nil
+	}
+	if raw.Data[0] == '[' {
+		return json.Unmarshal(raw.Data, &r.DataList)
+	}
+	var identifier ResourceIdentifier
+	if err := json.Unmarshal(raw.Data, &identifier); err != nil {
+		return err
+	}
+	r.Data = &identifier
+	return nil
 }
 
 // Write encodes a document with the correct content type.
@@ -186,6 +215,20 @@ func RelationshipID(data *RequestData, name string) (id string, present bool, er
 		return "", true, errors.New("relationship data.id is required")
 	}
 	return rel.Data.ID, true, nil
+}
+
+// RelationshipIdentifiers returns the identifiers of a to-many relationship.
+// present is true when the relationship was sent; an empty list means it was
+// sent as null or an empty array.
+func RelationshipIdentifiers(data *RequestData, name string) (ids []ResourceIdentifier, present bool, err error) {
+	if data == nil || data.Relationships == nil {
+		return nil, false, nil
+	}
+	rel, ok := data.Relationships[name]
+	if !ok {
+		return nil, false, nil
+	}
+	return rel.DataList, true, nil
 }
 
 // Link builds a to-one relationship.
