@@ -106,6 +106,7 @@ func run() error {
 		Layout:            tfstate.NewLayout(cfg.Storage.Type),
 		Auth:              internalAuth,
 		MaxStateSizeBytes: cfg.StateMaxSizeBytes,
+		PublicURL:         cfg.PublicURL,
 	}))
 
 	return httpapi.Serve(ctx, logger, cfg.HTTPAddr, handler, cfg.ShutdownTimeout)

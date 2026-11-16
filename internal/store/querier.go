@@ -9,14 +9,20 @@ import (
 )
 
 type Querier interface {
+	CreateArchive(ctx context.Context, arg CreateArchiveParams) (TempArchive, error)
+	CreateHistory(ctx context.Context, arg CreateHistoryParams) (History, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateVariable(ctx context.Context, arg CreateVariableParams) (Variable, error)
 	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (Workspace, error)
+	DeleteArchive(ctx context.Context, id string) error
 	DeleteOrganization(ctx context.Context, id string) error
 	DeleteProject(ctx context.Context, id string) error
 	DeleteVariable(ctx context.Context, id string) error
+	GetArchive(ctx context.Context, id string) (GetArchiveRow, error)
+	GetHistory(ctx context.Context, id string) (History, error)
 	GetJob(ctx context.Context, id int64) (Job, error)
+	GetLatestHistory(ctx context.Context, workspaceID string) (History, error)
 	GetOrganization(ctx context.Context, id string) (Organization, error)
 	GetOrganizationByName(ctx context.Context, name string) (Organization, error)
 	GetProject(ctx context.Context, id string) (Project, error)
@@ -31,6 +37,7 @@ type Querier interface {
 	ListWorkspacesByOrganization(ctx context.Context, organizationID string) ([]Workspace, error)
 	ListWorkspacesByProject(ctx context.Context, projectID *string) ([]Workspace, error)
 	SoftDeleteWorkspace(ctx context.Context, id string) error
+	UpdateHistoryOutput(ctx context.Context, arg UpdateHistoryOutputParams) error
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) (Organization, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 	UpdateVariable(ctx context.Context, arg UpdateVariableParams) (Variable, error)

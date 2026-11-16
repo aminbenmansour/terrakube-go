@@ -90,6 +90,8 @@ type stubStore struct {
 	workspaces map[string]store.Workspace
 	steps      map[string]store.Step
 	jobs       map[int64]store.Job
+	archives   map[string]store.GetArchiveRow
+	history    map[string]store.History
 }
 
 func (s *stubStore) GetWorkspace(_ context.Context, id string) (store.Workspace, error) {
@@ -114,6 +116,40 @@ func (s *stubStore) GetJob(_ context.Context, id int64) (store.Job, error) {
 		return store.Job{}, pgx.ErrNoRows
 	}
 	return job, nil
+}
+
+func (s *stubStore) GetArchive(_ context.Context, id string) (store.GetArchiveRow, error) {
+	archive, ok := s.archives[id]
+	if !ok {
+		return store.GetArchiveRow{}, pgx.ErrNoRows
+	}
+	return archive, nil
+}
+
+func (s *stubStore) DeleteArchive(_ context.Context, id string) error {
+	delete(s.archives, id)
+	return nil
+}
+
+func (s *stubStore) CreateHistory(_ context.Context, arg store.CreateHistoryParams) (store.History, error) {
+	history := store.History{
+		ID:           arg.ID,
+		WorkspaceID:  arg.WorkspaceID,
+		JobReference: arg.JobReference,
+		Output:       arg.Output,
+		Serial:       arg.Serial,
+		Md5:          arg.Md5,
+		Lineage:      arg.Lineage,
+	}
+	s.history[arg.ID] = history
+	return history, nil
+}
+
+func (s *stubStore) UpdateHistoryOutput(_ context.Context, arg store.UpdateHistoryOutputParams) error {
+	history := s.history[arg.ID]
+	history.Output = arg.Output
+	s.history[arg.ID] = history
+	return nil
 }
 
 type fixture struct {
@@ -149,6 +185,8 @@ func newFixture(t *testing.T, maxSize int64) *fixture {
 			"step-1":    {ID: "step-1", JobID: 42, Status: &statusRunning},
 			"step-done": {ID: "step-done", JobID: 42, Status: &statusDone},
 		},
+		archives: make(map[string]store.GetArchiveRow),
+		history:  make(map[string]store.History),
 	}
 	token, err := internalauth.Sign(secret, internalauth.Claims{
 		OrganizationID: testOrg,
@@ -168,6 +206,7 @@ func newFixture(t *testing.T, maxSize int64) *fixture {
 		Layout:            NewLayout("local"),
 		Auth:              validator,
 		MaxStateSizeBytes: maxSize,
+		PublicURL:         "https://terrakube.test",
 	})
 	return &fixture{handler: handler, storage: ms, store: st, secret: secret, token: token}
 }
@@ -378,6 +417,109 @@ func TestCrossWorkspaceReads(t *testing.T) {
 	}
 	if rec := f.requestAs(t, serviceToken, http.MethodGet, planPath, nil); rec.Code != http.StatusOK {
 		t.Fatalf("executor service plan read = %d, want 200", rec.Code)
+	}
+}
+
+func TestArchiveUploads(t *testing.T) {
+	f := newFixture(t, 1024)
+	f.store.archives["archive-raw"] = store.GetArchiveRow{
+		ID: "archive-raw", HistoryID: "history-raw", WorkspaceID: testWS1, OrganizationID: testOrg,
+	}
+	raw := []byte(`{"version":4,"serial":1}`)
+	rec := f.request(t, http.MethodPut, "/archive/archive-raw/terraform.tfstate", bytes.NewReader(raw), map[string]string{"Authorization": ""})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("raw archive upload = %d, want 201", rec.Code)
+	}
+	assertObject(t, f.storage, "backend/"+testOrg+"/"+testWS1+"/terraform.tfstate", raw)
+	assertObject(t, f.storage, "state/"+testOrg+"/"+testWS1+"/state/history-raw.raw.json", raw)
+	if _, ok := f.store.archives["archive-raw"]; ok {
+		t.Fatal("archive row was not deleted")
+	}
+
+	f.store.archives["archive-json"] = store.GetArchiveRow{
+		ID: "archive-json", HistoryID: "history-json", WorkspaceID: testWS1, OrganizationID: testOrg,
+	}
+	jsonState := []byte(`{"version":4,"serial":2}`)
+	rec = f.request(t, http.MethodPut, "/archive/archive-json/terraform.json.tfstate", bytes.NewReader(jsonState), map[string]string{"Authorization": ""})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("JSON archive upload = %d, want 201", rec.Code)
+	}
+	assertObject(t, f.storage, "state/"+testOrg+"/"+testWS1+"/state/history-json.json", jsonState)
+
+	rec = f.request(t, http.MethodPut, "/archive/missing/terraform.tfstate", bytes.NewReader(raw), map[string]string{"Authorization": ""})
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("unknown archive = %d, want 403", rec.Code)
+	}
+}
+
+func TestRollback(t *testing.T) {
+	f := newFixture(t, 1024)
+	jsonState := []byte(`{"version":4,"serial":2}`)
+	rawState := []byte(`{"version":4,"serial":2,"raw":true}`)
+	if err := f.storage.Put(context.Background(), "state/"+testOrg+"/"+testWS1+"/state/history-1.json", bytes.NewReader(jsonState), int64(len(jsonState)), "application/json"); err != nil {
+		t.Fatalf("Put JSON state: %v", err)
+	}
+	if err := f.storage.Put(context.Background(), "state/"+testOrg+"/"+testWS1+"/state/history-1.raw.json", bytes.NewReader(rawState), int64(len(rawState)), "application/json"); err != nil {
+		t.Fatalf("Put raw state: %v", err)
+	}
+
+	path := "/organization/" + testOrg + "/workspace/" + testWS1 + "/rollback/history-1.json"
+	rec := f.request(t, http.MethodPut, path, nil, nil)
+	if rec.Code != http.StatusCreated || rec.Body.String() != "Rollback successful" {
+		t.Fatalf("rollback = %d body=%q", rec.Code, rec.Body.String())
+	}
+
+	if len(f.store.history) != 1 {
+		t.Fatalf("history rows = %d, want 1", len(f.store.history))
+	}
+	var history store.History
+	for _, value := range f.store.history {
+		history = value
+	}
+	if history.JobReference == nil || *history.JobReference != "history-1" {
+		t.Errorf("job reference = %v, want history-1", history.JobReference)
+	}
+	if history.Serial != 1 || history.Md5 != "0" || history.Lineage != "0" {
+		t.Errorf("history serial/md5/lineage = %d/%s/%s, want 1/0/0", history.Serial, history.Md5, history.Lineage)
+	}
+	wantOutput := "https://terrakube.test/tfstate/v1/organization/" + testOrg + "/workspace/" + testWS1 + "/state/" + history.ID + ".json"
+	if history.Output == nil || *history.Output != wantOutput {
+		t.Errorf("history output = %v, want %s", history.Output, wantOutput)
+	}
+	assertObject(t, f.storage, "backend/"+testOrg+"/"+testWS1+"/terraform.tfstate", rawState)
+	assertObject(t, f.storage, "state/"+testOrg+"/"+testWS1+"/state/"+history.ID+".raw.json", rawState)
+	assertObject(t, f.storage, "state/"+testOrg+"/"+testWS1+"/state/"+history.ID+".json", jsonState)
+
+	rec = f.request(t, http.MethodPut, "/organization/"+testOrg+"/workspace/"+testWS1+"/rollback/missing.json", nil, nil)
+	if rec.Code != http.StatusNotFound || rec.Body.String() != "JSON state not found" {
+		t.Fatalf("missing JSON rollback = %d body=%q", rec.Code, rec.Body.String())
+	}
+	if err := f.storage.Put(context.Background(), "state/"+testOrg+"/"+testWS1+"/state/no-raw.json", bytes.NewReader(jsonState), int64(len(jsonState)), "application/json"); err != nil {
+		t.Fatalf("Put JSON-only state: %v", err)
+	}
+	rec = f.request(t, http.MethodPut, "/organization/"+testOrg+"/workspace/"+testWS1+"/rollback/no-raw.json", nil, nil)
+	if rec.Code != http.StatusNotFound || rec.Body.String() != "Raw Terraform state not found" {
+		t.Fatalf("missing raw rollback = %d body=%q", rec.Code, rec.Body.String())
+	}
+
+	otherWSToken, _ := internalauth.Sign(f.secret, internalauth.Claims{
+		OrganizationID: testOrg, WorkspaceID: testWS2, JobID: "42", StepID: "step-1",
+	})
+	if rec := f.requestAs(t, otherWSToken, http.MethodPut, path, nil); rec.Code != http.StatusForbidden {
+		t.Fatalf("cross-workspace rollback = %d, want 403", rec.Code)
+	}
+}
+
+func assertObject(t *testing.T, storage *memStorage, key string, want []byte) {
+	t.Helper()
+	storage.mu.Lock()
+	defer storage.mu.Unlock()
+	obj, ok := storage.objects[key]
+	if !ok {
+		t.Fatalf("object %q not found", key)
+	}
+	if !bytes.Equal(obj.data, want) {
+		t.Errorf("object %q = %q, want %q", key, obj.data, want)
 	}
 }
 

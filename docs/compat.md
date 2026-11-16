@@ -124,6 +124,13 @@ Storage keys mirror upstream per backend:
   `tfstate/{orgId}/{wsId}/state/{historyId}.json` and
   `tfstate/{orgId}/{wsId}/{jobId}/{stepId}/terraformLibrary.tfPlan`.
 
+Archive uploads are unauthenticated upstream; the unguessable archive UUID is
+the capability. A successful upload deletes the `temp_archive` row. The raw
+upload writes the current state plus `{historyId}.raw.json`; the JSON upload
+writes `{historyId}.json`. Rollback reads the archived JSON and raw state,
+creates a new `history` row with `serial=1`, `md5=0`, `lineage=0`, writes the
+new current/raw/JSON objects, and stores the new state URL in `history.output`.
+
 ## Management API — `/api/v1`
 
 Elide-generated JSON:API. Reference specification (upstream, v2.27.0) is at
@@ -182,6 +189,9 @@ data can be imported and the UI's assumptions hold. Core tables implemented in
 
 `organization`, `project`, `workspace`, `variable`, `tag`, `workspacetag`,
 `template`, `job`, `step`, `history`.
+
+`migrations/0002_temp_archive.sql` adds upstream's `temp_archive` table
+(`id`, `type`, `history_id`) used by the hosted-state and rollback flows.
 
 Differences from upstream at this stage:
 

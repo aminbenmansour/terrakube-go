@@ -9,6 +9,131 @@ import (
 	"context"
 )
 
+const createArchive = `-- name: CreateArchive :one
+INSERT INTO temp_archive (id, type, history_id)
+VALUES ($1, $2, $3)
+RETURNING id, type, history_id
+`
+
+type CreateArchiveParams struct {
+	ID        string  `json:"id"`
+	Type      *string `json:"type"`
+	HistoryID string  `json:"history_id"`
+}
+
+func (q *Queries) CreateArchive(ctx context.Context, arg CreateArchiveParams) (TempArchive, error) {
+	row := q.db.QueryRow(ctx, createArchive, arg.ID, arg.Type, arg.HistoryID)
+	var i TempArchive
+	err := row.Scan(&i.ID, &i.Type, &i.HistoryID)
+	return i, err
+}
+
+const createHistory = `-- name: CreateHistory :one
+INSERT INTO history (id, workspace_id, job_reference, output, serial, md5, lineage, created_by)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, workspace_id, job_reference, output, serial, md5, lineage, created_date, created_by, updated_date, updated_by
+`
+
+type CreateHistoryParams struct {
+	ID           string  `json:"id"`
+	WorkspaceID  string  `json:"workspace_id"`
+	JobReference *string `json:"job_reference"`
+	Output       *string `json:"output"`
+	Serial       int32   `json:"serial"`
+	Md5          string  `json:"md5"`
+	Lineage      string  `json:"lineage"`
+	CreatedBy    *string `json:"created_by"`
+}
+
+func (q *Queries) CreateHistory(ctx context.Context, arg CreateHistoryParams) (History, error) {
+	row := q.db.QueryRow(ctx, createHistory,
+		arg.ID,
+		arg.WorkspaceID,
+		arg.JobReference,
+		arg.Output,
+		arg.Serial,
+		arg.Md5,
+		arg.Lineage,
+		arg.CreatedBy,
+	)
+	var i History
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.JobReference,
+		&i.Output,
+		&i.Serial,
+		&i.Md5,
+		&i.Lineage,
+		&i.CreatedDate,
+		&i.CreatedBy,
+		&i.UpdatedDate,
+		&i.UpdatedBy,
+	)
+	return i, err
+}
+
+const deleteArchive = `-- name: DeleteArchive :exec
+DELETE FROM temp_archive WHERE id = $1
+`
+
+func (q *Queries) DeleteArchive(ctx context.Context, id string) error {
+	_, err := q.db.Exec(ctx, deleteArchive, id)
+	return err
+}
+
+const getArchive = `-- name: GetArchive :one
+SELECT ta.id, ta.type, ta.history_id, h.workspace_id, w.organization_id
+FROM temp_archive ta
+JOIN history h ON h.id = ta.history_id
+JOIN workspace w ON w.id = h.workspace_id
+WHERE ta.id = $1
+`
+
+type GetArchiveRow struct {
+	ID             string  `json:"id"`
+	Type           *string `json:"type"`
+	HistoryID      string  `json:"history_id"`
+	WorkspaceID    string  `json:"workspace_id"`
+	OrganizationID string  `json:"organization_id"`
+}
+
+func (q *Queries) GetArchive(ctx context.Context, id string) (GetArchiveRow, error) {
+	row := q.db.QueryRow(ctx, getArchive, id)
+	var i GetArchiveRow
+	err := row.Scan(
+		&i.ID,
+		&i.Type,
+		&i.HistoryID,
+		&i.WorkspaceID,
+		&i.OrganizationID,
+	)
+	return i, err
+}
+
+const getHistory = `-- name: GetHistory :one
+SELECT id, workspace_id, job_reference, output, serial, md5, lineage, created_date, created_by, updated_date, updated_by FROM history WHERE id = $1
+`
+
+func (q *Queries) GetHistory(ctx context.Context, id string) (History, error) {
+	row := q.db.QueryRow(ctx, getHistory, id)
+	var i History
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.JobReference,
+		&i.Output,
+		&i.Serial,
+		&i.Md5,
+		&i.Lineage,
+		&i.CreatedDate,
+		&i.CreatedBy,
+		&i.UpdatedDate,
+		&i.UpdatedBy,
+	)
+	return i, err
+}
+
 const getJob = `-- name: GetJob :one
 SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by FROM job WHERE id = $1
 `
@@ -42,6 +167,32 @@ func (q *Queries) GetJob(ctx context.Context, id int64) (Job, error) {
 	return i, err
 }
 
+const getLatestHistory = `-- name: GetLatestHistory :one
+SELECT id, workspace_id, job_reference, output, serial, md5, lineage, created_date, created_by, updated_date, updated_by FROM history
+WHERE workspace_id = $1
+ORDER BY created_date DESC, id DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLatestHistory(ctx context.Context, workspaceID string) (History, error) {
+	row := q.db.QueryRow(ctx, getLatestHistory, workspaceID)
+	var i History
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.JobReference,
+		&i.Output,
+		&i.Serial,
+		&i.Md5,
+		&i.Lineage,
+		&i.CreatedDate,
+		&i.CreatedBy,
+		&i.UpdatedDate,
+		&i.UpdatedBy,
+	)
+	return i, err
+}
+
 const getStep = `-- name: GetStep :one
 SELECT id, job_id, step_number, name, status, log_status, output FROM step WHERE id = $1
 `
@@ -59,4 +210,21 @@ func (q *Queries) GetStep(ctx context.Context, id string) (Step, error) {
 		&i.Output,
 	)
 	return i, err
+}
+
+const updateHistoryOutput = `-- name: UpdateHistoryOutput :exec
+UPDATE history
+SET output = $2,
+    updated_date = now()
+WHERE id = $1
+`
+
+type UpdateHistoryOutputParams struct {
+	ID     string  `json:"id"`
+	Output *string `json:"output"`
+}
+
+func (q *Queries) UpdateHistoryOutput(ctx context.Context, arg UpdateHistoryOutputParams) error {
+	_, err := q.db.Exec(ctx, updateHistoryOutput, arg.ID, arg.Output)
+	return err
 }
