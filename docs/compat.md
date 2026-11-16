@@ -85,6 +85,14 @@ tags. `PATCH` keeps bindings that are absent from the request, matching upstream
 Workspace creation accepts both `relationships.tags` and
 `relationships.tag-bindings`.
 
+State versions are served at `POST /workspaces/{id}/state-versions`,
+`GET /state-versions/{id}` and `GET /workspaces/{id}/current-state-version`.
+A supplied `state`/`json-state` is base64 decoded and stored under the M2
+`state/...` layout, with a dummy completed job and step matching upstream.
+Omitting `state` returns a `pending` version with hosted upload URLs backed by
+`temp_archive`, as upstream does. `current-state-version` reads the current
+backend state and returns its serial, Terraform version and `finalized` status.
+
 Authentication for this surface is a bearer token. During local development the
 `TERRAKUBE_AUTH_TOKEN` value is accepted; internal executor JWTs are also
 accepted. `GET /ping` is intentionally unauthenticated and returns `404` with
