@@ -102,6 +102,8 @@ func run() error {
 	}))
 	tfeDeps := tfe.Deps{
 		Store:          store.New(pool),
+		Storage:        storeBackend,
+		Layout:         tfstate.NewLayout(cfg.Storage.Type),
 		Logger:         logger,
 		PublicURL:      cfg.PublicURL,
 		AuthToken:      cfg.AuthToken,

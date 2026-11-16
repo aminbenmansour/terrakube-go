@@ -14,12 +14,16 @@ import (
 
 	internalauth "github.com/aminbenmansour/terrakube-go/internal/auth"
 	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
+	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
+	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
 )
 
 // Deps are the collaborators the TFE API needs.
 type Deps struct {
 	Store          store.Querier
+	Storage        storage.Backend
+	Layout         tfstate.Layout
 	Logger         *slog.Logger
 	PublicURL      string
 	AuthToken      string
@@ -63,6 +67,10 @@ func New(deps Deps) http.Handler {
 		r.Get("/workspaces/{workspaceID}/tag-bindings", a.listTagBindings)
 		r.Patch("/workspaces/{workspaceID}/tag-bindings", a.updateTagBindings)
 		r.Post("/workspaces/{workspaceID}/relationships/tags", a.updateWorkspaceTags)
+
+		r.Post("/workspaces/{workspaceID}/state-versions", a.createStateVersion)
+		r.Get("/state-versions/{historyID}", a.getStateVersion)
+		r.Get("/workspaces/{workspaceID}/current-state-version", a.getCurrentStateVersion)
 
 		r.Get("/organizations/{organizationName}/projects", a.listProjects)
 		r.Post("/organizations/{organizationName}/projects", a.createProject)

@@ -2,7 +2,9 @@ package tfe
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -12,7 +14,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
+	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
 )
 
 // stubQuerier embeds the generated interface so tests only implement the
@@ -43,6 +47,13 @@ type stubQuerier struct {
 	project     store.Project
 	projectErr  error
 	createdProj *store.CreateProjectParams
+
+	job            store.Job
+	step           store.Step
+	history        store.History
+	historyErr     error
+	archives       map[string][]store.TempArchive
+	createdArchive *store.CreateArchiveParams
 }
 
 func (s *stubQuerier) GetOrganizationByName(context.Context, string) (store.Organization, error) {
@@ -134,6 +145,73 @@ func (s *stubQuerier) UpdateWorkspaceTagValue(_ context.Context, arg store.Updat
 	return store.Workspacetag{}, pgx.ErrNoRows
 }
 
+func (s *stubQuerier) CreateJob(_ context.Context, arg store.CreateJobParams) (store.Job, error) {
+	s.job = store.Job{
+		ID:             42,
+		OrganizationID: arg.OrganizationID,
+		WorkspaceID:    arg.WorkspaceID,
+		Command:        arg.Command,
+		Status:         arg.Status,
+		Via:            arg.Via,
+		AutoApply:      arg.AutoApply,
+		Refresh:        arg.Refresh,
+		PlanChanges:    arg.PlanChanges,
+		CreatedBy:      arg.CreatedBy,
+	}
+	return s.job, nil
+}
+
+func (s *stubQuerier) CreateStep(_ context.Context, arg store.CreateStepParams) (store.Step, error) {
+	s.step = store.Step{
+		ID:         arg.ID,
+		JobID:      arg.JobID,
+		StepNumber: arg.StepNumber,
+		Name:       arg.Name,
+		Status:     arg.Status,
+		LogStatus:  arg.LogStatus,
+		Output:     arg.Output,
+	}
+	return s.step, nil
+}
+
+func (s *stubQuerier) CreateHistory(_ context.Context, arg store.CreateHistoryParams) (store.History, error) {
+	s.history = store.History{
+		ID:           arg.ID,
+		WorkspaceID:  arg.WorkspaceID,
+		JobReference: arg.JobReference,
+		Output:       arg.Output,
+		Serial:       arg.Serial,
+		Md5:          arg.Md5,
+		Lineage:      arg.Lineage,
+		CreatedBy:    arg.CreatedBy,
+	}
+	return s.history, nil
+}
+
+func (s *stubQuerier) GetHistory(context.Context, string) (store.History, error) {
+	if s.historyErr != nil {
+		return store.History{}, s.historyErr
+	}
+	if s.history.ID == "" {
+		return store.History{}, pgx.ErrNoRows
+	}
+	return s.history, nil
+}
+
+func (s *stubQuerier) CreateArchive(_ context.Context, arg store.CreateArchiveParams) (store.TempArchive, error) {
+	s.createdArchive = &arg
+	archive := store.TempArchive{ID: arg.ID, Type: arg.Type, HistoryID: arg.HistoryID}
+	if s.archives == nil {
+		s.archives = map[string][]store.TempArchive{}
+	}
+	s.archives[arg.HistoryID] = append(s.archives[arg.HistoryID], archive)
+	return archive, nil
+}
+
+func (s *stubQuerier) ListArchivesByHistory(_ context.Context, historyID string) ([]store.TempArchive, error) {
+	return s.archives[historyID], nil
+}
+
 func (s *stubQuerier) ListProjectsByOrganization(context.Context, string) ([]store.Project, error) {
 	return s.projects, s.projectsErr
 }
@@ -149,10 +227,23 @@ func (s *stubQuerier) CreateProject(_ context.Context, arg store.CreateProjectPa
 
 func newTestAPI(t *testing.T, q store.Querier) http.Handler {
 	t.Helper()
+	handler, _ := newTestAPIWithStorage(t, q)
+	return handler
+}
+
+func newTestAPIWithStorage(t *testing.T, q store.Querier) (http.Handler, storage.Backend) {
+	t.Helper()
+	backend, err := storage.NewLocal(t.TempDir())
+	if err != nil {
+		t.Fatalf("create local storage: %v", err)
+	}
 	return New(Deps{
-		Store:  q,
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-	})
+		Store:     q,
+		Storage:   backend,
+		Layout:    tfstate.NewLayout("local"),
+		PublicURL: "https://terrakube.local",
+		Logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}), backend
 }
 
 func TestDiscovery(t *testing.T) {
@@ -582,6 +673,148 @@ func TestCreateWorkspaceWithTags(t *testing.T) {
 	}
 	if len(doc.Data) != 2 {
 		t.Fatalf("bindings = %+v, want 2", doc.Data)
+	}
+}
+
+func TestCreateAndGetStateVersion(t *testing.T) {
+	state := `{"version":4,"terraform_version":"1.9.0","serial":7,"lineage":"lineage-7","outputs":{},"resources":[]}`
+	jsonState := `{"format_version":"1.0","terraform_version":"1.9.0","values":{"root_module":{}}}`
+	q := &stubQuerier{
+		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1", TerraformVersion: stringPtr("1.9.0")},
+	}
+	handler, backend := newTestAPIWithStorage(t, q)
+
+	body := fmt.Sprintf(`{"data":{"type":"state-versions","attributes":{"state":%q,"json-state":%q}}}`,
+		base64.StdEncoding.EncodeToString([]byte(state)),
+		base64.StdEncoding.EncodeToString([]byte(jsonState)))
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/state-versions", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create status = %d, want 201; body = %s", rec.Code, rec.Body.String())
+	}
+	var doc struct {
+		Data struct {
+			ID         string         `json:"id"`
+			Type       string         `json:"type"`
+			Attributes map[string]any `json:"attributes"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if doc.Data.Type != "state-versions" || doc.Data.ID == "" {
+		t.Fatalf("state version = %+v", doc.Data)
+	}
+	if doc.Data.Attributes["status"] != "finalized" {
+		t.Errorf("status = %v, want finalized", doc.Data.Attributes["status"])
+	}
+	if q.history.Serial != 7 || q.history.Lineage != "lineage-7" {
+		t.Errorf("history = %+v", q.history)
+	}
+	if q.job.Status != "completed" || q.step.Name == nil || *q.step.Name != "Dummy State Uploaded" {
+		t.Errorf("dummy job/step = %+v / %+v", q.job, q.step)
+	}
+
+	raw, err := backend.Get(context.Background(), tfstate.NewLayout("local").RawState("org-1", "ws-1", doc.Data.ID))
+	if err != nil {
+		t.Fatalf("read raw state: %v", err)
+	}
+	rawBody, _ := io.ReadAll(raw)
+	raw.Close()
+	if string(rawBody) != state {
+		t.Errorf("raw state = %s", rawBody)
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/state-versions/"+doc.Data.ID, nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("get status = %d, want 200; body = %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"hosted-state-download-url"`) {
+		t.Errorf("get body = %s", rec.Body.String())
+	}
+}
+
+func TestCreateStateVersionPendingUpload(t *testing.T) {
+	q := &stubQuerier{
+		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1"},
+	}
+	handler := newTestAPI(t, q)
+
+	body := `{"data":{"type":"state-versions","attributes":{}}}`
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/state-versions", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201; body = %s", rec.Code, rec.Body.String())
+	}
+	var doc struct {
+		Data struct {
+			Attributes map[string]any `json:"attributes"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if doc.Data.Attributes["status"] != "pending" {
+		t.Errorf("status = %v, want pending", doc.Data.Attributes["status"])
+	}
+	if doc.Data.Attributes["hosted-state-upload-url"] == nil || doc.Data.Attributes["hosted-json-state-upload-url"] == nil {
+		t.Errorf("upload URLs = %#v", doc.Data.Attributes)
+	}
+	if q.createdArchive == nil {
+		t.Fatal("no archive created")
+	}
+}
+
+func TestCurrentStateVersion(t *testing.T) {
+	state := `{"version":4,"terraform_version":"1.10.1","serial":12,"lineage":"lineage-12"}`
+	q := &stubQuerier{
+		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1", TerraformVersion: stringPtr("1.9.0")},
+	}
+	handler, backend := newTestAPIWithStorage(t, q)
+	layout := tfstate.NewLayout("local")
+	if err := backend.Put(context.Background(), layout.CurrentState("org-1", "ws-1"), strings.NewReader(state), int64(len(state)), "application/json"); err != nil {
+		t.Fatalf("put current state: %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/workspaces/ws-1/current-state-version", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body = %s", rec.Code, rec.Body.String())
+	}
+	var doc struct {
+		Data struct {
+			Attributes map[string]any `json:"attributes"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if doc.Data.Attributes["serial"] != float64(12) {
+		t.Errorf("serial = %v, want 12", doc.Data.Attributes["serial"])
+	}
+	if doc.Data.Attributes["terraform-version"] != "1.10.1" {
+		t.Errorf("terraform-version = %v", doc.Data.Attributes["terraform-version"])
+	}
+	if doc.Data.Attributes["status"] != "finalized" {
+		t.Errorf("status = %v", doc.Data.Attributes["status"])
+	}
+}
+
+func TestCurrentStateVersionMissing(t *testing.T) {
+	q := &stubQuerier{
+		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1"},
+	}
+	handler := newTestAPI(t, q)
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/workspaces/ws-1/current-state-version", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404; body = %s", rec.Code, rec.Body.String())
 	}
 }
 

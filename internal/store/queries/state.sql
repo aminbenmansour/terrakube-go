@@ -18,6 +18,19 @@ INSERT INTO history (id, workspace_id, job_reference, output, serial, md5, linea
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING *;
 
+-- name: CreateJob :one
+INSERT INTO job (organization_id, workspace_id, command, status, output, via, auto_apply, refresh, plan_changes, created_by)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING *;
+
+-- name: CreateStep :one
+INSERT INTO step (id, job_id, step_number, name, status, log_status, output)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING *;
+
+-- name: ListArchivesByHistory :many
+SELECT * FROM temp_archive WHERE history_id = $1 ORDER BY type;
+
 -- name: UpdateHistoryOutput :exec
 UPDATE history
 SET output = $2,

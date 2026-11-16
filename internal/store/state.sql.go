@@ -73,6 +73,104 @@ func (q *Queries) CreateHistory(ctx context.Context, arg CreateHistoryParams) (H
 	return i, err
 }
 
+const createJob = `-- name: CreateJob :one
+INSERT INTO job (organization_id, workspace_id, command, status, output, via, auto_apply, refresh, plan_changes, created_by)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by
+`
+
+type CreateJobParams struct {
+	OrganizationID string  `json:"organization_id"`
+	WorkspaceID    string  `json:"workspace_id"`
+	Command        *string `json:"command"`
+	Status         string  `json:"status"`
+	Output         *string `json:"output"`
+	Via            string  `json:"via"`
+	AutoApply      bool    `json:"auto_apply"`
+	Refresh        bool    `json:"refresh"`
+	PlanChanges    bool    `json:"plan_changes"`
+	CreatedBy      *string `json:"created_by"`
+}
+
+func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, error) {
+	row := q.db.QueryRow(ctx, createJob,
+		arg.OrganizationID,
+		arg.WorkspaceID,
+		arg.Command,
+		arg.Status,
+		arg.Output,
+		arg.Via,
+		arg.AutoApply,
+		arg.Refresh,
+		arg.PlanChanges,
+		arg.CreatedBy,
+	)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.WorkspaceID,
+		&i.Command,
+		&i.Status,
+		&i.Output,
+		&i.TemplateReference,
+		&i.Tcl,
+		&i.Via,
+		&i.AutoApply,
+		&i.Deleted,
+		&i.Comments,
+		&i.CommitID,
+		&i.ApprovedBy,
+		&i.ApprovedAt,
+		&i.PlanChanges,
+		&i.Refresh,
+		&i.CreatedDate,
+		&i.CreatedBy,
+		&i.UpdatedDate,
+		&i.UpdatedBy,
+	)
+	return i, err
+}
+
+const createStep = `-- name: CreateStep :one
+INSERT INTO step (id, job_id, step_number, name, status, log_status, output)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, job_id, step_number, name, status, log_status, output
+`
+
+type CreateStepParams struct {
+	ID         string  `json:"id"`
+	JobID      int64   `json:"job_id"`
+	StepNumber int32   `json:"step_number"`
+	Name       *string `json:"name"`
+	Status     *string `json:"status"`
+	LogStatus  *string `json:"log_status"`
+	Output     *string `json:"output"`
+}
+
+func (q *Queries) CreateStep(ctx context.Context, arg CreateStepParams) (Step, error) {
+	row := q.db.QueryRow(ctx, createStep,
+		arg.ID,
+		arg.JobID,
+		arg.StepNumber,
+		arg.Name,
+		arg.Status,
+		arg.LogStatus,
+		arg.Output,
+	)
+	var i Step
+	err := row.Scan(
+		&i.ID,
+		&i.JobID,
+		&i.StepNumber,
+		&i.Name,
+		&i.Status,
+		&i.LogStatus,
+		&i.Output,
+	)
+	return i, err
+}
+
 const deleteArchive = `-- name: DeleteArchive :exec
 DELETE FROM temp_archive WHERE id = $1
 `
@@ -210,6 +308,30 @@ func (q *Queries) GetStep(ctx context.Context, id string) (Step, error) {
 		&i.Output,
 	)
 	return i, err
+}
+
+const listArchivesByHistory = `-- name: ListArchivesByHistory :many
+SELECT id, type, history_id FROM temp_archive WHERE history_id = $1 ORDER BY type
+`
+
+func (q *Queries) ListArchivesByHistory(ctx context.Context, historyID string) ([]TempArchive, error) {
+	rows, err := q.db.Query(ctx, listArchivesByHistory, historyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []TempArchive{}
+	for rows.Next() {
+		var i TempArchive
+		if err := rows.Scan(&i.ID, &i.Type, &i.HistoryID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateHistoryOutput = `-- name: UpdateHistoryOutput :exec
