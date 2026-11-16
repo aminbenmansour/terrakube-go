@@ -13,8 +13,10 @@ type Querier interface {
 	CreateHistory(ctx context.Context, arg CreateHistoryParams) (History, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
+	CreateTag(ctx context.Context, arg CreateTagParams) (Tag, error)
 	CreateVariable(ctx context.Context, arg CreateVariableParams) (Variable, error)
 	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (Workspace, error)
+	CreateWorkspaceTag(ctx context.Context, arg CreateWorkspaceTagParams) (Workspacetag, error)
 	DeleteArchive(ctx context.Context, id string) error
 	DeleteOrganization(ctx context.Context, id string) error
 	DeleteProject(ctx context.Context, id string) error
@@ -28,6 +30,7 @@ type Querier interface {
 	GetProject(ctx context.Context, id string) (Project, error)
 	GetProjectByName(ctx context.Context, arg GetProjectByNameParams) (Project, error)
 	GetStep(ctx context.Context, id string) (Step, error)
+	GetTagByName(ctx context.Context, arg GetTagByNameParams) (Tag, error)
 	GetVariable(ctx context.Context, id string) (Variable, error)
 	GetWorkspace(ctx context.Context, id string) (Workspace, error)
 	GetWorkspaceByName(ctx context.Context, arg GetWorkspaceByNameParams) (Workspace, error)
@@ -45,6 +48,7 @@ type Querier interface {
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 	UpdateVariable(ctx context.Context, arg UpdateVariableParams) (Variable, error)
 	UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams) (Workspace, error)
+	UpdateWorkspaceTagValue(ctx context.Context, arg UpdateWorkspaceTagValueParams) (Workspacetag, error)
 }
 
 var _ Querier = (*Queries)(nil)
