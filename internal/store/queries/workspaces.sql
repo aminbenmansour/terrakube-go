@@ -8,6 +8,12 @@ SELECT * FROM workspace
 WHERE project_id = $1 AND deleted = false
 ORDER BY name;
 
+-- name: ListTagsByOrganization :many
+SELECT * FROM tag WHERE organization_id = $1 ORDER BY name;
+
+-- name: ListWorkspaceTagsByWorkspace :many
+SELECT * FROM workspacetag WHERE workspace_id = $1;
+
 -- name: GetWorkspace :one
 SELECT * FROM workspace WHERE id = $1 AND deleted = false;
 
@@ -46,6 +52,14 @@ SET name = $2,
     restrict_apply_to_configured_branch = $13,
     require_approve_to_apply = $14,
     project_id = $15,
+    updated_date = now()
+WHERE id = $1 AND deleted = false
+RETURNING *;
+
+-- name: SetWorkspaceLock :one
+UPDATE workspace
+SET locked = $2,
+    lock_description = $3,
     updated_date = now()
 WHERE id = $1 AND deleted = false
 RETURNING *;

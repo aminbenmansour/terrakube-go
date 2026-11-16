@@ -33,9 +33,12 @@ type Querier interface {
 	GetWorkspaceByName(ctx context.Context, arg GetWorkspaceByNameParams) (Workspace, error)
 	ListOrganizations(ctx context.Context) ([]Organization, error)
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
+	ListTagsByOrganization(ctx context.Context, organizationID string) ([]Tag, error)
 	ListVariablesByWorkspace(ctx context.Context, workspaceID string) ([]Variable, error)
+	ListWorkspaceTagsByWorkspace(ctx context.Context, workspaceID string) ([]Workspacetag, error)
 	ListWorkspacesByOrganization(ctx context.Context, organizationID string) ([]Workspace, error)
 	ListWorkspacesByProject(ctx context.Context, projectID *string) ([]Workspace, error)
+	SetWorkspaceLock(ctx context.Context, arg SetWorkspaceLockParams) (Workspace, error)
 	SoftDeleteWorkspace(ctx context.Context, id string) error
 	UpdateHistoryOutput(ctx context.Context, arg UpdateHistoryOutputParams) error
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) (Organization, error)

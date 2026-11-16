@@ -16,7 +16,7 @@ LDFLAGS := -s -w \
 
 .PHONY: help all build api executor registry migrate test test-race vet fmt lint tidy clean check \
 	services-up services-down services-status services-wipe run-api run-executor run-registry \
-	db-migrate docker-build tools generate smoke state-smoke tofu-state-conformance
+	db-migrate docker-build tools generate smoke state-smoke tfe-smoke tofu-state-conformance
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -103,6 +103,9 @@ smoke: ## Run the management API smoke test against a running server
 
 state-smoke: ## Run the state backend smoke test against a running server
 	./scripts/state-smoke.sh
+
+tfe-smoke: ## Run the TFE v2 API smoke test against a running server
+	./scripts/tfe-smoke.sh
 
 tofu-state-conformance: ## Run the OpenTofu HTTP backend conformance test
 	./scripts/tofu-state-conformance.sh

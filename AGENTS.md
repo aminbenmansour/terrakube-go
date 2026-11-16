@@ -43,6 +43,7 @@ export PATH=$PATH:/usr/local/go/bin
 | Regenerate sqlc | `make generate` |
 | Install pinned sqlc | `make tools` |
 | API smoke test | `make smoke` (API must be running; requires `jq`) |
+| TFE v2 smoke test | `make tfe-smoke` (API must be running; requires `jq`) |
 | State backend smoke test | `make state-smoke` (API must be running; see script header) |
 
 `scripts/dev-services.sh` uses plain podman. There is no `podman compose`
@@ -57,6 +58,7 @@ available in this environment. `.data/` holds local state and is git-ignored.
 - `cmd/registry` — private module/provider registry (M6)
 - `cmd/migrate` — applies embedded migrations and exits
 - `internal/api` — `/api/v1` management resources
+- `internal/tfe` — `/remote/tfe/v2` Terraform/OpenTofu cloud API
 - `internal/auth` — internal JWT minting and validation for executor calls
 - `internal/tfstate` — `/tfstate/v1` executor state backend
 - `internal/store` — sqlc-generated queries (do not edit)

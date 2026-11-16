@@ -20,6 +20,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/queue"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
+	"github.com/aminbenmansour/terrakube-go/internal/tfe"
 	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
 	"github.com/aminbenmansour/terrakube-go/migrations"
 )
@@ -99,6 +100,18 @@ func run() error {
 		PublicURL: cfg.PublicURL,
 		AuthToken: cfg.AuthToken,
 	}))
+	tfeDeps := tfe.Deps{
+		Store:          store.New(pool),
+		Logger:         logger,
+		PublicURL:      cfg.PublicURL,
+		AuthToken:      cfg.AuthToken,
+		InternalAuth:   internalAuth,
+		DexClientID:    cfg.DexClientID,
+		DexIssuerURL:   cfg.DexIssuerURL,
+		TerraformLogin: cfg.TerraformLogin,
+	}
+	handler.Get("/.well-known/terraform.json", tfe.Discovery(tfeDeps))
+	handler.Mount("/remote/tfe/v2", tfe.New(tfeDeps))
 	handler.Mount("/tfstate/v1", tfstate.New(tfstate.Deps{
 		Store:             store.New(pool),
 		Storage:           storeBackend,

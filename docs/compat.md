@@ -73,6 +73,22 @@ Source: `api/.../plugin/state/RemoteTfeController.java`. All responses use
 | GET | `/plans/logs/{a}/{b}` | Plan log |
 | GET | `/applies/logs/{a}/{b}` | Apply log |
 
+Implemented in the M3 core slice: `ping`, organization lookup, entitlement-set,
+capacity, workspace list/get/create/update, workspace lock/unlock, and project
+list/create. Configuration versions, runs, state versions, policy checks and
+logs are the remaining M3 work.
+
+Authentication for this surface is a bearer token. During local development the
+`TERRAKUBE_AUTH_TOKEN` value is accepted; internal executor JWTs are also
+accepted. `GET /ping` is intentionally unauthenticated and returns `404` with
+`TFP-API-Version: 2.5` and `TFP-AppName: Terrakube`, matching upstream.
+
+`/.well-known/terraform.json` is served with `login.v1`, `state.v2`,
+`tfe.v2` and `tfe.v2.1`. The `login.v1` block points at Dex by default
+(`TERRAKUBE_DEX_CLIENT_ID`, `TERRAKUBE_DEX_ISSUER_URL`); setting
+`TERRAKUBE_TERRAFORM_LOGIN_ENABLED=true` switches it to the optional OAuth
+broker URLs under `TERRAKUBE_PUBLIC_URL`.
+
 ## State backend — `/tfstate/v1`
 
 Source: `api/.../plugin/storage/controller/TerraformStateController.java`,

@@ -185,6 +185,71 @@ func (q *Queries) GetWorkspaceByName(ctx context.Context, arg GetWorkspaceByName
 	return i, err
 }
 
+const listTagsByOrganization = `-- name: ListTagsByOrganization :many
+SELECT id, name, organization_id, created_date, created_by, updated_date, updated_by FROM tag WHERE organization_id = $1 ORDER BY name
+`
+
+func (q *Queries) ListTagsByOrganization(ctx context.Context, organizationID string) ([]Tag, error) {
+	rows, err := q.db.Query(ctx, listTagsByOrganization, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Tag{}
+	for rows.Next() {
+		var i Tag
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.OrganizationID,
+			&i.CreatedDate,
+			&i.CreatedBy,
+			&i.UpdatedDate,
+			&i.UpdatedBy,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkspaceTagsByWorkspace = `-- name: ListWorkspaceTagsByWorkspace :many
+SELECT id, tag_id, tag_value, workspace_id, created_date, created_by, updated_date, updated_by FROM workspacetag WHERE workspace_id = $1
+`
+
+func (q *Queries) ListWorkspaceTagsByWorkspace(ctx context.Context, workspaceID string) ([]Workspacetag, error) {
+	rows, err := q.db.Query(ctx, listWorkspaceTagsByWorkspace, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Workspacetag{}
+	for rows.Next() {
+		var i Workspacetag
+		if err := rows.Scan(
+			&i.ID,
+			&i.TagID,
+			&i.TagValue,
+			&i.WorkspaceID,
+			&i.CreatedDate,
+			&i.CreatedBy,
+			&i.UpdatedDate,
+			&i.UpdatedBy,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listWorkspacesByOrganization = `-- name: ListWorkspacesByOrganization :many
 SELECT id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by FROM workspace
 WHERE organization_id = $1 AND deleted = false
@@ -293,6 +358,57 @@ func (q *Queries) ListWorkspacesByProject(ctx context.Context, projectID *string
 		return nil, err
 	}
 	return items, nil
+}
+
+const setWorkspaceLock = `-- name: SetWorkspaceLock :one
+UPDATE workspace
+SET locked = $2,
+    lock_description = $3,
+    updated_date = now()
+WHERE id = $1 AND deleted = false
+RETURNING id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by
+`
+
+type SetWorkspaceLockParams struct {
+	ID              string  `json:"id"`
+	Locked          bool    `json:"locked"`
+	LockDescription *string `json:"lock_description"`
+}
+
+func (q *Queries) SetWorkspaceLock(ctx context.Context, arg SetWorkspaceLockParams) (Workspace, error) {
+	row := q.db.QueryRow(ctx, setWorkspaceLock, arg.ID, arg.Locked, arg.LockDescription)
+	var i Workspace
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Source,
+		&i.Branch,
+		&i.Folder,
+		&i.LastJobStatus,
+		&i.LastJobDate,
+		&i.Locked,
+		&i.Deleted,
+		&i.AllowRemoteApply,
+		&i.GlobalRemoteState,
+		&i.SharedIds,
+		&i.DefaultTemplate,
+		&i.RestrictApplyToConfiguredBranch,
+		&i.RequireApproveToApply,
+		&i.LockDescription,
+		&i.IacType,
+		&i.ModuleSshKey,
+		&i.TerraformVersion,
+		&i.ExecutionMode,
+		&i.PolicyComplianceStatus,
+		&i.OrganizationID,
+		&i.ProjectID,
+		&i.CreatedDate,
+		&i.CreatedBy,
+		&i.UpdatedDate,
+		&i.UpdatedBy,
+	)
+	return i, err
 }
 
 const softDeleteWorkspace = `-- name: SoftDeleteWorkspace :exec

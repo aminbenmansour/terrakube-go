@@ -35,6 +35,7 @@ curl -s localhost:8080/readyz
 curl -s localhost:8080/version
 
 TERRAKUBE_AUTH_TOKEN=dev-token ./scripts/smoke.sh
+TERRAKUBE_AUTH_TOKEN=dev-token ./scripts/tfe-smoke.sh
 ```
 
 The management API lives at `/api/v1` and is exercised by `scripts/smoke.sh`
@@ -101,6 +102,8 @@ Set `TERRAKUBE_STORAGE_TYPE=s3` for S3/MinIO.
   `make tools`.
 - `make check` formats, vets and tests.
 - `scripts/smoke.sh` exercises the management API against a running server.
+- `scripts/tfe-smoke.sh` (or `make tfe-smoke`) exercises discovery and the TFE
+  v2 organization, workspace and project endpoints.
 - `scripts/state-smoke.sh` exercises the state backend against a dedicated
   workspace; see the script header for the required IDs and signing key.
 - `scripts/tofu-state-conformance.sh` runs a real OpenTofu HTTP backend
