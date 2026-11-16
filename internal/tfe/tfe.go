@@ -60,6 +60,9 @@ func New(deps Deps) http.Handler {
 		r.Patch("/workspaces/{workspaceID}", a.updateWorkspace)
 		r.Post("/workspaces/{workspaceID}/actions/lock", a.lockWorkspace)
 		r.Post("/workspaces/{workspaceID}/actions/unlock", a.unlockWorkspace)
+		r.Get("/workspaces/{workspaceID}/tag-bindings", a.listTagBindings)
+		r.Patch("/workspaces/{workspaceID}/tag-bindings", a.updateTagBindings)
+		r.Post("/workspaces/{workspaceID}/relationships/tags", a.updateWorkspaceTags)
 
 		r.Get("/organizations/{organizationName}/projects", a.listProjects)
 		r.Post("/organizations/{organizationName}/projects", a.createProject)

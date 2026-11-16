@@ -166,6 +166,12 @@ func (a *API) createWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tagBindings, err := workspaceTagBindings(data)
+	if err != nil {
+		jsonapi.WriteError(w, http.StatusUnprocessableEntity, "Invalid Tag Binding", err.Error())
+		return
+	}
+
 	var projectID *string
 	if id, present, relErr := jsonapi.RelationshipID(data, "project"); relErr != nil {
 		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Relationship", relErr.Error())
@@ -222,7 +228,18 @@ func (a *API) createWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonapi.WriteResource(w, http.StatusCreated, workspaceResource(ws, []string{}))
+	if len(tagBindings) > 0 {
+		if err := a.applyTagBindings(r, ws, tagBindings, true); err != nil {
+			a.internalError(w, "apply workspace tags", err)
+			return
+		}
+	}
+	tagNames, err := a.workspaceTagNames(r, org.ID, ws.ID)
+	if err != nil {
+		a.internalError(w, "load workspace tags", err)
+		return
+	}
+	jsonapi.WriteResource(w, http.StatusCreated, workspaceResource(ws, tagNames))
 }
 
 func (a *API) updateWorkspace(w http.ResponseWriter, r *http.Request) {

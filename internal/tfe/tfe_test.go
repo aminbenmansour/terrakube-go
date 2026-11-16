@@ -23,16 +23,20 @@ type stubQuerier struct {
 	org    store.Organization
 	orgErr error
 
-	workspaces    []store.Workspace
-	workspacesErr error
-	workspace     store.Workspace
-	workspaceErr  error
-	createdWS     *store.CreateWorkspaceParams
-	lockParams    *store.SetWorkspaceLockParams
+	workspaces         []store.Workspace
+	workspacesErr      error
+	workspace          store.Workspace
+	workspaceErr       error
+	workspaceByNameErr error
+	createdWS          *store.CreateWorkspaceParams
+	lockParams         *store.SetWorkspaceLockParams
 
 	tags                     []store.Tag
 	workspaceTags            []store.Workspacetag
 	workspaceTagsByWorkspace map[string][]store.Workspacetag
+	createdTag               *store.CreateTagParams
+	createdWorkspaceTag      *store.CreateWorkspaceTagParams
+	updatedWorkspaceTag      *store.UpdateWorkspaceTagValueParams
 
 	projects    []store.Project
 	projectsErr error
@@ -50,7 +54,7 @@ func (s *stubQuerier) ListWorkspacesByOrganization(context.Context, string) ([]s
 }
 
 func (s *stubQuerier) GetWorkspaceByName(context.Context, store.GetWorkspaceByNameParams) (store.Workspace, error) {
-	return s.workspace, s.workspaceErr
+	return s.workspace, s.workspaceByNameErr
 }
 
 func (s *stubQuerier) GetWorkspace(context.Context, string) (store.Workspace, error) {
@@ -83,6 +87,51 @@ func (s *stubQuerier) ListWorkspaceTagsByWorkspace(_ context.Context, workspaceI
 		return s.workspaceTagsByWorkspace[workspaceID], nil
 	}
 	return s.workspaceTags, nil
+}
+
+func (s *stubQuerier) GetTagByName(_ context.Context, arg store.GetTagByNameParams) (store.Tag, error) {
+	for _, tag := range s.tags {
+		if tag.OrganizationID == arg.OrganizationID && tag.Name == arg.Name {
+			return tag, nil
+		}
+	}
+	return store.Tag{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateTag(_ context.Context, arg store.CreateTagParams) (store.Tag, error) {
+	s.createdTag = &arg
+	tag := store.Tag{ID: arg.ID, Name: arg.Name, OrganizationID: arg.OrganizationID}
+	s.tags = append(s.tags, tag)
+	return tag, nil
+}
+
+func (s *stubQuerier) CreateWorkspaceTag(_ context.Context, arg store.CreateWorkspaceTagParams) (store.Workspacetag, error) {
+	s.createdWorkspaceTag = &arg
+	if s.workspaceTagsByWorkspace == nil {
+		s.workspaceTagsByWorkspace = map[string][]store.Workspacetag{}
+	}
+	workspaceTag := store.Workspacetag{
+		ID:          arg.ID,
+		TagID:       arg.TagID,
+		TagValue:    arg.TagValue,
+		WorkspaceID: arg.WorkspaceID,
+	}
+	s.workspaceTagsByWorkspace[arg.WorkspaceID] = append(s.workspaceTagsByWorkspace[arg.WorkspaceID], workspaceTag)
+	return workspaceTag, nil
+}
+
+func (s *stubQuerier) UpdateWorkspaceTagValue(_ context.Context, arg store.UpdateWorkspaceTagValueParams) (store.Workspacetag, error) {
+	s.updatedWorkspaceTag = &arg
+	for workspaceID, list := range s.workspaceTagsByWorkspace {
+		for i := range list {
+			if list[i].ID == arg.ID {
+				list[i].TagValue = arg.TagValue
+				s.workspaceTagsByWorkspace[workspaceID] = list
+				return list[i], nil
+			}
+		}
+	}
+	return store.Workspacetag{}, pgx.ErrNoRows
 }
 
 func (s *stubQuerier) ListProjectsByOrganization(context.Context, string) ([]store.Project, error) {
@@ -319,9 +368,9 @@ func TestListWorkspacesTagFilter(t *testing.T) {
 
 func TestCreateWorkspace(t *testing.T) {
 	q := &stubQuerier{
-		org:          store.Organization{ID: "org-1", Name: "acme", ExecutionMode: "remote"},
-		workspace:    store.Workspace{ID: "ws-new", Name: "dev", OrganizationID: "org-1", GlobalRemoteState: true},
-		workspaceErr: pgx.ErrNoRows,
+		org:                store.Organization{ID: "org-1", Name: "acme", ExecutionMode: "remote"},
+		workspace:          store.Workspace{ID: "ws-new", Name: "dev", OrganizationID: "org-1", GlobalRemoteState: true},
+		workspaceByNameErr: pgx.ErrNoRows,
 	}
 	handler := newTestAPI(t, q)
 
@@ -407,6 +456,132 @@ func TestProjects(t *testing.T) {
 	}
 	if q.createdProj == nil || q.createdProj.Name != "app" {
 		t.Errorf("created project = %+v", q.createdProj)
+	}
+}
+
+func TestTagBindingsRoundTrip(t *testing.T) {
+	q := &stubQuerier{
+		org:       store.Organization{ID: "org-1", Name: "acme"},
+		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1", GlobalRemoteState: true},
+	}
+	handler := newTestAPI(t, q)
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/workspaces/ws-1/tag-bindings", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("initial list status = %d, want 200; body = %s", rec.Code, rec.Body.String())
+	}
+
+	body := `{"data":[{"type":"tag-bindings","attributes":{"key":"env","value":"dev"}}]}`
+	req := httptest.NewRequest(http.MethodPatch, "/workspaces/ws-1/tag-bindings", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("patch status = %d, want 200; body = %s", rec.Code, rec.Body.String())
+	}
+	if q.createdTag == nil || q.createdTag.Name != "env" {
+		t.Fatalf("created tag = %+v", q.createdTag)
+	}
+	if q.createdWorkspaceTag == nil || q.createdWorkspaceTag.TagValue == nil || *q.createdWorkspaceTag.TagValue != "dev" {
+		t.Fatalf("created workspace tag = %+v", q.createdWorkspaceTag)
+	}
+
+	body = `{"data":[{"type":"tag-bindings","attributes":{"key":"env","value":"prod"}}]}`
+	req = httptest.NewRequest(http.MethodPatch, "/workspaces/ws-1/tag-bindings", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("update status = %d, want 200; body = %s", rec.Code, rec.Body.String())
+	}
+	if q.updatedWorkspaceTag == nil || q.updatedWorkspaceTag.TagValue == nil || *q.updatedWorkspaceTag.TagValue != "prod" {
+		t.Fatalf("updated workspace tag = %+v", q.updatedWorkspaceTag)
+	}
+
+	body = `{"data":[{"type":"tags","attributes":{"name":"team"}}]}`
+	req = httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/relationships/tags", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("tags status = %d, want 204; body = %s", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/workspaces/ws-1/tag-bindings", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("final list status = %d, want 200", rec.Code)
+	}
+	var doc struct {
+		Data []struct {
+			Attributes map[string]any `json:"attributes"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(doc.Data) != 2 {
+		t.Fatalf("bindings = %+v, want 2", doc.Data)
+	}
+	values := map[string]string{}
+	for _, item := range doc.Data {
+		values[item.Attributes["key"].(string)] = item.Attributes["value"].(string)
+	}
+	if values["env"] != "prod" || values["team"] != "" {
+		t.Errorf("bindings = %#v", values)
+	}
+}
+
+func TestTagBindingsRejectEmptyKey(t *testing.T) {
+	q := &stubQuerier{
+		org:       store.Organization{ID: "org-1", Name: "acme"},
+		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1", GlobalRemoteState: true},
+	}
+	handler := newTestAPI(t, q)
+
+	body := `{"data":[{"type":"tag-bindings","attributes":{"key":"","value":"x"}}]}`
+	req := httptest.NewRequest(http.MethodPatch, "/workspaces/ws-1/tag-bindings", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want 422; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestCreateWorkspaceWithTags(t *testing.T) {
+	q := &stubQuerier{
+		org:                store.Organization{ID: "org-1", Name: "acme", ExecutionMode: "remote"},
+		workspace:          store.Workspace{ID: "ws-new", Name: "tagged", OrganizationID: "org-1", GlobalRemoteState: true},
+		workspaceByNameErr: pgx.ErrNoRows,
+	}
+	handler := newTestAPI(t, q)
+
+	body := `{"data":{"type":"workspaces","attributes":{"name":"tagged"},"relationships":{"tags":{"data":[{"type":"tags","attributes":{"name":"team"}}]},"tag-bindings":{"data":[{"type":"tag-bindings","attributes":{"key":"env","value":"dev"}}]}}}}`
+	req := httptest.NewRequest(http.MethodPost, "/organizations/acme/workspaces", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201; body = %s", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/workspaces/ws-new/tag-bindings", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("list status = %d, want 200; body = %s", rec.Code, rec.Body.String())
+	}
+	var doc struct {
+		Data []struct {
+			Attributes map[string]any `json:"attributes"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(doc.Data) != 2 {
+		t.Fatalf("bindings = %+v, want 2", doc.Data)
 	}
 }
 

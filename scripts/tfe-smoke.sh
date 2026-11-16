@@ -109,6 +109,17 @@ created=$(req -X POST "${TFE}/organizations/${name}/workspaces" -d "{
 [[ "$created" == "tfe-created" ]] || { echo "FAIL: create workspace" >&2; exit 1; }
 echo "ok: create workspace"
 
+binding=$(req -X PATCH "${TFE}/workspaces/${ws_id}/tag-bindings" -d '{
+  "data": [{"type": "tag-bindings", "attributes": {"key": "env", "value": "smoke"}}]
+}' | jq -r '.data[0].attributes.key')
+[[ "$binding" == "env" ]] || { echo "FAIL: tag binding write" >&2; exit 1; }
+req -X POST "${TFE}/workspaces/${ws_id}/relationships/tags" -d '{
+  "data": [{"type": "tags", "attributes": {"name": "team"}}]
+}' >/dev/null
+count=$(req "${TFE}/workspaces/${ws_id}/tag-bindings" | jq '.data | length')
+[[ "$count" == "2" ]] || { echo "FAIL: tag binding count (${count})" >&2; exit 1; }
+echo "ok: tag bindings"
+
 locked=$(req -X POST "${TFE}/workspaces/${ws_id}/actions/lock" | jq -r '.data.attributes.locked')
 [[ "$locked" == "true" ]] || { echo "FAIL: lock workspace" >&2; exit 1; }
 expect_status 409 "$(status -X POST "${TFE}/workspaces/${ws_id}/actions/lock")" "lock conflict"

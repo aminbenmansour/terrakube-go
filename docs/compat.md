@@ -74,9 +74,16 @@ Source: `api/.../plugin/state/RemoteTfeController.java`. All responses use
 | GET | `/applies/logs/{a}/{b}` | Apply log |
 
 Implemented in the M3 core slice: `ping`, organization lookup, entitlement-set,
-capacity, workspace list/get/create/update, workspace lock/unlock, and project
-list/create. Configuration versions, runs, state versions, policy checks and
-logs are the remaining M3 work.
+capacity, workspace list/get/create/update, workspace lock/unlock, project
+list/create, and workspace tag bindings. Configuration versions, runs, state
+versions, policy checks and logs are the remaining M3 work.
+
+Tag bindings use `GET`/`PATCH /workspaces/{id}/tag-bindings` for key/value tags
+and `POST /workspaces/{id}/relationships/tags` for legacy key-only tags. Keys
+are at most 128 characters, values at most 256, and a workspace has at most 10
+tags. `PATCH` keeps bindings that are absent from the request, matching upstream.
+Workspace creation accepts both `relationships.tags` and
+`relationships.tag-bindings`.
 
 Authentication for this surface is a bearer token. During local development the
 `TERRAKUBE_AUTH_TOKEN` value is accepted; internal executor JWTs are also
