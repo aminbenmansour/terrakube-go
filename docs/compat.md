@@ -107,11 +107,12 @@ matching the upstream controller.
 Runs are served at `POST /runs`, `GET /runs/{id}`,
 `GET /workspaces/{id}/runs`, `GET /organizations/{name}/runs/queue`,
 `POST /runs/{id}/actions/apply` and `POST /runs/{id}/actions/discard`. Creation
-validates the workspace and uploaded configuration version, then creates a
-`pending` job and returns the upstream run shape (`run-<job id>`). Run events
-and policy checks currently return empty lists; plan/apply resources and their
-log endpoints expose the job output. Apply and discard update the job status;
-executor-driven transitions remain M4 work.
+validates the workspace and uploaded configuration version, creates a `pending`
+job, publishes its ID to the Redis Stream `terrakube:jobs`, and returns the
+upstream run shape (`run-<job id>`). Run events and policy checks currently
+return empty lists; plan/apply resources and their log endpoints expose the job
+output. Apply and discard update the job status; executor-driven transitions
+remain M4 work.
 
 Authentication for the remaining surface is a bearer token. During local development the
 `TERRAKUBE_AUTH_TOKEN` value is accepted; internal executor JWTs are also
