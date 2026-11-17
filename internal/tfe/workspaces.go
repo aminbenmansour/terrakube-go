@@ -312,8 +312,9 @@ func (a *API) lockWorkspace(w http.ResponseWriter, r *http.Request) {
 	}
 
 	locked, err := a.deps.Store.SetWorkspaceLock(r.Context(), store.SetWorkspaceLockParams{
-		ID:     ws.ID,
-		Locked: true,
+		ID:              ws.ID,
+		Locked:          true,
+		LockDescription: ws.LockDescription,
 	})
 	if err != nil {
 		if !a.writeStoreError(w, "lock workspace", err) {
