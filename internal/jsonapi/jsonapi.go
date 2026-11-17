@@ -26,11 +26,28 @@ type Resource struct {
 	Meta          map[string]any          `json:"meta,omitempty"`
 }
 
-// Relationship is a to-one relationship in a resource object.
+// Relationship is a to-one or to-many relationship in a resource object.
+// Data is used for to-one links; DataList is used for to-many links. A non-nil
+// empty DataList marshals as an empty array, which is how upstream exposes
+// run-events.
 type Relationship struct {
-	Data  *ResourceIdentifier `json:"data,omitempty"`
-	Links map[string]any      `json:"links,omitempty"`
-	Meta  map[string]any      `json:"meta,omitempty"`
+	Data     *ResourceIdentifier  `json:"data,omitempty"`
+	DataList []ResourceIdentifier `json:"-"`
+	Links    map[string]any       `json:"links,omitempty"`
+	Meta     map[string]any       `json:"meta,omitempty"`
+}
+
+// MarshalJSON emits either a to-one data object or a to-many data array.
+func (r Relationship) MarshalJSON() ([]byte, error) {
+	if r.DataList != nil {
+		return json.Marshal(struct {
+			Data  []ResourceIdentifier `json:"data"`
+			Links map[string]any       `json:"links,omitempty"`
+			Meta  map[string]any       `json:"meta,omitempty"`
+		}{Data: r.DataList, Links: r.Links, Meta: r.Meta})
+	}
+	type alias Relationship
+	return json.Marshal(alias(r))
 }
 
 // ResourceIdentifier identifies a related resource. Attributes is only used
@@ -234,4 +251,14 @@ func RelationshipIdentifiers(data *RequestData, name string) (ids []ResourceIden
 // Link builds a to-one relationship.
 func Link(resourceType, id string) Relationship {
 	return Relationship{Data: &ResourceIdentifier{Type: resourceType, ID: id}}
+}
+
+// LinkList builds a to-many relationship. An empty ids slice is preserved as an
+// empty JSON array rather than being omitted.
+func LinkList(resourceType string, ids ...string) Relationship {
+	data := make([]ResourceIdentifier, 0, len(ids))
+	for _, id := range ids {
+		data = append(data, ResourceIdentifier{Type: resourceType, ID: id})
+	}
+	return Relationship{DataList: data}
 }

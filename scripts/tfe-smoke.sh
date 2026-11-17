@@ -171,6 +171,12 @@ run_number=${run_id#run-}
 [[ "$(req "${TFE}/runs/${run_id}/run-events" | jq -r '.data | length')" == "0" ]] || {
   echo "FAIL: run events" >&2; exit 1;
 }
+[[ "$(req "${TFE}/runs/${run_id}" | jq -r '.data.relationships["run-events"].data | length')" == "0" ]] || {
+  echo "FAIL: run-events relationship" >&2; exit 1;
+}
+[[ "$(req "${TFE}/runs/${run_id}?include=plan,apply" | jq -r '.included | length')" == "2" ]] || {
+  echo "FAIL: run include plan/apply" >&2; exit 1;
+}
 [[ "$(req "${TFE}/plans/${run_number}" | jq -r '.data.type')" == "plans" ]] || {
   echo "FAIL: plan" >&2; exit 1;
 }

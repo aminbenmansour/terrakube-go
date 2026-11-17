@@ -1170,15 +1170,10 @@ func TestCreateGetAndDiscardRun(t *testing.T) {
 	}
 	var doc struct {
 		Data struct {
-			ID            string `json:"id"`
-			Type          string `json:"type"`
-			Attributes    map[string]any
-			Relationships map[string]struct {
-				Data struct {
-					Type string `json:"type"`
-					ID   string `json:"id"`
-				} `json:"data"`
-			} `json:"relationships"`
+			ID            string                     `json:"id"`
+			Type          string                     `json:"type"`
+			Attributes    map[string]any             `json:"attributes"`
+			Relationships map[string]json.RawMessage `json:"relationships"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
@@ -1190,8 +1185,17 @@ func TestCreateGetAndDiscardRun(t *testing.T) {
 	if doc.Data.Attributes["status"] != "pending" {
 		t.Errorf("status = %v", doc.Data.Attributes["status"])
 	}
-	if doc.Data.Relationships["workspace"].Data.ID != "ws-1" {
-		t.Errorf("workspace relationship = %+v", doc.Data.Relationships["workspace"])
+	var workspaceRel struct {
+		Data struct {
+			Type string `json:"type"`
+			ID   string `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(doc.Data.Relationships["workspace"], &workspaceRel); err != nil {
+		t.Fatalf("decode workspace relationship: %v", err)
+	}
+	if workspaceRel.Data.ID != "ws-1" {
+		t.Errorf("workspace relationship = %+v", workspaceRel)
 	}
 	if q.job.Command == nil || *q.job.Command != "plan" {
 		t.Errorf("command = %v", q.job.Command)
@@ -1275,6 +1279,21 @@ func TestRunEventsPlanAndApply(t *testing.T) {
 	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/runs/run-42/run-events", nil))
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"data": []`) {
 		t.Fatalf("run events status = %d; body = %q", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/runs/run-42", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"run-events":{"data":[]}`) {
+		t.Fatalf("run relationships status = %d; body = %s", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/runs/run-42?include=plan,apply", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("run include status = %d; body = %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"included"`) || !strings.Contains(rec.Body.String(), `"type":"plans"`) || !strings.Contains(rec.Body.String(), `"type":"applies"`) {
+		t.Errorf("run include = %s", rec.Body.String())
 	}
 
 	rec = httptest.NewRecorder()
