@@ -86,6 +86,12 @@ tags. `PATCH` keeps bindings that are absent from the request, matching upstream
 Workspace creation accepts both `relationships.tags` and
 `relationships.tag-bindings`.
 
+Workspace locking uses `POST /workspaces/{id}/actions/lock` and
+`/actions/unlock`. Locking preserves any existing `lock_description` (used by
+PR apply locks); unlocking clears it. A locked workspace still accepts run
+creation, matching upstream: the lock blocks dispatch, not the API call. There
+is no `LOCK`/`UNLOCK` method on `/tfstate/v1`.
+
 State versions are served at `POST /workspaces/{id}/state-versions`,
 `GET /state-versions/{id}` and `GET /workspaces/{id}/current-state-version`.
 A supplied `state`/`json-state` is base64 decoded and stored under the M2

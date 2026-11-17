@@ -597,6 +597,37 @@ func TestLockWorkspace(t *testing.T) {
 	}
 }
 
+func TestLockPreservesDescriptionAndUnlockClears(t *testing.T) {
+	description := "PR apply lock"
+	q := &stubQuerier{
+		workspace: store.Workspace{
+			ID:              "ws-1",
+			Name:            "dev",
+			OrganizationID:  "org-1",
+			LockDescription: &description,
+		},
+	}
+	handler := newTestAPI(t, q)
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/actions/lock", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("lock status = %d; body = %s", rec.Code, rec.Body.String())
+	}
+	if q.lockParams == nil || q.lockParams.LockDescription == nil || *q.lockParams.LockDescription != description {
+		t.Fatalf("lock description = %+v, want %q", q.lockParams, description)
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/actions/unlock", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unlock status = %d; body = %s", rec.Code, rec.Body.String())
+	}
+	if q.lockParams == nil || q.lockParams.LockDescription != nil {
+		t.Fatalf("unlock description = %+v, want nil", q.lockParams)
+	}
+}
+
 func TestProjects(t *testing.T) {
 	q := &stubQuerier{
 		org:      store.Organization{ID: "org-1", Name: "acme"},
