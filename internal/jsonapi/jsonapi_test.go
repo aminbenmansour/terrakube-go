@@ -35,6 +35,32 @@ func TestWriteResource(t *testing.T) {
 	}
 }
 
+func TestRelationshipMarshalling(t *testing.T) {
+	resource := Resource{
+		Type: "runs",
+		ID:   "run-1",
+		Relationships: map[string]Relationship{
+			"workspace":  Link("workspaces", "ws-1"),
+			"run-events": LinkList("run-events"),
+			"tags":       LinkList("tags", "a", "b"),
+		},
+	}
+	raw, err := json.Marshal(resource)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	body := string(raw)
+	for _, want := range []string{
+		`"workspace":{"data":{"type":"workspaces","id":"ws-1"}}`,
+		`"run-events":{"data":[]}`,
+		`"tags":{"data":[{"type":"tags","id":"a"},{"type":"tags","id":"b"}]}`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("resource = %s, missing %s", body, want)
+		}
+	}
+}
+
 func TestWriteCollectionTotals(t *testing.T) {
 	rec := httptest.NewRecorder()
 	WriteCollection(rec, http.StatusOK, nil, 3, true)
