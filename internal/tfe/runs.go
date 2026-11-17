@@ -95,6 +95,16 @@ func (a *API) createRun(w http.ResponseWriter, r *http.Request) {
 	if job.Comments == nil {
 		job.Comments = stringPointer("terraform-cli")
 	}
+	if a.deps.Queue == nil {
+		_, _ = a.deps.Store.UpdateJobStatus(r.Context(), store.UpdateJobStatusParams{ID: job.ID, Status: "failed"})
+		a.internalError(w, "enqueue run", errors.New("run queue is not configured"))
+		return
+	}
+	if _, err := a.deps.Queue.EnqueueJob(r.Context(), job.ID); err != nil {
+		_, _ = a.deps.Store.UpdateJobStatus(r.Context(), store.UpdateJobStatusParams{ID: job.ID, Status: "failed"})
+		a.internalError(w, "enqueue run", err)
+		return
+	}
 
 	jsonapi.WriteResource(w, http.StatusCreated, runResource(job, ws))
 }

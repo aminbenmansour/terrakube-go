@@ -4,6 +4,7 @@
 package tfe
 
 import (
+	"context"
 	"crypto/subtle"
 	"errors"
 	"log/slog"
@@ -20,10 +21,16 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
 )
 
+// JobQueue publishes created runs to the executor.
+type JobQueue interface {
+	EnqueueJob(ctx context.Context, jobID int64) (string, error)
+}
+
 // Deps are the collaborators the TFE API needs.
 type Deps struct {
 	Store              store.Querier
 	Storage            storage.Backend
+	Queue              JobQueue
 	Layout             tfstate.Layout
 	Logger             *slog.Logger
 	PublicURL          string

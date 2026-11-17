@@ -5,10 +5,15 @@ package queue
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
+
+// JobsStream is the Redis Stream the API publishes run IDs to and the executor
+// consumes. It is an internal contract, not part of the upstream HTTP API.
+const JobsStream = "terrakube:jobs"
 
 // Queue is a thin Redis Streams client.
 type Queue struct {
@@ -48,6 +53,14 @@ func (q *Queue) Publish(ctx context.Context, stream string, values map[string]an
 		return "", fmt.Errorf("queue: publish to %s: %w", stream, err)
 	}
 	return id, nil
+}
+
+// EnqueueJob publishes a run to the executor queue. The message carries only
+// the job ID; the executor reads the rest of the job from Postgres.
+func (q *Queue) EnqueueJob(ctx context.Context, jobID int64) (string, error) {
+	return q.Publish(ctx, JobsStream, map[string]any{
+		"job_id": strconv.FormatInt(jobID, 10),
+	})
 }
 
 // EnsureGroup creates a consumer group if it does not exist yet.

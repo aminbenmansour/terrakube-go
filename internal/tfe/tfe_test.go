@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -20,6 +21,20 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
 )
+
+// stubJobQueue records enqueued run IDs for handler tests.
+type stubJobQueue struct {
+	enqueued []int64
+	err      error
+}
+
+func (s *stubJobQueue) EnqueueJob(_ context.Context, jobID int64) (string, error) {
+	if s.err != nil {
+		return "", s.err
+	}
+	s.enqueued = append(s.enqueued, jobID)
+	return "1-0", nil
+}
 
 // stubQuerier embeds the generated interface so tests only implement the
 // methods they exercise.
@@ -296,6 +311,11 @@ func newTestAPI(t *testing.T, q store.Querier) http.Handler {
 
 func newTestAPIWithStorage(t *testing.T, q store.Querier) (http.Handler, storage.Backend) {
 	t.Helper()
+	return newTestAPIWithQueue(t, q, &stubJobQueue{})
+}
+
+func newTestAPIWithQueue(t *testing.T, q store.Querier, jq JobQueue) (http.Handler, storage.Backend) {
+	t.Helper()
 	backend, err := storage.NewLocal(t.TempDir())
 	if err != nil {
 		t.Fatalf("create local storage: %v", err)
@@ -303,6 +323,7 @@ func newTestAPIWithStorage(t *testing.T, q store.Querier) (http.Handler, storage
 	return New(Deps{
 		Store:              q,
 		Storage:            backend,
+		Queue:              jq,
 		Layout:             tfstate.NewLayout("local"),
 		PublicURL:          "https://terrakube.local",
 		UploadTicketSecret: "test-secret",
@@ -1007,7 +1028,8 @@ func TestCreateGetAndDiscardRun(t *testing.T) {
 			Status:      stringPtr("uploaded"),
 		},
 	}
-	handler := newTestAPI(t, q)
+	jq := &stubJobQueue{}
+	handler, _ := newTestAPIWithQueue(t, q, jq)
 
 	body := `{"data":{"type":"runs","attributes":{"is-destroy":false,"auto-apply":false,"refresh":true},"relationships":{"workspace":{"data":{"type":"workspaces","id":"ws-1"}},"configuration-version":{"data":{"type":"configuration-versions","id":"cv-1"}}}}}`
 	req := httptest.NewRequest(http.MethodPost, "/runs", strings.NewReader(body))
@@ -1045,6 +1067,9 @@ func TestCreateGetAndDiscardRun(t *testing.T) {
 	if q.job.Command == nil || *q.job.Command != "plan" {
 		t.Errorf("command = %v", q.job.Command)
 	}
+	if len(jq.enqueued) != 1 || jq.enqueued[0] != 42 {
+		t.Errorf("enqueued = %v, want [42]", jq.enqueued)
+	}
 
 	rec = httptest.NewRecorder()
 	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/runs/run-42", nil))
@@ -1059,6 +1084,31 @@ func TestCreateGetAndDiscardRun(t *testing.T) {
 	}
 	if q.updatedJob == nil || q.updatedJob.Status != "cancelled" {
 		t.Fatalf("updated job = %+v", q.updatedJob)
+	}
+}
+
+func TestCreateRunEnqueueFailure(t *testing.T) {
+	q := &stubQuerier{
+		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1"},
+		content: store.Content{
+			ID:          "cv-1",
+			WorkspaceID: stringPtr("ws-1"),
+			Status:      stringPtr("uploaded"),
+		},
+	}
+	jq := &stubJobQueue{err: errors.New("redis down")}
+	handler, _ := newTestAPIWithQueue(t, q, jq)
+
+	body := `{"data":{"type":"runs","relationships":{"workspace":{"data":{"type":"workspaces","id":"ws-1"}},"configuration-version":{"data":{"type":"configuration-versions","id":"cv-1"}}}}}`
+	req := httptest.NewRequest(http.MethodPost, "/runs", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500; body = %s", rec.Code, rec.Body.String())
+	}
+	if q.job.Status != "failed" {
+		t.Errorf("job status = %q, want failed", q.job.Status)
 	}
 }
 
