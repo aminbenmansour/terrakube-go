@@ -92,6 +92,7 @@ func New(deps Deps) http.Handler {
 		r.Post("/workspaces/{workspaceID}/state-versions", a.createStateVersion)
 		r.Get("/state-versions/{historyID}", a.getStateVersion)
 		r.Get("/workspaces/{workspaceID}/current-state-version", a.getCurrentStateVersion)
+		r.Get("/workspaces/{workspaceID}/current-state-version-outputs", a.getCurrentStateVersionOutputs)
 
 		r.Post("/workspaces/{workspaceID}/configuration-versions", a.createConfigurationVersion)
 		r.Get("/configuration-versions/{configurationID}", a.getConfigurationVersion)

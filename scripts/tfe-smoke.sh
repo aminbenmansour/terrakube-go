@@ -120,12 +120,18 @@ count=$(req "${TFE}/workspaces/${ws_id}/tag-bindings" | jq '.data | length')
 [[ "$count" == "2" ]] || { echo "FAIL: tag binding count (${count})" >&2; exit 1; }
 echo "ok: tag bindings"
 
-state_b64=$(printf '{"version":4,"terraform_version":"1.9.0","serial":3,"lineage":"smoke-lineage"}' | base64 -w0)
+state_b64=$(printf '{"version":4,"terraform_version":"1.9.0","serial":3,"lineage":"smoke-lineage","outputs":{"smoke":{"value":"ok","type":"string","sensitive":false}}}' | base64 -w0)
 state_version=$(req -X POST "${TFE}/workspaces/${ws_id}/state-versions" -d "{
   \"data\": {\"type\": \"state-versions\", \"attributes\": {\"state\": \"${state_b64}\"}}
 }" | jq -r '.data.id')
 state_status=$(req "${TFE}/state-versions/${state_version}" | jq -r '.data.attributes.status')
 [[ "$state_status" == "finalized" ]] || { echo "FAIL: state version status (${state_status})" >&2; exit 1; }
+[[ "$(req "${TFE}/workspaces/${ws_id}/current-state-version" | jq -r '.data.attributes.serial')" == "3" ]] || {
+  echo "FAIL: current state version" >&2; exit 1;
+}
+[[ "$(req "${TFE}/workspaces/${ws_id}/current-state-version-outputs" | jq -r '.data[0].attributes.value')" == "ok" ]] || {
+  echo "FAIL: current state outputs" >&2; exit 1;
+}
 echo "ok: state versions"
 
 config_response=$(req -X POST "${TFE}/workspaces/${ws_id}/configuration-versions" -d '{

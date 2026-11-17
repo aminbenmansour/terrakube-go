@@ -91,8 +91,11 @@ State versions are served at `POST /workspaces/{id}/state-versions`,
 A supplied `state`/`json-state` is base64 decoded and stored under the M2
 `state/...` layout, with a dummy completed job and step matching upstream.
 Omitting `state` returns a `pending` version with hosted upload URLs backed by
-`temp_archive`, as upstream does. `current-state-version` reads the current
-backend state and returns its serial, Terraform version and `finalized` status.
+`temp_archive`, as upstream does. Supplying `state` also overwrites the current
+backend state, matching upstream `uploadState`. `current-state-version` reads the
+current backend state and returns its serial, Terraform version and `finalized`
+status. `GET /workspaces/{id}/current-state-version-outputs` exposes the root
+module outputs as `state-version-outputs` resources.
 
 Configuration versions are served at
 `POST /workspaces/{id}/configuration-versions` and
