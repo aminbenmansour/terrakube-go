@@ -8,6 +8,15 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Content struct {
+	ID            string  `json:"id"`
+	AutoQueueRuns bool    `json:"auto_queue_runs"`
+	Source        *string `json:"source"`
+	Speculative   *bool   `json:"speculative"`
+	Status        *string `json:"status"`
+	WorkspaceID   *string `json:"workspace_id"`
+}
+
 type History struct {
 	ID           string             `json:"id"`
 	WorkspaceID  string             `json:"workspace_id"`
