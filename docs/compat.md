@@ -225,7 +225,19 @@ Current M1 limitations (tracked for later milestones):
   `attr==value` / `attr==prefix*` are not implemented.
 - Variable values are stored in plaintext. Upstream encrypts them with
   `io.terrakube.encryption.*`; this must land before anything is exposed.
-- `tag` and `workspacetag` tables exist but have no handlers yet.
+- `tag` and `workspacetag` are implemented through the TFE tag-binding
+  endpoints; the Elide-style management endpoints are not.
+
+## Compatibility tests
+
+- `internal/tfe/contract_test.go` pins the JSON:API media type, success and
+  error envelopes, discovery, ping headers and the main TFE status codes.
+- `internal/tfe/*_test.go` cover handler behaviour and edge cases.
+- `scripts/tfe-smoke.sh` exercises the real API for discovery, workspaces, tags,
+  state, configuration versions, runs, locking and projects.
+- `scripts/smoke.sh` and `scripts/state-smoke.sh` cover the management API and
+  state backend.
+- New TFE endpoints must add contract coverage in the same change.
 
 ## Executor contract
 
