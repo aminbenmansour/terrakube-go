@@ -138,6 +138,12 @@ func (a *API) createStateVersion(w http.ResponseWriter, r *http.Request) {
 			a.internalError(w, "store raw state", err)
 			return
 		}
+		// Upstream uploadState overwrites the current backend state as well as the
+		// history object, so a TFE state upload immediately becomes current.
+		if err := a.deps.Storage.Put(r.Context(), a.deps.Layout.CurrentState(ws.OrganizationID, ws.ID), bytes.NewReader(stateBytes), int64(len(stateBytes)), "application/json"); err != nil {
+			a.internalError(w, "store current state", err)
+			return
+		}
 	} else {
 		// Match upstream: when the client defers the state upload, expose pending
 		// archive URLs instead of pretending the version is finalized.

@@ -855,6 +855,46 @@ func TestCreateStateVersionPendingUpload(t *testing.T) {
 	}
 }
 
+func TestCreateStateVersionUpdatesCurrentState(t *testing.T) {
+	state := `{"version":4,"terraform_version":"1.9.0","serial":7,"lineage":"lineage-7","outputs":{"name":{"value":"demo","type":"string","sensitive":false}}}`
+	q := &stubQuerier{
+		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1"},
+	}
+	handler, _ := newTestAPIWithStorage(t, q)
+
+	body := fmt.Sprintf(`{"data":{"type":"state-versions","attributes":{"state":"%s"}}}`, base64.StdEncoding.EncodeToString([]byte(state)))
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/state-versions", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create status = %d, want 201; body = %s", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/workspaces/ws-1/current-state-version", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("current state status = %d, want 200; body = %s", rec.Code, rec.Body.String())
+	}
+	var current struct {
+		Data struct {
+			Attributes map[string]any `json:"attributes"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &current); err != nil {
+		t.Fatalf("decode current state: %v", err)
+	}
+	if current.Data.Attributes["serial"] != float64(7) {
+		t.Errorf("serial = %v, want 7", current.Data.Attributes["serial"])
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/workspaces/ws-1/current-state-version-outputs", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"name":"name"`) || !strings.Contains(rec.Body.String(), `"value":"demo"`) {
+		t.Fatalf("outputs status = %d; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestCurrentStateVersion(t *testing.T) {
 	state := `{"version":4,"terraform_version":"1.10.1","serial":12,"lineage":"lineage-12"}`
 	q := &stubQuerier{
@@ -900,6 +940,64 @@ func TestCurrentStateVersionMissing(t *testing.T) {
 	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/workspaces/ws-1/current-state-version", nil))
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestCurrentStateVersionOutputs(t *testing.T) {
+	state := `{"version":4,"outputs":{"z_count":{"value":3,"type":"number","sensitive":false},"a_name":{"value":"demo","type":"string","sensitive":true}}}`
+	q := &stubQuerier{
+		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1"},
+	}
+	handler, backend := newTestAPIWithStorage(t, q)
+	layout := tfstate.NewLayout("local")
+	if err := backend.Put(context.Background(), layout.CurrentState("org-1", "ws-1"), strings.NewReader(state), int64(len(state)), "application/json"); err != nil {
+		t.Fatalf("put current state: %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/workspaces/ws-1/current-state-version-outputs", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body = %s", rec.Code, rec.Body.String())
+	}
+	var doc struct {
+		Data []struct {
+			Type       string         `json:"type"`
+			Attributes map[string]any `json:"attributes"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(doc.Data) != 2 {
+		t.Fatalf("outputs = %d, want 2; body = %s", len(doc.Data), rec.Body.String())
+	}
+	if doc.Data[0].Type != "state-version-outputs" || doc.Data[0].Attributes["name"] != "a_name" {
+		t.Errorf("first output = %+v", doc.Data[0])
+	}
+	if doc.Data[0].Attributes["value"] != "demo" || doc.Data[0].Attributes["sensitive"] != true {
+		t.Errorf("string output = %+v", doc.Data[0].Attributes)
+	}
+	if doc.Data[0].Attributes["type"] != "string" || doc.Data[0].Attributes["detailed-type"] != "string" {
+		t.Errorf("string types = %+v", doc.Data[0].Attributes)
+	}
+	if doc.Data[1].Attributes["type"] != "string" || doc.Data[1].Attributes["detailed-type"] != "string" {
+		t.Errorf("number types = %+v", doc.Data[1].Attributes)
+	}
+}
+
+func TestCurrentStateVersionOutputsMissing(t *testing.T) {
+	q := &stubQuerier{
+		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1"},
+	}
+	handler := newTestAPI(t, q)
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/workspaces/ws-1/current-state-version-outputs", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body = %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"data":[]`) {
+		t.Errorf("body = %s, want empty data", rec.Body.String())
 	}
 }
 
