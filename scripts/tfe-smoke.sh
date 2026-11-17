@@ -141,6 +141,41 @@ downloaded=$(curl -fsS "${TFE}/configuration-versions/${config_id}/terraformCont
 [[ "$downloaded" == "smoke-configuration" ]] || { echo "FAIL: configuration download" >&2; exit 1; }
 echo "ok: configuration versions"
 
+run_response=$(req -X POST "${TFE}/runs" -d "{
+  \"data\": {
+    \"type\": \"runs\",
+    \"attributes\": {\"is-destroy\": false, \"auto-apply\": false, \"refresh\": true},
+    \"relationships\": {
+      \"workspace\": {\"data\": {\"type\": \"workspaces\", \"id\": \"${ws_id}\"}},
+      \"configuration-version\": {\"data\": {\"type\": \"configuration-versions\", \"id\": \"${config_id}\"}}
+    }
+  }
+}")
+run_id=$(jq -r '.data.id' <<<"$run_response")
+run_number=${run_id#run-}
+[[ "$(jq -r '.data.attributes.status' <<<"$run_response")" == "pending" ]] || {
+  echo "FAIL: create run" >&2; exit 1;
+}
+[[ "$(req "${TFE}/workspaces/${ws_id}/runs" | jq -r '.data[0].id')" == "$run_id" ]] || {
+  echo "FAIL: list workspace runs" >&2; exit 1;
+}
+[[ "$(req "${TFE}/organizations/${name}/runs/queue" | jq -r '.data[0].id')" == "$run_id" ]] || {
+  echo "FAIL: run queue" >&2; exit 1;
+}
+[[ "$(req "${TFE}/runs/${run_id}/run-events" | jq -r '.data | length')" == "0" ]] || {
+  echo "FAIL: run events" >&2; exit 1;
+}
+[[ "$(req "${TFE}/plans/${run_number}" | jq -r '.data.type')" == "plans" ]] || {
+  echo "FAIL: plan" >&2; exit 1;
+}
+[[ "$(req "${TFE}/applies/${run_number}" | jq -r '.data.type')" == "applies" ]] || {
+  echo "FAIL: apply" >&2; exit 1;
+}
+[[ "$(req -X POST "${TFE}/runs/${run_id}/actions/discard" | jq -r '.data.attributes.status')" == "unknown" ]] || {
+  echo "FAIL: discard run" >&2; exit 1;
+}
+echo "ok: runs"
+
 locked=$(req -X POST "${TFE}/workspaces/${ws_id}/actions/lock" | jq -r '.data.attributes.locked')
 [[ "$locked" == "true" ]] || { echo "FAIL: lock workspace" >&2; exit 1; }
 expect_status 409 "$(status -X POST "${TFE}/workspaces/${ws_id}/actions/lock")" "lock conflict"

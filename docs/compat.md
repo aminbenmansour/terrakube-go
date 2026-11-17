@@ -75,8 +75,9 @@ Source: `api/.../plugin/state/RemoteTfeController.java`. All responses use
 
 Implemented in the M3 core slice: `ping`, organization lookup, entitlement-set,
 capacity, workspace list/get/create/update, workspace lock/unlock, project
-list/create, and workspace tag bindings. Configuration versions, runs, state
-versions, policy checks and logs are the remaining M3 work.
+list/create, workspace tag bindings, state versions, configuration versions and
+run lifecycle endpoints. Policy-check details, log streaming and executor-driven
+run transitions are the remaining M3/M4 work.
 
 Tag bindings use `GET`/`PATCH /workspaces/{id}/tag-bindings` for key/value tags
 and `POST /workspaces/{id}/relationships/tags` for legacy key-only tags. Keys
@@ -102,6 +103,15 @@ with `PUT /configuration-versions/{id}?ticket=...`, stored at
 `GET /configuration-versions/{id}/terraformContent.tar.gz` returns the stored
 tarball. The upload and download endpoints do not require a bearer token,
 matching the upstream controller.
+
+Runs are served at `POST /runs`, `GET /runs/{id}`,
+`GET /workspaces/{id}/runs`, `GET /organizations/{name}/runs/queue`,
+`POST /runs/{id}/actions/apply` and `POST /runs/{id}/actions/discard`. Creation
+validates the workspace and uploaded configuration version, then creates a
+`pending` job and returns the upstream run shape (`run-<job id>`). Run events
+and policy checks currently return empty lists; plan/apply resources and their
+log endpoints expose the job output. Apply and discard update the job status;
+executor-driven transitions remain M4 work.
 
 Authentication for the remaining surface is a bearer token. During local development the
 `TERRAKUBE_AUTH_TOKEN` value is accepted; internal executor JWTs are also
