@@ -93,7 +93,17 @@ Omitting `state` returns a `pending` version with hosted upload URLs backed by
 `temp_archive`, as upstream does. `current-state-version` reads the current
 backend state and returns its serial, Terraform version and `finalized` status.
 
-Authentication for this surface is a bearer token. During local development the
+Configuration versions are served at
+`POST /workspaces/{id}/configuration-versions` and
+`GET /configuration-versions/{id}`. Creation returns `pending` with an absolute
+`upload-url` carrying an HMAC-signed, one-hour ticket. The tarball is uploaded
+with `PUT /configuration-versions/{id}?ticket=...`, stored at
+`content/{id}/terraformContent.tar.gz`, and the version moves to `uploaded`.
+`GET /configuration-versions/{id}/terraformContent.tar.gz` returns the stored
+tarball. The upload and download endpoints do not require a bearer token,
+matching the upstream controller.
+
+Authentication for the remaining surface is a bearer token. During local development the
 `TERRAKUBE_AUTH_TOKEN` value is accepted; internal executor JWTs are also
 accepted. `GET /ping` is intentionally unauthenticated and returns `404` with
 `TFP-API-Version: 2.5` and `TFP-AppName: Terrakube`, matching upstream.

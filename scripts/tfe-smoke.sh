@@ -128,6 +128,19 @@ state_status=$(req "${TFE}/state-versions/${state_version}" | jq -r '.data.attri
 [[ "$state_status" == "finalized" ]] || { echo "FAIL: state version status (${state_status})" >&2; exit 1; }
 echo "ok: state versions"
 
+config_response=$(req -X POST "${TFE}/workspaces/${ws_id}/configuration-versions" -d '{
+  "data": {"type": "configuration-versions", "attributes": {"speculative": true, "auto-queue-runs": false}}
+}')
+config_id=$(jq -r '.data.id' <<<"$config_response")
+upload_url=$(jq -r '.data.attributes["upload-url"]' <<<"$config_response")
+upload_path=$(printf '%s' "$upload_url" | sed -E 's#^https?://[^/]+##')
+printf 'smoke-configuration' | curl -fsS -X PUT "${ROOT}${upload_path}" --data-binary @- >/dev/null
+config_status=$(req "${TFE}/configuration-versions/${config_id}" | jq -r '.data.attributes.status')
+[[ "$config_status" == "uploaded" ]] || { echo "FAIL: configuration status (${config_status})" >&2; exit 1; }
+downloaded=$(curl -fsS "${TFE}/configuration-versions/${config_id}/terraformContent.tar.gz")
+[[ "$downloaded" == "smoke-configuration" ]] || { echo "FAIL: configuration download" >&2; exit 1; }
+echo "ok: configuration versions"
+
 locked=$(req -X POST "${TFE}/workspaces/${ws_id}/actions/lock" | jq -r '.data.attributes.locked')
 [[ "$locked" == "true" ]] || { echo "FAIL: lock workspace" >&2; exit 1; }
 expect_status 409 "$(status -X POST "${TFE}/workspaces/${ws_id}/actions/lock")" "lock conflict"

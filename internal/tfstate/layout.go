@@ -41,6 +41,12 @@ func (l Layout) Plan(organizationID, workspaceID, jobID, stepID string) string {
 	return fmt.Sprintf("%s/%s/%s/%s/%s/terraformLibrary.tfPlan", l.statePrefix(), organizationID, workspaceID, jobID, stepID)
 }
 
+// Content is the uploaded Terraform configuration tarball for a
+// configuration version. Upstream uses the same key for local and S3 storage.
+func (l Layout) Content(contentID string) string {
+	return fmt.Sprintf("content/%s/terraformContent.tar.gz", contentID)
+}
+
 func (l Layout) statePrefix() string {
 	if l.s3 {
 		return "tfstate"

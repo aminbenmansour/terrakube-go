@@ -101,16 +101,17 @@ func run() error {
 		AuthToken: cfg.AuthToken,
 	}))
 	tfeDeps := tfe.Deps{
-		Store:          store.New(pool),
-		Storage:        storeBackend,
-		Layout:         tfstate.NewLayout(cfg.Storage.Type),
-		Logger:         logger,
-		PublicURL:      cfg.PublicURL,
-		AuthToken:      cfg.AuthToken,
-		InternalAuth:   internalAuth,
-		DexClientID:    cfg.DexClientID,
-		DexIssuerURL:   cfg.DexIssuerURL,
-		TerraformLogin: cfg.TerraformLogin,
+		Store:              store.New(pool),
+		Storage:            storeBackend,
+		Layout:             tfstate.NewLayout(cfg.Storage.Type),
+		Logger:             logger,
+		PublicURL:          cfg.PublicURL,
+		AuthToken:          cfg.AuthToken,
+		UploadTicketSecret: cfg.InternalTokenSecret,
+		InternalAuth:       internalAuth,
+		DexClientID:        cfg.DexClientID,
+		DexIssuerURL:       cfg.DexIssuerURL,
+		TerraformLogin:     cfg.TerraformLogin,
 	}
 	handler.Get("/.well-known/terraform.json", tfe.Discovery(tfeDeps))
 	handler.Mount("/remote/tfe/v2", tfe.New(tfeDeps))
