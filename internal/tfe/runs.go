@@ -106,7 +106,7 @@ func (a *API) createRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonapi.WriteResource(w, http.StatusCreated, runResource(job, ws))
+	a.writeRun(w, http.StatusCreated, job, ws, r.URL.Query().Get("include"))
 }
 
 func (a *API) getRun(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +114,7 @@ func (a *API) getRun(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	jsonapi.WriteResource(w, http.StatusOK, runResource(job, ws))
+	a.writeRun(w, http.StatusOK, job, ws, r.URL.Query().Get("include"))
 }
 
 func (a *API) listWorkspaceRuns(w http.ResponseWriter, r *http.Request) {
@@ -181,7 +181,7 @@ func (a *API) applyRun(w http.ResponseWriter, r *http.Request) {
 		a.internalError(w, "apply run", err)
 		return
 	}
-	jsonapi.WriteResource(w, http.StatusOK, runResource(updated, ws))
+	a.writeRun(w, http.StatusOK, updated, ws, r.URL.Query().Get("include"))
 }
 
 func (a *API) discardRun(w http.ResponseWriter, r *http.Request) {
@@ -201,7 +201,7 @@ func (a *API) discardRun(w http.ResponseWriter, r *http.Request) {
 		a.internalError(w, "discard run", err)
 		return
 	}
-	jsonapi.WriteResource(w, http.StatusOK, runResource(updated, ws))
+	a.writeRun(w, http.StatusOK, updated, ws, r.URL.Query().Get("include"))
 }
 
 func (a *API) getPlan(w http.ResponseWriter, r *http.Request) {
@@ -287,6 +287,24 @@ func (a *API) jobAndWorkspace(w http.ResponseWriter, r *http.Request, param stri
 	return job, ws, true
 }
 
+func (a *API) writeRun(w http.ResponseWriter, status int, job store.Job, ws store.Workspace, include string) {
+	resource := runResource(job, ws)
+	included := make([]jsonapi.Resource, 0, 2)
+	for _, part := range strings.Split(include, ",") {
+		switch strings.TrimSpace(part) {
+		case "plan":
+			included = append(included, planResource(a, job))
+		case "apply":
+			included = append(included, applyResource(a, job))
+		}
+	}
+	if len(included) == 0 {
+		jsonapi.WriteResource(w, status, resource)
+		return
+	}
+	jsonapi.Write(w, status, jsonapi.Document{Data: resource, Included: included})
+}
+
 func runResource(job store.Job, ws store.Workspace) jsonapi.Resource {
 	id := strconv.FormatInt(job.ID, 10)
 	return jsonapi.Resource{
@@ -307,9 +325,10 @@ func runResource(job store.Job, ws store.Workspace) jsonapi.Resource {
 			},
 		},
 		Relationships: map[string]jsonapi.Relationship{
-			"plan":      jsonapi.Link("plans", id),
-			"apply":     jsonapi.Link("applies", id),
-			"workspace": jsonapi.Link("workspaces", ws.ID),
+			"plan":       jsonapi.Link("plans", id),
+			"apply":      jsonapi.Link("applies", id),
+			"workspace":  jsonapi.Link("workspaces", ws.ID),
+			"run-events": jsonapi.LinkList("run-events"),
 		},
 	}
 }
