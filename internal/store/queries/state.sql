@@ -28,6 +28,27 @@ INSERT INTO step (id, job_id, step_number, name, status, log_status, output)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
+-- name: UpdateJobStatus :one
+UPDATE job
+SET status = $2,
+    updated_date = now()
+WHERE id = $1
+RETURNING *;
+
+-- name: ListActiveJobsByWorkspace :many
+SELECT * FROM job
+WHERE workspace_id = $1
+  AND status IN ('pending', 'running', 'queue', 'waitingApproval')
+ORDER BY id DESC;
+
+-- name: ListActiveJobsByOrganization :many
+SELECT j.*
+FROM job j
+JOIN organization o ON o.id = j.organization_id
+WHERE o.name = $1
+  AND j.status IN ('pending', 'running', 'queue', 'waitingApproval')
+ORDER BY j.id ASC;
+
 -- name: ListArchivesByHistory :many
 SELECT * FROM temp_archive WHERE history_id = $1 ORDER BY type;
 

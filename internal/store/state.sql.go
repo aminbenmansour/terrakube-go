@@ -310,6 +310,106 @@ func (q *Queries) GetStep(ctx context.Context, id string) (Step, error) {
 	return i, err
 }
 
+const listActiveJobsByOrganization = `-- name: ListActiveJobsByOrganization :many
+SELECT j.id, j.organization_id, j.workspace_id, j.command, j.status, j.output, j.template_reference, j.tcl, j.via, j.auto_apply, j.deleted, j.comments, j.commit_id, j.approved_by, j.approved_at, j.plan_changes, j.refresh, j.created_date, j.created_by, j.updated_date, j.updated_by
+FROM job j
+JOIN organization o ON o.id = j.organization_id
+WHERE o.name = $1
+  AND j.status IN ('pending', 'running', 'queue', 'waitingApproval')
+ORDER BY j.id ASC
+`
+
+func (q *Queries) ListActiveJobsByOrganization(ctx context.Context, name string) ([]Job, error) {
+	rows, err := q.db.Query(ctx, listActiveJobsByOrganization, name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Job{}
+	for rows.Next() {
+		var i Job
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.WorkspaceID,
+			&i.Command,
+			&i.Status,
+			&i.Output,
+			&i.TemplateReference,
+			&i.Tcl,
+			&i.Via,
+			&i.AutoApply,
+			&i.Deleted,
+			&i.Comments,
+			&i.CommitID,
+			&i.ApprovedBy,
+			&i.ApprovedAt,
+			&i.PlanChanges,
+			&i.Refresh,
+			&i.CreatedDate,
+			&i.CreatedBy,
+			&i.UpdatedDate,
+			&i.UpdatedBy,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listActiveJobsByWorkspace = `-- name: ListActiveJobsByWorkspace :many
+SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by FROM job
+WHERE workspace_id = $1
+  AND status IN ('pending', 'running', 'queue', 'waitingApproval')
+ORDER BY id DESC
+`
+
+func (q *Queries) ListActiveJobsByWorkspace(ctx context.Context, workspaceID string) ([]Job, error) {
+	rows, err := q.db.Query(ctx, listActiveJobsByWorkspace, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Job{}
+	for rows.Next() {
+		var i Job
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.WorkspaceID,
+			&i.Command,
+			&i.Status,
+			&i.Output,
+			&i.TemplateReference,
+			&i.Tcl,
+			&i.Via,
+			&i.AutoApply,
+			&i.Deleted,
+			&i.Comments,
+			&i.CommitID,
+			&i.ApprovedBy,
+			&i.ApprovedAt,
+			&i.PlanChanges,
+			&i.Refresh,
+			&i.CreatedDate,
+			&i.CreatedBy,
+			&i.UpdatedDate,
+			&i.UpdatedBy,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listArchivesByHistory = `-- name: ListArchivesByHistory :many
 SELECT id, type, history_id FROM temp_archive WHERE history_id = $1 ORDER BY type
 `
@@ -349,4 +449,46 @@ type UpdateHistoryOutputParams struct {
 func (q *Queries) UpdateHistoryOutput(ctx context.Context, arg UpdateHistoryOutputParams) error {
 	_, err := q.db.Exec(ctx, updateHistoryOutput, arg.ID, arg.Output)
 	return err
+}
+
+const updateJobStatus = `-- name: UpdateJobStatus :one
+UPDATE job
+SET status = $2,
+    updated_date = now()
+WHERE id = $1
+RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by
+`
+
+type UpdateJobStatusParams struct {
+	ID     int64  `json:"id"`
+	Status string `json:"status"`
+}
+
+func (q *Queries) UpdateJobStatus(ctx context.Context, arg UpdateJobStatusParams) (Job, error) {
+	row := q.db.QueryRow(ctx, updateJobStatus, arg.ID, arg.Status)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.WorkspaceID,
+		&i.Command,
+		&i.Status,
+		&i.Output,
+		&i.TemplateReference,
+		&i.Tcl,
+		&i.Via,
+		&i.AutoApply,
+		&i.Deleted,
+		&i.Comments,
+		&i.CommitID,
+		&i.ApprovedBy,
+		&i.ApprovedAt,
+		&i.PlanChanges,
+		&i.Refresh,
+		&i.CreatedDate,
+		&i.CreatedBy,
+		&i.UpdatedDate,
+		&i.UpdatedBy,
+	)
+	return i, err
 }
