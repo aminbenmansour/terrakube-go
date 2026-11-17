@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	internalauth "github.com/aminbenmansour/terrakube-go/internal/auth"
@@ -21,16 +22,17 @@ import (
 
 // Deps are the collaborators the TFE API needs.
 type Deps struct {
-	Store          store.Querier
-	Storage        storage.Backend
-	Layout         tfstate.Layout
-	Logger         *slog.Logger
-	PublicURL      string
-	AuthToken      string
-	InternalAuth   *internalauth.Validator
-	DexClientID    string
-	DexIssuerURL   string
-	TerraformLogin bool
+	Store              store.Querier
+	Storage            storage.Backend
+	Layout             tfstate.Layout
+	Logger             *slog.Logger
+	PublicURL          string
+	AuthToken          string
+	UploadTicketSecret string
+	InternalAuth       *internalauth.Validator
+	DexClientID        string
+	DexIssuerURL       string
+	TerraformLogin     bool
 }
 
 // API holds the TFE handlers.
@@ -43,6 +45,12 @@ func New(deps Deps) http.Handler {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
+	if deps.UploadTicketSecret == "" {
+		deps.UploadTicketSecret = deps.AuthToken
+	}
+	if deps.UploadTicketSecret == "" {
+		deps.UploadTicketSecret = uuid.NewString()
+	}
 
 	a := &API{deps: deps}
 	r := chi.NewRouter()
@@ -50,6 +58,12 @@ func New(deps Deps) http.Handler {
 	// Upstream's ping handler has no Principal and intentionally returns 404
 	// with TFP headers; go-tfe uses the headers to learn the API version.
 	r.Get("/ping", a.ping)
+
+	// Configuration uploads authenticate with a short-lived signed ticket, not
+	// the bearer token, matching the upstream upload URL. The download endpoint
+	// is also unauthenticated upstream because the executor fetches it.
+	r.Put("/configuration-versions/{configurationID}", a.uploadConfigurationVersion)
+	r.Get("/configuration-versions/{configurationID}/terraformContent.tar.gz", a.downloadConfigurationVersion)
 
 	r.Group(func(r chi.Router) {
 		r.Use(a.authenticate)
@@ -71,6 +85,9 @@ func New(deps Deps) http.Handler {
 		r.Post("/workspaces/{workspaceID}/state-versions", a.createStateVersion)
 		r.Get("/state-versions/{historyID}", a.getStateVersion)
 		r.Get("/workspaces/{workspaceID}/current-state-version", a.getCurrentStateVersion)
+
+		r.Post("/workspaces/{workspaceID}/configuration-versions", a.createConfigurationVersion)
+		r.Get("/configuration-versions/{configurationID}", a.getConfigurationVersion)
 
 		r.Get("/organizations/{organizationName}/projects", a.listProjects)
 		r.Post("/organizations/{organizationName}/projects", a.createProject)

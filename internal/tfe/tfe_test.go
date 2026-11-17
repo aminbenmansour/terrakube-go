@@ -9,8 +9,10 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -54,6 +56,11 @@ type stubQuerier struct {
 	historyErr     error
 	archives       map[string][]store.TempArchive
 	createdArchive *store.CreateArchiveParams
+
+	content              store.Content
+	contentErr           error
+	createdContent       *store.CreateContentParams
+	updatedContentStatus *store.UpdateContentStatusParams
 }
 
 func (s *stubQuerier) GetOrganizationByName(context.Context, string) (store.Organization, error) {
@@ -212,6 +219,35 @@ func (s *stubQuerier) ListArchivesByHistory(_ context.Context, historyID string)
 	return s.archives[historyID], nil
 }
 
+func (s *stubQuerier) CreateContent(_ context.Context, arg store.CreateContentParams) (store.Content, error) {
+	s.createdContent = &arg
+	s.content = store.Content{
+		ID:            arg.ID,
+		AutoQueueRuns: arg.AutoQueueRuns,
+		Source:        arg.Source,
+		Speculative:   arg.Speculative,
+		Status:        arg.Status,
+		WorkspaceID:   arg.WorkspaceID,
+	}
+	return s.content, nil
+}
+
+func (s *stubQuerier) GetContent(context.Context, string) (store.Content, error) {
+	if s.contentErr != nil {
+		return store.Content{}, s.contentErr
+	}
+	if s.content.ID == "" {
+		return store.Content{}, pgx.ErrNoRows
+	}
+	return s.content, nil
+}
+
+func (s *stubQuerier) UpdateContentStatus(_ context.Context, arg store.UpdateContentStatusParams) (store.Content, error) {
+	s.updatedContentStatus = &arg
+	s.content.Status = arg.Status
+	return s.content, nil
+}
+
 func (s *stubQuerier) ListProjectsByOrganization(context.Context, string) ([]store.Project, error) {
 	return s.projects, s.projectsErr
 }
@@ -238,11 +274,12 @@ func newTestAPIWithStorage(t *testing.T, q store.Querier) (http.Handler, storage
 		t.Fatalf("create local storage: %v", err)
 	}
 	return New(Deps{
-		Store:     q,
-		Storage:   backend,
-		Layout:    tfstate.NewLayout("local"),
-		PublicURL: "https://terrakube.local",
-		Logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Store:              q,
+		Storage:            backend,
+		Layout:             tfstate.NewLayout("local"),
+		PublicURL:          "https://terrakube.local",
+		UploadTicketSecret: "test-secret",
+		Logger:             slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}), backend
 }
 
@@ -813,6 +850,122 @@ func TestCurrentStateVersionMissing(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/workspaces/ws-1/current-state-version", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestCreateGetUploadConfigurationVersion(t *testing.T) {
+	q := &stubQuerier{
+		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1"},
+	}
+	handler, backend := newTestAPIWithStorage(t, q)
+
+	body := `{"data":{"type":"configuration-versions","attributes":{"speculative":true,"auto-queue-runs":true}}}`
+	req := httptest.NewRequest(http.MethodPost, "/workspaces/ws-1/configuration-versions", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create status = %d, want 201; body = %s", rec.Code, rec.Body.String())
+	}
+	var doc struct {
+		Data struct {
+			ID         string         `json:"id"`
+			Type       string         `json:"type"`
+			Attributes map[string]any `json:"attributes"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if doc.Data.Type != "configuration-versions" || doc.Data.ID == "" {
+		t.Fatalf("configuration version = %+v", doc.Data)
+	}
+	if doc.Data.Attributes["status"] != "pending" || doc.Data.Attributes["speculative"] != true || doc.Data.Attributes["auto-queue-runs"] != true {
+		t.Errorf("attributes = %#v", doc.Data.Attributes)
+	}
+	uploadURL, _ := doc.Data.Attributes["upload-url"].(string)
+	if uploadURL == "" {
+		t.Fatal("missing upload-url")
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/configuration-versions/"+doc.Data.ID, nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"status":"pending"`) {
+		t.Fatalf("get status = %d; body = %s", rec.Code, rec.Body.String())
+	}
+
+	parsed, err := url.Parse(uploadURL)
+	if err != nil {
+		t.Fatalf("parse upload url: %v", err)
+	}
+	uploadPath := strings.TrimPrefix(parsed.Path, "/remote/tfe/v2")
+	if parsed.RawQuery != "" {
+		uploadPath += "?" + parsed.RawQuery
+	}
+	req = httptest.NewRequest(http.MethodPut, uploadPath, strings.NewReader("configuration-tarball"))
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("upload status = %d, want 200; body = %s", rec.Code, rec.Body.String())
+	}
+	if q.updatedContentStatus == nil || q.updatedContentStatus.Status == nil || *q.updatedContentStatus.Status != "uploaded" {
+		t.Fatalf("updated status = %+v", q.updatedContentStatus)
+	}
+
+	rc, err := backend.Get(context.Background(), tfstate.NewLayout("local").Content(doc.Data.ID))
+	if err != nil {
+		t.Fatalf("read stored content: %v", err)
+	}
+	stored, _ := io.ReadAll(rc)
+	rc.Close()
+	if string(stored) != "configuration-tarball" {
+		t.Errorf("stored content = %q", stored)
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/configuration-versions/"+doc.Data.ID+"/terraformContent.tar.gz", nil))
+	if rec.Code != http.StatusOK || rec.Body.String() != "configuration-tarball" {
+		t.Fatalf("download status = %d; body = %q", rec.Code, rec.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodPut, uploadPath, strings.NewReader("again"))
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("second upload status = %d, want 409; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestConfigurationUploadTickets(t *testing.T) {
+	handler := newTestAPI(t, &stubQuerier{})
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPut, "/configuration-versions/c1", strings.NewReader("x")))
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("missing ticket status = %d, want 401", rec.Code)
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPut, "/configuration-versions/c1?ticket=bad", strings.NewReader("x")))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("invalid ticket status = %d, want 403", rec.Code)
+	}
+
+	api := &API{deps: Deps{UploadTicketSecret: "test-secret"}}
+	expired := api.signUploadTicket("c1", time.Now().Add(-time.Minute))
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPut, "/configuration-versions/c1?ticket="+url.QueryEscape(expired), strings.NewReader("x")))
+	if rec.Code != http.StatusGone {
+		t.Fatalf("expired ticket status = %d, want 410", rec.Code)
+	}
+}
+
+func TestGetConfigurationVersionNotFound(t *testing.T) {
+	handler := newTestAPI(t, &stubQuerier{})
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/configuration-versions/missing", nil))
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404; body = %s", rec.Code, rec.Body.String())
 	}
