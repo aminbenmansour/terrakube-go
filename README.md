@@ -8,8 +8,9 @@ Terraform/OpenTofu CLI (`cloud` block and remote backend), the Terrakube
 Terraform provider and the API clients should keep working while the backend is
 replaced.
 
-> Status: foundation only. The binaries start, migrations run and health
-> endpoints respond. The Terraform workflow is not implemented yet.
+> Status: M2 state backend released as `v0.2.0`. M3 is in progress: discovery,
+> workspaces, tags, state versions, configuration versions, runs and locking are
+> implemented; the executor and run log/event streaming follow in M4.
 
 ## Requirements
 
@@ -89,9 +90,9 @@ Set `TERRAKUBE_STORAGE_TYPE=s3` for S3/MinIO.
 | Milestone | Scope | Status |
 | --- | --- | --- |
 | M0 | Repo, config, migrations, storage, queue, health, CI | done |
-| M1 | JSON:API management API: org, project, workspace, variable, tag | done (core REST; tags pending) |
-| M2 | State backend `/tfstate/v1` (executor HTTP backend) | done — [v0.2.0](https://github.com/aminbenmansour/terrakube-go/releases/tag/v0.2.0) (state-version history follows in M3) |
-| M3 | TFE v2 remote CLI workflow (`terraform init/plan/apply`) | in progress |
+| M1 | JSON:API management API: org, project, workspace, variable, tag | done |
+| M2 | State backend `/tfstate/v1` (executor HTTP backend) | done — [v0.2.0](https://github.com/aminbenmansour/terrakube-go/releases/tag/v0.2.0) |
+| M3 | TFE v2 remote CLI workflow (`terraform init/plan/apply`) | in progress — TFE core, state/config versions and runs landed; executor-driven plan/apply and log streaming remain |
 | M4 | Executor: clone, run, stream logs, store state | planned |
 | M5 | Upstream UI compatibility, GraphQL + subscriptions | planned |
 | M6 | RBAC, templates, VCS, policies, registry, parity | planned |
@@ -102,8 +103,9 @@ Set `TERRAKUBE_STORAGE_TYPE=s3` for S3/MinIO.
   `make tools`.
 - `make check` formats, vets and tests.
 - `scripts/smoke.sh` exercises the management API against a running server.
-- `scripts/tfe-smoke.sh` (or `make tfe-smoke`) exercises discovery and the TFE
-  v2 organization, workspace and project endpoints.
+- `scripts/tfe-smoke.sh` (or `make tfe-smoke`) exercises discovery, TFE v2
+  organizations, workspaces, tags, state versions, configuration versions,
+  runs and locking.
 - `scripts/state-smoke.sh` exercises the state backend against a dedicated
   workspace; see the script header for the required IDs and signing key.
 - `scripts/tofu-state-conformance.sh` runs a real OpenTofu HTTP backend
