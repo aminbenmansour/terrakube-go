@@ -38,6 +38,8 @@ type Querier interface {
 	GetVariable(ctx context.Context, id string) (Variable, error)
 	GetWorkspace(ctx context.Context, id string) (Workspace, error)
 	GetWorkspaceByName(ctx context.Context, arg GetWorkspaceByNameParams) (Workspace, error)
+	ListActiveJobsByOrganization(ctx context.Context, name string) ([]Job, error)
+	ListActiveJobsByWorkspace(ctx context.Context, workspaceID string) ([]Job, error)
 	ListArchivesByHistory(ctx context.Context, historyID string) ([]TempArchive, error)
 	ListOrganizations(ctx context.Context) ([]Organization, error)
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
@@ -50,6 +52,7 @@ type Querier interface {
 	SoftDeleteWorkspace(ctx context.Context, id string) error
 	UpdateContentStatus(ctx context.Context, arg UpdateContentStatusParams) (Content, error)
 	UpdateHistoryOutput(ctx context.Context, arg UpdateHistoryOutputParams) error
+	UpdateJobStatus(ctx context.Context, arg UpdateJobStatusParams) (Job, error)
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) (Organization, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 	UpdateVariable(ctx context.Context, arg UpdateVariableParams) (Variable, error)

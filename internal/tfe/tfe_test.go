@@ -51,6 +51,9 @@ type stubQuerier struct {
 	createdProj *store.CreateProjectParams
 
 	job            store.Job
+	jobErr         error
+	jobs           []store.Job
+	updatedJob     *store.UpdateJobStatusParams
 	step           store.Step
 	history        store.History
 	historyErr     error
@@ -166,6 +169,30 @@ func (s *stubQuerier) CreateJob(_ context.Context, arg store.CreateJobParams) (s
 		CreatedBy:      arg.CreatedBy,
 	}
 	return s.job, nil
+}
+
+func (s *stubQuerier) GetJob(context.Context, int64) (store.Job, error) {
+	if s.jobErr != nil {
+		return store.Job{}, s.jobErr
+	}
+	if s.job.ID == 0 {
+		return store.Job{}, pgx.ErrNoRows
+	}
+	return s.job, nil
+}
+
+func (s *stubQuerier) UpdateJobStatus(_ context.Context, arg store.UpdateJobStatusParams) (store.Job, error) {
+	s.updatedJob = &arg
+	s.job.Status = arg.Status
+	return s.job, nil
+}
+
+func (s *stubQuerier) ListActiveJobsByWorkspace(context.Context, string) ([]store.Job, error) {
+	return s.jobs, nil
+}
+
+func (s *stubQuerier) ListActiveJobsByOrganization(context.Context, string) ([]store.Job, error) {
+	return s.jobs, nil
 }
 
 func (s *stubQuerier) CreateStep(_ context.Context, arg store.CreateStepParams) (store.Step, error) {
@@ -968,6 +995,128 @@ func TestGetConfigurationVersionNotFound(t *testing.T) {
 	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/configuration-versions/missing", nil))
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestCreateGetAndDiscardRun(t *testing.T) {
+	q := &stubQuerier{
+		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1"},
+		content: store.Content{
+			ID:          "cv-1",
+			WorkspaceID: stringPtr("ws-1"),
+			Status:      stringPtr("uploaded"),
+		},
+	}
+	handler := newTestAPI(t, q)
+
+	body := `{"data":{"type":"runs","attributes":{"is-destroy":false,"auto-apply":false,"refresh":true},"relationships":{"workspace":{"data":{"type":"workspaces","id":"ws-1"}},"configuration-version":{"data":{"type":"configuration-versions","id":"cv-1"}}}}}`
+	req := httptest.NewRequest(http.MethodPost, "/runs", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create status = %d, want 201; body = %s", rec.Code, rec.Body.String())
+	}
+	var doc struct {
+		Data struct {
+			ID            string `json:"id"`
+			Type          string `json:"type"`
+			Attributes    map[string]any
+			Relationships map[string]struct {
+				Data struct {
+					Type string `json:"type"`
+					ID   string `json:"id"`
+				} `json:"data"`
+			} `json:"relationships"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if doc.Data.Type != "runs" || doc.Data.ID != "run-42" {
+		t.Fatalf("run = %+v", doc.Data)
+	}
+	if doc.Data.Attributes["status"] != "pending" {
+		t.Errorf("status = %v", doc.Data.Attributes["status"])
+	}
+	if doc.Data.Relationships["workspace"].Data.ID != "ws-1" {
+		t.Errorf("workspace relationship = %+v", doc.Data.Relationships["workspace"])
+	}
+	if q.job.Command == nil || *q.job.Command != "plan" {
+		t.Errorf("command = %v", q.job.Command)
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/runs/run-42", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"id":"run-42"`) {
+		t.Fatalf("get status = %d; body = %s", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/runs/run-42/actions/discard", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("discard status = %d; body = %s", rec.Code, rec.Body.String())
+	}
+	if q.updatedJob == nil || q.updatedJob.Status != "cancelled" {
+		t.Fatalf("updated job = %+v", q.updatedJob)
+	}
+}
+
+func TestListWorkspaceRunsAndQueue(t *testing.T) {
+	q := &stubQuerier{
+		org:       store.Organization{ID: "org-1", Name: "acme"},
+		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1"},
+		jobs: []store.Job{
+			{ID: 42, OrganizationID: "org-1", WorkspaceID: "ws-1", Status: "pending"},
+		},
+	}
+	handler := newTestAPI(t, q)
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/workspaces/ws-1/runs", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"id":"run-42"`) {
+		t.Fatalf("workspace runs status = %d; body = %s", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/organizations/acme/runs/queue", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"id":"run-42"`) {
+		t.Fatalf("queue status = %d; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestRunEventsPlanAndApply(t *testing.T) {
+	q := &stubQuerier{
+		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1"},
+		job:       store.Job{ID: 42, OrganizationID: "org-1", WorkspaceID: "ws-1", Status: "pending", PlanChanges: true},
+	}
+	handler := newTestAPI(t, q)
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/runs/run-42/run-events", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"data": []`) {
+		t.Fatalf("run events status = %d; body = %q", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/plans/42", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"type":"plans"`) {
+		t.Fatalf("plan status = %d; body = %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "/remote/tfe/v2/plans/logs/42/0") {
+		t.Errorf("missing log-read-url: %s", rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/applies/42", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"type":"applies"`) {
+		t.Fatalf("apply status = %d; body = %s", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/plans/logs/42/0?offset=0&limit=10", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("plan logs status = %d", rec.Code)
 	}
 }
 
