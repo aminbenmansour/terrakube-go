@@ -212,8 +212,7 @@ func configurationVersionResource(content store.Content) jsonapi.Resource {
 
 func (a *API) configurationUploadURL(contentID string) string {
 	ticket := a.signUploadTicket(contentID, time.Now().Add(uploadTicketTTL))
-	return fmt.Sprintf("%s/remote/tfe/v2/configuration-versions/%s?ticket=%s",
-		strings.TrimRight(a.deps.PublicURL, "/"), contentID, url.QueryEscape(ticket))
+	return a.tfeURL(fmt.Sprintf("/configuration-versions/%s?ticket=%s", contentID, url.QueryEscape(ticket)))
 }
 
 func (a *API) signUploadTicket(contentID string, expires time.Time) string {
