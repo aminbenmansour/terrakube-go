@@ -9,6 +9,7 @@ import (
 )
 
 type Querier interface {
+	ApproveJob(ctx context.Context, arg ApproveJobParams) (Job, error)
 	CreateArchive(ctx context.Context, arg CreateArchiveParams) (TempArchive, error)
 	CreateContent(ctx context.Context, arg CreateContentParams) (Content, error)
 	CreateHistory(ctx context.Context, arg CreateHistoryParams) (History, error)
@@ -31,9 +32,11 @@ type Querier interface {
 	GetLatestHistory(ctx context.Context, workspaceID string) (History, error)
 	GetOrganization(ctx context.Context, id string) (Organization, error)
 	GetOrganizationByName(ctx context.Context, name string) (Organization, error)
+	GetPendingStepByJob(ctx context.Context, jobID int64) (Step, error)
 	GetProject(ctx context.Context, id string) (Project, error)
 	GetProjectByName(ctx context.Context, arg GetProjectByNameParams) (Project, error)
 	GetStep(ctx context.Context, id string) (Step, error)
+	GetStepByJobAndNumber(ctx context.Context, arg GetStepByJobAndNumberParams) (Step, error)
 	GetTagByName(ctx context.Context, arg GetTagByNameParams) (Tag, error)
 	GetVariable(ctx context.Context, id string) (Variable, error)
 	GetWorkspace(ctx context.Context, id string) (Workspace, error)
@@ -43,18 +46,25 @@ type Querier interface {
 	ListArchivesByHistory(ctx context.Context, historyID string) ([]TempArchive, error)
 	ListOrganizations(ctx context.Context) ([]Organization, error)
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
+	ListStepsByJob(ctx context.Context, jobID int64) ([]Step, error)
 	ListTagsByOrganization(ctx context.Context, organizationID string) ([]Tag, error)
 	ListVariablesByWorkspace(ctx context.Context, workspaceID string) ([]Variable, error)
 	ListWorkspaceTagsByWorkspace(ctx context.Context, workspaceID string) ([]Workspacetag, error)
 	ListWorkspacesByOrganization(ctx context.Context, organizationID string) ([]Workspace, error)
 	ListWorkspacesByProject(ctx context.Context, projectID *string) ([]Workspace, error)
+	SetJobOverrideSource(ctx context.Context, arg SetJobOverrideSourceParams) (Job, error)
+	SetWorkspaceLastJob(ctx context.Context, arg SetWorkspaceLastJobParams) error
 	SetWorkspaceLock(ctx context.Context, arg SetWorkspaceLockParams) (Workspace, error)
 	SoftDeleteWorkspace(ctx context.Context, id string) error
 	UpdateContentStatus(ctx context.Context, arg UpdateContentStatusParams) (Content, error)
 	UpdateHistoryOutput(ctx context.Context, arg UpdateHistoryOutputParams) error
+	UpdateJobOutput(ctx context.Context, arg UpdateJobOutputParams) error
+	UpdateJobPlanChanges(ctx context.Context, arg UpdateJobPlanChangesParams) (Job, error)
 	UpdateJobStatus(ctx context.Context, arg UpdateJobStatusParams) (Job, error)
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) (Organization, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
+	UpdateStepOutput(ctx context.Context, arg UpdateStepOutputParams) error
+	UpdateStepStatus(ctx context.Context, arg UpdateStepStatusParams) (Step, error)
 	UpdateVariable(ctx context.Context, arg UpdateVariableParams) (Variable, error)
 	UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams) (Workspace, error)
 	UpdateWorkspaceTagValue(ctx context.Context, arg UpdateWorkspaceTagValueParams) (Workspacetag, error)

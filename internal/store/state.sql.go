@@ -9,6 +9,52 @@ import (
 	"context"
 )
 
+const approveJob = `-- name: ApproveJob :one
+UPDATE job
+SET approved_by = $2,
+    approved_at = now(),
+    status = 'pending',
+    updated_date = now()
+WHERE id = $1
+RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch
+`
+
+type ApproveJobParams struct {
+	ID         int64   `json:"id"`
+	ApprovedBy *string `json:"approved_by"`
+}
+
+func (q *Queries) ApproveJob(ctx context.Context, arg ApproveJobParams) (Job, error) {
+	row := q.db.QueryRow(ctx, approveJob, arg.ID, arg.ApprovedBy)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.WorkspaceID,
+		&i.Command,
+		&i.Status,
+		&i.Output,
+		&i.TemplateReference,
+		&i.Tcl,
+		&i.Via,
+		&i.AutoApply,
+		&i.Deleted,
+		&i.Comments,
+		&i.CommitID,
+		&i.ApprovedBy,
+		&i.ApprovedAt,
+		&i.PlanChanges,
+		&i.Refresh,
+		&i.CreatedDate,
+		&i.CreatedBy,
+		&i.UpdatedDate,
+		&i.UpdatedBy,
+		&i.OverrideSource,
+		&i.OverrideBranch,
+	)
+	return i, err
+}
+
 const createArchive = `-- name: CreateArchive :one
 INSERT INTO temp_archive (id, type, history_id)
 VALUES ($1, $2, $3)
@@ -76,7 +122,7 @@ func (q *Queries) CreateHistory(ctx context.Context, arg CreateHistoryParams) (H
 const createJob = `-- name: CreateJob :one
 INSERT INTO job (organization_id, workspace_id, command, status, output, via, auto_apply, refresh, plan_changes, created_by)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by
+RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch
 `
 
 type CreateJobParams struct {
@@ -128,6 +174,8 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		&i.CreatedBy,
 		&i.UpdatedDate,
 		&i.UpdatedBy,
+		&i.OverrideSource,
+		&i.OverrideBranch,
 	)
 	return i, err
 }
@@ -233,7 +281,7 @@ func (q *Queries) GetHistory(ctx context.Context, id string) (History, error) {
 }
 
 const getJob = `-- name: GetJob :one
-SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by FROM job WHERE id = $1
+SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch FROM job WHERE id = $1
 `
 
 func (q *Queries) GetJob(ctx context.Context, id int64) (Job, error) {
@@ -261,6 +309,8 @@ func (q *Queries) GetJob(ctx context.Context, id int64) (Job, error) {
 		&i.CreatedBy,
 		&i.UpdatedDate,
 		&i.UpdatedBy,
+		&i.OverrideSource,
+		&i.OverrideBranch,
 	)
 	return i, err
 }
@@ -291,6 +341,28 @@ func (q *Queries) GetLatestHistory(ctx context.Context, workspaceID string) (His
 	return i, err
 }
 
+const getPendingStepByJob = `-- name: GetPendingStepByJob :one
+SELECT id, job_id, step_number, name, status, log_status, output FROM step
+WHERE job_id = $1 AND status IN ('pending', 'queue')
+ORDER BY step_number ASC
+LIMIT 1
+`
+
+func (q *Queries) GetPendingStepByJob(ctx context.Context, jobID int64) (Step, error) {
+	row := q.db.QueryRow(ctx, getPendingStepByJob, jobID)
+	var i Step
+	err := row.Scan(
+		&i.ID,
+		&i.JobID,
+		&i.StepNumber,
+		&i.Name,
+		&i.Status,
+		&i.LogStatus,
+		&i.Output,
+	)
+	return i, err
+}
+
 const getStep = `-- name: GetStep :one
 SELECT id, job_id, step_number, name, status, log_status, output FROM step WHERE id = $1
 `
@@ -310,8 +382,34 @@ func (q *Queries) GetStep(ctx context.Context, id string) (Step, error) {
 	return i, err
 }
 
+const getStepByJobAndNumber = `-- name: GetStepByJobAndNumber :one
+SELECT id, job_id, step_number, name, status, log_status, output FROM step
+WHERE job_id = $1 AND step_number = $2
+LIMIT 1
+`
+
+type GetStepByJobAndNumberParams struct {
+	JobID      int64 `json:"job_id"`
+	StepNumber int32 `json:"step_number"`
+}
+
+func (q *Queries) GetStepByJobAndNumber(ctx context.Context, arg GetStepByJobAndNumberParams) (Step, error) {
+	row := q.db.QueryRow(ctx, getStepByJobAndNumber, arg.JobID, arg.StepNumber)
+	var i Step
+	err := row.Scan(
+		&i.ID,
+		&i.JobID,
+		&i.StepNumber,
+		&i.Name,
+		&i.Status,
+		&i.LogStatus,
+		&i.Output,
+	)
+	return i, err
+}
+
 const listActiveJobsByOrganization = `-- name: ListActiveJobsByOrganization :many
-SELECT j.id, j.organization_id, j.workspace_id, j.command, j.status, j.output, j.template_reference, j.tcl, j.via, j.auto_apply, j.deleted, j.comments, j.commit_id, j.approved_by, j.approved_at, j.plan_changes, j.refresh, j.created_date, j.created_by, j.updated_date, j.updated_by
+SELECT j.id, j.organization_id, j.workspace_id, j.command, j.status, j.output, j.template_reference, j.tcl, j.via, j.auto_apply, j.deleted, j.comments, j.commit_id, j.approved_by, j.approved_at, j.plan_changes, j.refresh, j.created_date, j.created_by, j.updated_date, j.updated_by, j.override_source, j.override_branch
 FROM job j
 JOIN organization o ON o.id = j.organization_id
 WHERE o.name = $1
@@ -350,6 +448,8 @@ func (q *Queries) ListActiveJobsByOrganization(ctx context.Context, name string)
 			&i.CreatedBy,
 			&i.UpdatedDate,
 			&i.UpdatedBy,
+			&i.OverrideSource,
+			&i.OverrideBranch,
 		); err != nil {
 			return nil, err
 		}
@@ -362,7 +462,7 @@ func (q *Queries) ListActiveJobsByOrganization(ctx context.Context, name string)
 }
 
 const listActiveJobsByWorkspace = `-- name: ListActiveJobsByWorkspace :many
-SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by FROM job
+SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch FROM job
 WHERE workspace_id = $1
   AND status IN ('pending', 'running', 'queue', 'waitingApproval')
 ORDER BY id DESC
@@ -399,6 +499,8 @@ func (q *Queries) ListActiveJobsByWorkspace(ctx context.Context, workspaceID str
 			&i.CreatedBy,
 			&i.UpdatedDate,
 			&i.UpdatedBy,
+			&i.OverrideSource,
+			&i.OverrideBranch,
 		); err != nil {
 			return nil, err
 		}
@@ -434,6 +536,102 @@ func (q *Queries) ListArchivesByHistory(ctx context.Context, historyID string) (
 	return items, nil
 }
 
+const listStepsByJob = `-- name: ListStepsByJob :many
+SELECT id, job_id, step_number, name, status, log_status, output FROM step WHERE job_id = $1 ORDER BY step_number ASC
+`
+
+func (q *Queries) ListStepsByJob(ctx context.Context, jobID int64) ([]Step, error) {
+	rows, err := q.db.Query(ctx, listStepsByJob, jobID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Step{}
+	for rows.Next() {
+		var i Step
+		if err := rows.Scan(
+			&i.ID,
+			&i.JobID,
+			&i.StepNumber,
+			&i.Name,
+			&i.Status,
+			&i.LogStatus,
+			&i.Output,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const setJobOverrideSource = `-- name: SetJobOverrideSource :one
+UPDATE job
+SET override_source = $2,
+    override_branch = $3,
+    updated_date = now()
+WHERE id = $1
+RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch
+`
+
+type SetJobOverrideSourceParams struct {
+	ID             int64   `json:"id"`
+	OverrideSource *string `json:"override_source"`
+	OverrideBranch *string `json:"override_branch"`
+}
+
+func (q *Queries) SetJobOverrideSource(ctx context.Context, arg SetJobOverrideSourceParams) (Job, error) {
+	row := q.db.QueryRow(ctx, setJobOverrideSource, arg.ID, arg.OverrideSource, arg.OverrideBranch)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.WorkspaceID,
+		&i.Command,
+		&i.Status,
+		&i.Output,
+		&i.TemplateReference,
+		&i.Tcl,
+		&i.Via,
+		&i.AutoApply,
+		&i.Deleted,
+		&i.Comments,
+		&i.CommitID,
+		&i.ApprovedBy,
+		&i.ApprovedAt,
+		&i.PlanChanges,
+		&i.Refresh,
+		&i.CreatedDate,
+		&i.CreatedBy,
+		&i.UpdatedDate,
+		&i.UpdatedBy,
+		&i.OverrideSource,
+		&i.OverrideBranch,
+	)
+	return i, err
+}
+
+const setWorkspaceLastJob = `-- name: SetWorkspaceLastJob :exec
+UPDATE workspace
+SET last_job_status = $2,
+    last_job_date = now(),
+    updated_date = now()
+WHERE id = $1
+`
+
+type SetWorkspaceLastJobParams struct {
+	ID            string `json:"id"`
+	LastJobStatus string `json:"last_job_status"`
+}
+
+func (q *Queries) SetWorkspaceLastJob(ctx context.Context, arg SetWorkspaceLastJobParams) error {
+	_, err := q.db.Exec(ctx, setWorkspaceLastJob, arg.ID, arg.LastJobStatus)
+	return err
+}
+
 const updateHistoryOutput = `-- name: UpdateHistoryOutput :exec
 UPDATE history
 SET output = $2,
@@ -451,12 +649,73 @@ func (q *Queries) UpdateHistoryOutput(ctx context.Context, arg UpdateHistoryOutp
 	return err
 }
 
+const updateJobOutput = `-- name: UpdateJobOutput :exec
+UPDATE job
+SET output = $2,
+    updated_date = now()
+WHERE id = $1
+`
+
+type UpdateJobOutputParams struct {
+	ID     int64   `json:"id"`
+	Output *string `json:"output"`
+}
+
+func (q *Queries) UpdateJobOutput(ctx context.Context, arg UpdateJobOutputParams) error {
+	_, err := q.db.Exec(ctx, updateJobOutput, arg.ID, arg.Output)
+	return err
+}
+
+const updateJobPlanChanges = `-- name: UpdateJobPlanChanges :one
+UPDATE job
+SET plan_changes = $2,
+    updated_date = now()
+WHERE id = $1
+RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch
+`
+
+type UpdateJobPlanChangesParams struct {
+	ID          int64 `json:"id"`
+	PlanChanges bool  `json:"plan_changes"`
+}
+
+func (q *Queries) UpdateJobPlanChanges(ctx context.Context, arg UpdateJobPlanChangesParams) (Job, error) {
+	row := q.db.QueryRow(ctx, updateJobPlanChanges, arg.ID, arg.PlanChanges)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.WorkspaceID,
+		&i.Command,
+		&i.Status,
+		&i.Output,
+		&i.TemplateReference,
+		&i.Tcl,
+		&i.Via,
+		&i.AutoApply,
+		&i.Deleted,
+		&i.Comments,
+		&i.CommitID,
+		&i.ApprovedBy,
+		&i.ApprovedAt,
+		&i.PlanChanges,
+		&i.Refresh,
+		&i.CreatedDate,
+		&i.CreatedBy,
+		&i.UpdatedDate,
+		&i.UpdatedBy,
+		&i.OverrideSource,
+		&i.OverrideBranch,
+	)
+	return i, err
+}
+
 const updateJobStatus = `-- name: UpdateJobStatus :one
 UPDATE job
 SET status = $2,
     updated_date = now()
 WHERE id = $1
-RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by
+RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch
 `
 
 type UpdateJobStatusParams struct {
@@ -489,6 +748,51 @@ func (q *Queries) UpdateJobStatus(ctx context.Context, arg UpdateJobStatusParams
 		&i.CreatedBy,
 		&i.UpdatedDate,
 		&i.UpdatedBy,
+		&i.OverrideSource,
+		&i.OverrideBranch,
+	)
+	return i, err
+}
+
+const updateStepOutput = `-- name: UpdateStepOutput :exec
+UPDATE step
+SET output = $2
+WHERE id = $1
+`
+
+type UpdateStepOutputParams struct {
+	ID     string  `json:"id"`
+	Output *string `json:"output"`
+}
+
+func (q *Queries) UpdateStepOutput(ctx context.Context, arg UpdateStepOutputParams) error {
+	_, err := q.db.Exec(ctx, updateStepOutput, arg.ID, arg.Output)
+	return err
+}
+
+const updateStepStatus = `-- name: UpdateStepStatus :one
+UPDATE step
+SET status = $2
+WHERE id = $1
+RETURNING id, job_id, step_number, name, status, log_status, output
+`
+
+type UpdateStepStatusParams struct {
+	ID     string  `json:"id"`
+	Status *string `json:"status"`
+}
+
+func (q *Queries) UpdateStepStatus(ctx context.Context, arg UpdateStepStatusParams) (Step, error) {
+	row := q.db.QueryRow(ctx, updateStepStatus, arg.ID, arg.Status)
+	var i Step
+	err := row.Scan(
+		&i.ID,
+		&i.JobID,
+		&i.StepNumber,
+		&i.Name,
+		&i.Status,
+		&i.LogStatus,
+		&i.Output,
 	)
 	return i, err
 }
