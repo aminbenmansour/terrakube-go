@@ -162,12 +162,23 @@ run_number=${run_id#run-}
 [[ "$(jq -r '.data.attributes.status' <<<"$run_response")" == "pending" ]] || {
   echo "FAIL: create run" >&2; exit 1;
 }
-[[ "$(req "${TFE}/workspaces/${ws_id}/runs" | jq -r '.data[0].id')" == "$run_id" ]] || {
-  echo "FAIL: list workspace runs" >&2; exit 1;
-}
-[[ "$(req "${TFE}/organizations/${name}/runs/queue" | jq -r '.data[0].id')" == "$run_id" ]] || {
-  echo "FAIL: run queue" >&2; exit 1;
-}
+# Active-run listings only contain pending, queue, running and
+# waitingApproval jobs. When an executor is running it can pick the run up
+# between creation and this check, so accept either "listed" or "advanced".
+active_run=$(req "${TFE}/workspaces/${ws_id}/runs" | jq -r '.data[0].id // empty')
+if [[ -n "$active_run" ]]; then
+  [[ "$active_run" == "$run_id" ]] || { echo "FAIL: list workspace runs" >&2; exit 1; }
+else
+  run_status=$(req "${TFE}/runs/${run_id}" | jq -r '.data.attributes.status')
+  [[ "$run_status" != "pending" ]] || { echo "FAIL: list workspace runs (run still pending but not listed)" >&2; exit 1; }
+fi
+active_run=$(req "${TFE}/organizations/${name}/runs/queue" | jq -r '.data[0].id // empty')
+if [[ -n "$active_run" ]]; then
+  [[ "$active_run" == "$run_id" ]] || { echo "FAIL: run queue" >&2; exit 1; }
+else
+  run_status=$(req "${TFE}/runs/${run_id}" | jq -r '.data.attributes.status')
+  [[ "$run_status" != "pending" ]] || { echo "FAIL: run queue (run still pending but not listed)" >&2; exit 1; }
+fi
 [[ "$(req "${TFE}/runs/${run_id}/run-events" | jq -r '.data | length')" == "0" ]] || {
   echo "FAIL: run events" >&2; exit 1;
 }
@@ -183,9 +194,24 @@ run_number=${run_id#run-}
 [[ "$(req "${TFE}/applies/${run_number}" | jq -r '.data.type')" == "applies" ]] || {
   echo "FAIL: apply" >&2; exit 1;
 }
-[[ "$(req -X POST "${TFE}/runs/${run_id}/actions/discard" | jq -r '.data.attributes.status')" == "unknown" ]] || {
-  echo "FAIL: discard run" >&2; exit 1;
-}
+# Discard only succeeds while the run still holds the queue. When an executor
+# is running it may have already picked the run up, so accept the upstream
+# conflict response in that case.
+discard_code=$(status -X POST "${TFE}/runs/${run_id}/actions/discard")
+case "$discard_code" in
+  200)
+    [[ "$(req "${TFE}/runs/${run_id}" | jq -r '.data.attributes.status')" == "unknown" ]] || {
+      echo "FAIL: discard run status" >&2; exit 1;
+    }
+    ;;
+  409)
+    run_status=$(req "${TFE}/runs/${run_id}" | jq -r '.data.attributes.status')
+    [[ "$run_status" != "pending" ]] || { echo "FAIL: discard run conflict while pending" >&2; exit 1; }
+    ;;
+  *)
+    echo "FAIL: discard run: got HTTP ${discard_code}" >&2; exit 1;
+    ;;
+esac
 echo "ok: runs"
 
 locked=$(req -X POST "${TFE}/workspaces/${ws_id}/actions/lock" | jq -r '.data.attributes.locked')

@@ -25,10 +25,17 @@ export PATH=$PATH:/usr/local/go/bin
 
 make services-up     # Postgres, Redis, MinIO via plain podman
 make db-migrate      # apply SQL migrations
+
+# The API and executor must share this secret: the executor mints
+# workspace-scoped tokens for the /tfstate/v1 backend with it.
+export TERRAKUBE_INTERNAL_TOKEN_SECRET="$(openssl rand -base64 64 | tr '+/' '-_' | tr -d '=')"
+export TERRAKUBE_PUBLIC_URL=http://localhost:8080
+
 make run-api         # http://localhost:8080/healthz
+make run-executor    # http://localhost:8081/healthz
 ```
 
-In another shell:
+In another shell (with the same secret exported):
 
 ```bash
 curl -s localhost:8080/healthz
@@ -37,7 +44,12 @@ curl -s localhost:8080/version
 
 TERRAKUBE_AUTH_TOKEN=dev-token ./scripts/smoke.sh
 TERRAKUBE_AUTH_TOKEN=dev-token ./scripts/tfe-smoke.sh
+TERRAKUBE_AUTH_TOKEN=dev-token ./scripts/executor-e2e.sh
 ```
+
+`scripts/executor-e2e.sh` uploads a small OpenTofu configuration and waits for
+the executor to plan, apply and destroy it. It needs `tofu` (or a
+`TERRAKUBE_EXECUTOR_BINARY` override) on `PATH`.
 
 The management API lives at `/api/v1` and is exercised by `scripts/smoke.sh`
 (organizations, projects, workspaces and variables). The API accepts a static
@@ -68,6 +80,11 @@ internal/queue      Redis Streams queue/log transport
 internal/httpapi    Shared middleware and health endpoints
 internal/jsonapi    JSON:API 1.0 codec
 internal/api        /api/v1 management resources
+internal/tfe        /remote/tfe/v2 Terraform/OpenTofu cloud API
+internal/tfstate    /tfstate/v1 executor state backend
+internal/tfoutput   /tfoutput/v1 step logs and SSE streaming
+internal/executor   Job consumer: configuration, plan/apply, logs, history
+internal/auth       Internal executor JWTs
 internal/store      sqlc-generated queries (regenerate with `make generate`)
 
 migrations/         Embedded SQL migrations
@@ -92,8 +109,8 @@ Set `TERRAKUBE_STORAGE_TYPE=s3` for S3/MinIO.
 | M0 | Repo, config, migrations, storage, queue, health, CI | done |
 | M1 | JSON:API management API: org, project, workspace, variable, tag | done |
 | M2 | State backend `/tfstate/v1` (executor HTTP backend) | done — [v0.2.0](https://github.com/aminbenmansour/terrakube-go/releases/tag/v0.2.0) |
-| M3 | TFE v2 remote CLI workflow (`terraform init/plan/apply`) | in progress — TFE core, state/config versions and runs landed; executor-driven plan/apply and log streaming remain |
-| M4 | Executor: clone, run, stream logs, store state | planned |
+| M3 | TFE v2 remote CLI workflow (`terraform init/plan/apply`) | done — [v0.3.0](https://github.com/aminbenmansour/terrakube-go/releases/tag/v0.3.0) |
+| M4 | Executor hardening: VCS clone, remote agents, policy checks, cost estimation | planned |
 | M5 | Upstream UI compatibility, GraphQL + subscriptions | planned |
 | M6 | RBAC, templates, VCS, policies, registry, parity | planned |
 
@@ -106,6 +123,8 @@ Set `TERRAKUBE_STORAGE_TYPE=s3` for S3/MinIO.
 - `scripts/tfe-smoke.sh` (or `make tfe-smoke`) exercises discovery, TFE v2
   organizations, workspaces, tags, state versions, configuration versions,
   runs and locking.
+- `scripts/executor-e2e.sh` (or `make executor-e2e`) runs a real OpenTofu
+  plan/apply/destroy through the executor and checks logs, outputs and state.
 - `scripts/state-smoke.sh` exercises the state backend against a dedicated
   workspace; see the script header for the required IDs and signing key.
 - `scripts/tofu-state-conformance.sh` runs a real OpenTofu HTTP backend
