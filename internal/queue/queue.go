@@ -55,6 +55,46 @@ func (q *Queue) Publish(ctx context.Context, stream string, values map[string]an
 	return id, nil
 }
 
+// PublishCapped appends to a stream and trims it to roughly maxLen entries.
+// It is used for live log fan-out so a long run cannot grow Redis without
+// bound.
+func (q *Queue) PublishCapped(ctx context.Context, stream string, values map[string]any, maxLen int64) (string, error) {
+	id, err := q.client.XAdd(ctx, &redis.XAddArgs{
+		Stream: stream,
+		MaxLen: maxLen,
+		Approx: true,
+		Values: values,
+	}).Result()
+	if err != nil {
+		return "", fmt.Errorf("queue: publish to %s: %w", stream, err)
+	}
+	return id, nil
+}
+
+// ClaimStale takes over entries that were delivered to a consumer that stopped
+// before acknowledging them. It returns nil when nothing was pending.
+func (q *Queue) ClaimStale(ctx context.Context, stream, group, consumer string, minIdle time.Duration, count int64) ([]Message, error) {
+	entries, _, err := q.client.XAutoClaim(ctx, &redis.XAutoClaimArgs{
+		Stream:   stream,
+		Group:    group,
+		Consumer: consumer,
+		MinIdle:  minIdle,
+		Start:    "0-0",
+		Count:    count,
+	}).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("queue: claim pending on %s: %w", stream, err)
+	}
+	messages := make([]Message, 0, len(entries))
+	for _, entry := range entries {
+		messages = append(messages, Message{ID: entry.ID, Values: entry.Values})
+	}
+	return messages, nil
+}
+
 // EnqueueJob publishes a run to the executor queue. The message carries only
 // the job ID; the executor reads the rest of the job from Postgres.
 func (q *Queue) EnqueueJob(ctx context.Context, jobID int64) (string, error) {
@@ -99,6 +139,55 @@ func (q *Queue) ReadGroup(ctx context.Context, stream, group, consumer string, c
 		for _, m := range s.Messages {
 			messages = append(messages, Message{ID: m.ID, Values: m.Values})
 		}
+	}
+	return messages, nil
+}
+
+// ReadStream reads entries after lastID from a plain (non-group) stream.
+// It returns nil when the block timeout expires.
+func (q *Queue) ReadStream(ctx context.Context, stream, lastID string, count int64, block time.Duration) ([]Message, error) {
+	streams, err := q.client.XRead(ctx, &redis.XReadArgs{
+		Streams: []string{stream, lastID},
+		Count:   count,
+		Block:   block,
+	}).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("queue: read %s: %w", stream, err)
+	}
+
+	var messages []Message
+	for _, s := range streams {
+		for _, m := range s.Messages {
+			messages = append(messages, Message{ID: m.ID, Values: m.Values})
+		}
+	}
+	return messages, nil
+}
+
+// FirstStreamID returns the oldest retained entry ID, or "" when empty.
+func (q *Queue) FirstStreamID(ctx context.Context, stream string) (string, error) {
+	entries, err := q.client.XRangeN(ctx, stream, "-", "+", 1).Result()
+	if err != nil {
+		return "", fmt.Errorf("queue: first entry of %s: %w", stream, err)
+	}
+	if len(entries) == 0 {
+		return "", nil
+	}
+	return entries[0].ID, nil
+}
+
+// TailStream returns up to count of the newest entries in chronological order.
+func (q *Queue) TailStream(ctx context.Context, stream string, count int64) ([]Message, error) {
+	entries, err := q.client.XRevRangeN(ctx, stream, "+", "-", count).Result()
+	if err != nil {
+		return nil, fmt.Errorf("queue: tail %s: %w", stream, err)
+	}
+	messages := make([]Message, 0, len(entries))
+	for i := len(entries) - 1; i >= 0; i-- {
+		messages = append(messages, Message{ID: entries[i].ID, Values: entries[i].Values})
 	}
 	return messages, nil
 }

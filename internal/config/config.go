@@ -41,6 +41,12 @@ type Config struct {
 	ExecutorHTTPAddr string
 	RegistryHTTPAddr string
 
+	// ExecutorBinary overrides the Terraform/OpenTofu binary. When empty the
+	// executor uses the workspace IaC type and falls back to tofu.
+	ExecutorBinary string
+	// ExecutorWorkDir is the parent directory for job workspaces.
+	ExecutorWorkDir string
+
 	Storage Storage
 }
 
@@ -86,6 +92,8 @@ func Load() (Config, error) {
 		HTTPAddr:            env("TERRAKUBE_HTTP_ADDR", ":8080"),
 		ExecutorHTTPAddr:    env("TERRAKUBE_EXECUTOR_HTTP_ADDR", ":8081"),
 		RegistryHTTPAddr:    env("TERRAKUBE_REGISTRY_HTTP_ADDR", ":8082"),
+		ExecutorBinary:      env("TERRAKUBE_EXECUTOR_BINARY", ""),
+		ExecutorWorkDir:     env("TERRAKUBE_EXECUTOR_WORK_DIR", ""),
 		Storage: Storage{
 			Type:      strings.ToLower(env("TERRAKUBE_STORAGE_TYPE", StorageTypeLocal)),
 			LocalPath: env("TERRAKUBE_STORAGE_LOCAL_PATH", ".data"),
