@@ -122,6 +122,7 @@ func run() error {
 		Logger:            logger,
 		Layout:            tfstate.NewLayout(cfg.Storage.Type),
 		Auth:              internalAuth,
+		AuthToken:         cfg.AuthToken,
 		MaxStateSizeBytes: cfg.StateMaxSizeBytes,
 		PublicURL:         cfg.PublicURL,
 	}))

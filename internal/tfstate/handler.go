@@ -34,6 +34,7 @@ type Deps struct {
 	Logger            *slog.Logger
 	Layout            Layout
 	Auth              *internalauth.Validator
+	AuthToken         string
 	MaxStateSizeBytes int64
 	PublicURL         string
 }
@@ -195,22 +196,20 @@ func (h *Handler) deleteBackendState(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getCurrentState(w http.ResponseWriter, r *http.Request) {
-	claims, ok := h.requestClaims(w, r)
-	if !ok {
-		return
-	}
 	organizationID, workspaceID := pathIDs(r)
-	if !h.authorizeReadState(w, r, claims, organizationID, workspaceID) {
-		return
+	if !isExternalUser(r.Context()) {
+		claims, ok := h.requestClaims(w, r)
+		if !ok {
+			return
+		}
+		if !h.authorizeReadState(w, r, claims, organizationID, workspaceID) {
+			return
+		}
 	}
 	h.writeObject(w, r, h.deps.Layout.CurrentState(organizationID, workspaceID), "application/json")
 }
 
 func (h *Handler) getStateJSON(w http.ResponseWriter, r *http.Request) {
-	claims, ok := h.requestClaims(w, r)
-	if !ok {
-		return
-	}
 	organizationID, workspaceID := pathIDs(r)
 
 	filename := chi.URLParam(r, "stateFilename")
@@ -223,8 +222,14 @@ func (h *Handler) getStateJSON(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if !h.authorizeReadState(w, r, claims, organizationID, workspaceID) {
-		return
+	if !isExternalUser(r.Context()) {
+		claims, ok := h.requestClaims(w, r)
+		if !ok {
+			return
+		}
+		if !h.authorizeReadState(w, r, claims, organizationID, workspaceID) {
+			return
+		}
 	}
 	h.writeObject(w, r, h.deps.Layout.JSONState(organizationID, workspaceID, filename), "application/json")
 }
