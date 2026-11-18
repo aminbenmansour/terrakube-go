@@ -36,6 +36,7 @@ type Deps struct {
 	PublicURL          string
 	AuthToken          string
 	UploadTicketSecret string
+	LogTokenSecret     string
 	InternalAuth       *internalauth.Validator
 	DexClientID        string
 	DexIssuerURL       string
@@ -58,6 +59,9 @@ func New(deps Deps) http.Handler {
 	if deps.UploadTicketSecret == "" {
 		deps.UploadTicketSecret = uuid.NewString()
 	}
+	if deps.LogTokenSecret == "" {
+		deps.LogTokenSecret = deps.UploadTicketSecret
+	}
 
 	a := &API{deps: deps}
 	r := chi.NewRouter()
@@ -71,6 +75,11 @@ func New(deps Deps) http.Handler {
 	// is also unauthenticated upstream because the executor fetches it.
 	r.Put("/configuration-versions/{configurationID}", a.uploadConfigurationVersion)
 	r.Get("/configuration-versions/{configurationID}/terraformContent.tar.gz", a.downloadConfigurationVersion)
+
+	// Log read URLs are capabilities: the CLI follows log-read-url without an
+	// Authorization header, exactly like the upstream encrypted plan-id token.
+	r.Get("/plans/logs/{planID}/{logToken}", a.getPlanLogs)
+	r.Get("/applies/logs/{applyID}/{logToken}", a.getApplyLogs)
 
 	r.Group(func(r chi.Router) {
 		r.Use(a.authenticate)
@@ -106,9 +115,7 @@ func New(deps Deps) http.Handler {
 		r.Get("/workspaces/{workspaceID}/runs", a.listWorkspaceRuns)
 		r.Get("/organizations/{organizationName}/runs/queue", a.getRunQueue)
 		r.Get("/plans/{planID}", a.getPlan)
-		r.Get("/plans/logs/{planID}/{logToken}", a.getPlanLogs)
 		r.Get("/applies/{applyID}", a.getApply)
-		r.Get("/applies/logs/{applyID}/{logToken}", a.getApplyLogs)
 		r.Get("/policy-checks/{checkID}", a.getPolicyCheck)
 
 		r.Get("/organizations/{organizationName}/projects", a.listProjects)
