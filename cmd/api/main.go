@@ -21,6 +21,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 	"github.com/aminbenmansour/terrakube-go/internal/tfe"
+	"github.com/aminbenmansour/terrakube-go/internal/tfoutput"
 	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
 	"github.com/aminbenmansour/terrakube-go/migrations"
 )
@@ -116,6 +117,13 @@ func run() error {
 	}
 	handler.Get("/.well-known/terraform.json", tfe.Discovery(tfeDeps))
 	handler.Mount("/remote/tfe/v2", tfe.New(tfeDeps))
+	handler.Mount("/tfoutput/v1", tfoutput.New(tfoutput.Deps{
+		Store:        store.New(pool),
+		Queue:        q,
+		Logger:       logger,
+		AuthToken:    cfg.AuthToken,
+		InternalAuth: internalAuth,
+	}))
 	handler.Mount("/tfstate/v1", tfstate.New(tfstate.Deps{
 		Store:             store.New(pool),
 		Storage:           storeBackend,
