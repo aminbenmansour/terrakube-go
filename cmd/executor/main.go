@@ -1,5 +1,5 @@
-// Command executor runs Terraform/OpenTofu jobs. Job processing lands in M4;
-// for now it validates its dependencies and exposes health endpoints.
+// Command executor runs Terraform/OpenTofu jobs from the Redis queue and
+// exposes health endpoints.
 package main
 
 import (
@@ -12,10 +12,14 @@ import (
 	"time"
 
 	"github.com/aminbenmansour/terrakube-go/internal/config"
+	"github.com/aminbenmansour/terrakube-go/internal/db"
+	"github.com/aminbenmansour/terrakube-go/internal/executor"
 	"github.com/aminbenmansour/terrakube-go/internal/httpapi"
 	"github.com/aminbenmansour/terrakube-go/internal/logging"
 	"github.com/aminbenmansour/terrakube-go/internal/queue"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
+	"github.com/aminbenmansour/terrakube-go/internal/store"
+	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
 )
 
 func main() {
@@ -37,6 +41,12 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	pool, err := db.NewPool(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
 	q, err := queue.New(cfg.RedisURL)
 	if err != nil {
 		return err
@@ -50,20 +60,39 @@ func run() error {
 		return err
 	}
 
-	store, err := storage.New(ctx, cfg.Storage)
+	storeBackend, err := storage.New(ctx, cfg.Storage)
 	if err != nil {
 		return err
 	}
 
+	runner := executor.New(executor.Deps{
+		Store:               store.New(pool),
+		Storage:             storeBackend,
+		Queue:               q,
+		Layout:              tfstate.NewLayout(cfg.Storage.Type),
+		Logger:              logger,
+		PublicURL:           cfg.PublicURL,
+		InternalTokenSecret: cfg.InternalTokenSecret,
+		Binary:              cfg.ExecutorBinary,
+		WorkDir:             cfg.ExecutorWorkDir,
+	})
+
+	go func() {
+		if err := runner.Run(ctx); err != nil && ctx.Err() == nil {
+			logger.Error("executor stopped", "error", err)
+			stop()
+		}
+	}()
+
 	logger.Info("executor started", "storage", cfg.Storage.Type)
-	logger.Warn("job processing is not implemented yet; see milestone M4")
 
 	handler := httpapi.New(httpapi.Deps{
 		Logger:  logger,
 		Service: "executor",
 		Started: time.Now(),
+		DB:      pool,
 		Redis:   q,
-		Storage: store,
+		Storage: storeBackend,
 	})
 
 	return httpapi.Serve(ctx, logger, cfg.ExecutorHTTPAddr, handler, cfg.ShutdownTimeout)
