@@ -35,6 +35,43 @@ SET status = $2,
 WHERE id = $1
 RETURNING *;
 
+-- name: SetJobOverrideSource :one
+UPDATE job
+SET override_source = $2,
+    override_branch = $3,
+    updated_date = now()
+WHERE id = $1
+RETURNING *;
+
+-- name: UpdateJobOutput :exec
+UPDATE job
+SET output = $2,
+    updated_date = now()
+WHERE id = $1;
+
+-- name: UpdateJobPlanChanges :one
+UPDATE job
+SET plan_changes = $2,
+    updated_date = now()
+WHERE id = $1
+RETURNING *;
+
+-- name: ApproveJob :one
+UPDATE job
+SET approved_by = $2,
+    approved_at = now(),
+    status = 'pending',
+    updated_date = now()
+WHERE id = $1
+RETURNING *;
+
+-- name: SetWorkspaceLastJob :exec
+UPDATE workspace
+SET last_job_status = $2,
+    last_job_date = now(),
+    updated_date = now()
+WHERE id = $1;
+
 -- name: ListActiveJobsByWorkspace :many
 SELECT * FROM job
 WHERE workspace_id = $1
@@ -72,3 +109,28 @@ RETURNING *;
 
 -- name: DeleteArchive :exec
 DELETE FROM temp_archive WHERE id = $1;
+
+-- name: ListStepsByJob :many
+SELECT * FROM step WHERE job_id = $1 ORDER BY step_number ASC;
+
+-- name: GetStepByJobAndNumber :one
+SELECT * FROM step
+WHERE job_id = $1 AND step_number = $2
+LIMIT 1;
+
+-- name: GetPendingStepByJob :one
+SELECT * FROM step
+WHERE job_id = $1 AND status IN ('pending', 'queue')
+ORDER BY step_number ASC
+LIMIT 1;
+
+-- name: UpdateStepStatus :one
+UPDATE step
+SET status = $2
+WHERE id = $1
+RETURNING *;
+
+-- name: UpdateStepOutput :exec
+UPDATE step
+SET output = $2
+WHERE id = $1;

@@ -53,6 +53,8 @@ type Job struct {
 	CreatedBy         *string            `json:"created_by"`
 	UpdatedDate       pgtype.Timestamptz `json:"updated_date"`
 	UpdatedBy         *string            `json:"updated_by"`
+	OverrideSource    *string            `json:"override_source"`
+	OverrideBranch    *string            `json:"override_branch"`
 }
 
 type Organization struct {
