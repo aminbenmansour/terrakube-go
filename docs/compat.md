@@ -73,11 +73,13 @@ Source: `api/.../plugin/state/RemoteTfeController.java`. All responses use
 | GET | `/plans/logs/{a}/{b}` | Plan log |
 | GET | `/applies/logs/{a}/{b}` | Apply log |
 
-Implemented in the M3 core slice: `ping`, organization lookup, entitlement-set,
-capacity, workspace list/get/create/update, workspace lock/unlock, project
-list/create, workspace tag bindings, state versions, configuration versions and
-run lifecycle endpoints. Policy-check details, log streaming and executor-driven
-run transitions are the remaining M3/M4 work.
+Implemented in M3: `ping`, organization lookup, entitlement-set, capacity,
+workspace list/get/create/update, workspace lock/unlock, project list/create,
+workspace tag bindings, state versions, configuration versions, the run
+lifecycle (including step creation, apply/discard and plan/apply log
+capabilities) and executor-driven plan/apply. Policy-check details and the
+policy override flow remain M6 work; `run-events` stays an empty list as
+upstream does, and live logs are served by `/tfoutput/v1`.
 
 Tag bindings use `GET`/`PATCH /workspaces/{id}/tag-bindings` for key/value tags
 and `POST /workspaces/{id}/relationships/tags` for legacy key-only tags. Keys
@@ -116,13 +118,36 @@ matching the upstream controller.
 Runs are served at `POST /runs`, `GET /runs/{id}`,
 `GET /workspaces/{id}/runs`, `GET /organizations/{name}/runs/queue`,
 `POST /runs/{id}/actions/apply` and `POST /runs/{id}/actions/discard`. Creation
-validates the workspace and uploaded configuration version, creates a `pending`
-job, publishes its ID to the Redis Stream `terrakube:jobs`, and returns the
-upstream run shape (`run-<job id>`). `GET /runs/{id}?include=plan,apply` adds the
-related plan/apply resources under `included`, and `run-events` is exposed as an
-empty to-many relationship. Run events and policy checks currently return empty
-lists; plan/apply resources and their log endpoints expose the job output. Apply
-and discard update the job status; executor-driven transitions remain M4 work.
+validates the workspace and uploaded configuration version, writes the
+configuration tarball URL to `job.override_source` with
+`job.override_branch = remote-content`, creates the CLI steps `100` (plan), `150`
+(approval) and `200` (apply), publishes the job ID to the Redis Stream
+`terrakube:jobs`, and returns the upstream run shape (`run-<job id>`).
+`GET /runs/{id}?include=plan,apply` adds the related plan/apply resources under
+`included`, and `run-events` is exposed as an empty to-many relationship.
+
+Plan and apply status come from the matching step status, as upstream does:
+`pending` → `pending`, `queue`/`running` → `running`, `completed` → `finished`,
+`failed` → `errored`. While the plan step is finished but the approval step is
+still open and the plan has changes, the plan stays `running` so the CLI keeps
+polling until the executor reaches the approval gate. The run's own status maps
+`completed` → `finished`, `pending` → `pending`, `running`/`queue`/
+`waitingApproval` → `running`, `failed` → `errored`, default → `unknown`.
+Workspace and organization run listings only include `pending`, `running`,
+`queue` and `waitingApproval`, matching upstream.
+
+Apply (`POST /runs/{id}/actions/apply`) is accepted only for `waitingApproval`
+or `completed` jobs. It completes the approval step, records `approved_by` and
+`approved_at`, sets the job back to `pending` and re-queues it so the executor
+can apply the saved plan. Discard is accepted only while the job still holds the
+queue (`pending`, `approved`, `waitingApproval`, `queue`, `running`); it sets
+`cancelled`, which the CLI renders as `unknown`.
+
+Plan and apply `log-read-url` values embed an HMAC capability token instead of
+an `Authorization` header, mirroring upstream's encrypted plan-id token. The CLI
+fetches those URLs directly; a missing or invalid token returns `403`. Logs are
+read from the step output, falling back to `job.output` for older rows, and
+honor `offset`/`limit` query parameters.
 
 Authentication for the remaining surface is a bearer token. During local development the
 `TERRAKUBE_AUTH_TOKEN` value is accepted; internal executor JWTs are also
@@ -173,7 +198,10 @@ issued with `iss=TerrakubeInternal`, `sub=TerrakubeInternal (EXECUTOR)`,
 `io.terrakube.token.internal` secret; HMAC algorithm selection follows key
 length (HS256, HS384, HS512). Missing or invalid credentials return `401`;
 wrong organization/workspace scope or a non-executor token returns `403`.
-Writes additionally require an active step.
+Writes additionally require an active step. The configured
+`TERRAKUBE_AUTH_TOKEN` (the development user token) is accepted for state reads
+because the CLI downloads hosted state with its own credentials; it is never
+accepted for backend writes.
 
 Storage keys mirror upstream per backend:
 
@@ -192,6 +220,31 @@ upload writes the current state plus `{historyId}.raw.json`; the JSON upload
 writes `{historyId}.json`. Rollback reads the archived JSON and raw state,
 creates a new `history` row with `serial=1`, `md5=0`, `lineage=0`, writes the
 new current/raw/JSON objects, and stores the new state URL in `history.output`.
+
+## Executor logs — `/tfoutput/v1`
+
+Source: `api/.../plugin/storage/controller/TerraformOutputController.java`.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/organization/{orgId}/job/{jobId}/step/{stepId}` | Step log; `application/octet-stream`; `404` when the job/step pair is unknown or has no output |
+| GET | `/organization/{orgId}/job/{jobId}/step/{stepId}/stream` | Server-Sent Events live log |
+
+The plain endpoint returns the archived step output for finished steps and the
+live Redis stream for running steps. The stream resumes from `Last-Event-ID`,
+emits `id:`/`data:` frames with the Redis stream ID, a `gap` event when the
+requested ID was trimmed (`recovery: "step-log"`), `: heartbeat` comments after
+idle reads, and an `end` event (`{"reason":"complete"}`) once the job is
+terminal. Requests are authorized with the user token or an internal executor
+JWT; both endpoints verify that the job belongs to the organization in the path
+and that the step belongs to the job.
+
+Live records use the Redis stream named after the job ID with the fields
+`stepId` and `output` (one log line per record), matching the upstream
+executor. Final step output is stored in `step.output`; upstream stores a
+`/tfoutput/v1/...` URL there and reads the file from object storage, so a
+deployment that imports upstream rows should read the archived object instead
+of the column.
 
 ## Management API — `/api/v1`
 
@@ -239,21 +292,69 @@ Current M1 limitations (tracked for later milestones):
 
 - `internal/tfe/contract_test.go` pins the JSON:API media type, success and
   error envelopes, discovery, ping headers and the main TFE status codes.
-- `internal/tfe/*_test.go` cover handler behaviour and edge cases.
+- `internal/tfe/*_test.go` cover handler behaviour and edge cases, including
+  step-driven plan/apply status and log capability tokens.
+- `internal/executor/*_test.go` cover tarball extraction and traversal safety,
+  variable/source parsing, log line splitting and state history archiving.
+- `internal/tfoutput/handler_test.go` covers archived logs, scoping, auth,
+  resume IDs and SSE framing.
 - `scripts/tfe-smoke.sh` exercises the real API for discovery, workspaces, tags,
   state, configuration versions, runs, locking and projects.
+- `scripts/executor-e2e.sh` (also `make executor-e2e`) drives a real OpenTofu
+  plan, apply and destroy through the executor and verifies logs, state outputs
+  and current state.
 - `scripts/smoke.sh` and `scripts/state-smoke.sh` cover the management API and
   state backend.
 - New TFE endpoints must add contract coverage in the same change.
 
 ## Executor contract
 
-- API enqueues a run; executor claims it.
-- Executor fetches the configuration tarball, injects variables, runs
-  `terraform`/`tofu`, and reports step/job status.
-- Live output goes to Redis; final output and state go to object storage.
-- Storage keys and the state archive layout must remain compatible with
-  upstream history rows (`history.md5`, `history.serial`, `history.lineage`).
+The M3 executor (`cmd/executor`, `internal/executor`) consumes the Redis Stream
+`terrakube:jobs` with the consumer group `terrakube-executor`. It claims
+messages idle for more than 30 seconds so a restarted executor picks up work
+that was delivered to a dead consumer.
+
+- **Configuration**: `job.override_source` holds either an object-storage key
+  (`content/{configurationId}/terraformContent.tar.gz`) or the TFE download URL
+  written by run creation. The executor prefers object storage, falls back to
+  HTTP, and extracts the gzip tarball with path traversal checks. When the
+  workspace has a `folder`, the first entry is used as the working directory.
+- **Backend**: the executor writes `terrakube_override.tf` containing only the
+  HTTP backend `address` at
+  `{TERRAKUBE_PUBLIC_URL}/tfstate/v1/organization/{orgId}/workspace/{wsId}/backend/terraform.tfstate`.
+  It does not configure locking, matching upstream.
+- **Variables**: `ENV` variables become plain environment entries; `TERRAFORM`
+  variables become `TF_VAR_*`. Incomplete variables are skipped. Values are
+  still plaintext in the database.
+- **Auth**: when `TERRAKUBE_INTERNAL_TOKEN_SECRET` is set, the executor mints a
+  workspace-scoped internal JWT (two-hour expiry) and passes it as
+  `TF_HTTP_PASSWORD` with `TF_HTTP_USERNAME=terraform`.
+- **Steps**: plan is step `100`, approval `150`, apply `200`. Plan runs
+  `init` and `plan -detailed-exitcode -out=tfplan`; exit code `2` records
+  `plan_changes=true`. The saved plan is stored under the upstream plan key and
+  applied by step `200`. `is-destroy` runs `plan -destroy`. `auto-apply` jobs
+  approve themselves and continue; otherwise the job moves to
+  `waitingApproval`.
+- **Logs**: each command line is published to the Redis stream named after the
+  job with `stepId`/`output` fields, and the full step output is written to
+  `step.output` and `job.output` (truncated at 10 MiB). The live stream is
+  capped at 200,000 records.
+- **History**: after a successful apply the executor reads the current state,
+  creates a `history` row with the state `serial`, `lineage` and MD5, and
+  archives the raw and JSON state objects under the upstream `state/...` keys.
+- **Binary**: `TERRAKUBE_EXECUTOR_BINARY` overrides the CLI. Otherwise
+  `iac_type` containing `tofu` selects `tofu`; other workspaces use
+  `terraform` when installed and fall back to `tofu`.
+- **Work dir**: `TERRAKUBE_EXECUTOR_WORK_DIR` sets the temporary root; each job
+  gets a unique directory that is removed afterwards.
+
+Divergences to keep in mind:
+
+- `step.output` stores log text inline; upstream stores a `/tfoutput/v1/...`
+  URL and reads the file from object storage. `/tfoutput/v1` reads the column
+  for rows created by this implementation.
+- The executor has no VCS clone, policy check, cost estimation or remote
+  (agent) execution yet; those are M4/M6.
 
 ## Database
 
@@ -266,6 +367,11 @@ data can be imported and the UI's assumptions hold. Core tables implemented in
 
 `migrations/0002_temp_archive.sql` adds upstream's `temp_archive` table
 (`id`, `type`, `history_id`) used by the hosted-state and rollback flows.
+
+`migrations/0004_remote_content.sql` adds `job.override_source` and
+`job.override_branch` (upstream stores the CLI configuration tarball URL there
+with `override_branch = remote-content`) plus an index on
+`step(job_id, step_number)` for step lookups.
 
 Differences from upstream at this stage:
 
