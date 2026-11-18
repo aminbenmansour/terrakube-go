@@ -75,6 +75,8 @@ type stubQuerier struct {
 	archives       map[string][]store.TempArchive
 	createdArchive *store.CreateArchiveParams
 
+	createdSteps []store.Step
+
 	content              store.Content
 	contentErr           error
 	createdContent       *store.CreateContentParams
@@ -202,6 +204,47 @@ func (s *stubQuerier) UpdateJobStatus(_ context.Context, arg store.UpdateJobStat
 	return s.job, nil
 }
 
+func (s *stubQuerier) SetJobOverrideSource(_ context.Context, arg store.SetJobOverrideSourceParams) (store.Job, error) {
+	s.job.OverrideSource = arg.OverrideSource
+	s.job.OverrideBranch = arg.OverrideBranch
+	return s.job, nil
+}
+
+func (s *stubQuerier) SetWorkspaceLastJob(_ context.Context, arg store.SetWorkspaceLastJobParams) error {
+	s.workspace.LastJobStatus = arg.LastJobStatus
+	return nil
+}
+
+func (s *stubQuerier) ApproveJob(_ context.Context, arg store.ApproveJobParams) (store.Job, error) {
+	s.job.ApprovedBy = arg.ApprovedBy
+	s.job.Status = "pending"
+	return s.job, nil
+}
+
+func (s *stubQuerier) GetStepByJobAndNumber(_ context.Context, arg store.GetStepByJobAndNumberParams) (store.Step, error) {
+	if s.step.JobID == arg.JobID && s.step.StepNumber == arg.StepNumber {
+		return s.step, nil
+	}
+	return store.Step{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) ListStepsByJob(context.Context, int64) ([]store.Step, error) {
+	if s.step.ID == "" {
+		return nil, nil
+	}
+	return []store.Step{s.step}, nil
+}
+
+func (s *stubQuerier) UpdateStepStatus(_ context.Context, arg store.UpdateStepStatusParams) (store.Step, error) {
+	s.step.Status = arg.Status
+	return s.step, nil
+}
+
+func (s *stubQuerier) UpdateStepOutput(_ context.Context, arg store.UpdateStepOutputParams) error {
+	s.step.Output = arg.Output
+	return nil
+}
+
 func (s *stubQuerier) ListActiveJobsByWorkspace(context.Context, string) ([]store.Job, error) {
 	return s.jobs, nil
 }
@@ -220,6 +263,7 @@ func (s *stubQuerier) CreateStep(_ context.Context, arg store.CreateStepParams) 
 		LogStatus:  arg.LogStatus,
 		Output:     arg.Output,
 	}
+	s.createdSteps = append(s.createdSteps, s.step)
 	return s.step, nil
 }
 
@@ -1220,6 +1264,35 @@ func TestCreateGetAndDiscardRun(t *testing.T) {
 	}
 }
 
+func TestCreateSpeculativeRunOnlyCreatesPlanStep(t *testing.T) {
+	speculative := true
+	q := &stubQuerier{
+		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1"},
+		content: store.Content{
+			ID:          "cv-1",
+			WorkspaceID: stringPtr("ws-1"),
+			Status:      stringPtr("uploaded"),
+			Speculative: &speculative,
+		},
+	}
+	handler, _ := newTestAPIWithQueue(t, q, &stubJobQueue{})
+
+	body := `{"data":{"type":"runs","attributes":{"is-destroy":false,"auto-apply":false},"relationships":{"workspace":{"data":{"type":"workspaces","id":"ws-1"}},"configuration-version":{"data":{"type":"configuration-versions","id":"cv-1"}}}}}`
+	req := httptest.NewRequest(http.MethodPost, "/runs", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/vnd.api+json")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("create status = %d; body = %s", rec.Code, rec.Body.String())
+	}
+	if len(q.createdSteps) != 1 {
+		t.Fatalf("speculative run created %d steps, want 1", len(q.createdSteps))
+	}
+	if q.createdSteps[0].StepNumber != 100 {
+		t.Errorf("speculative step = %d, want 100", q.createdSteps[0].StepNumber)
+	}
+}
+
 func TestCreateRunEnqueueFailure(t *testing.T) {
 	q := &stubQuerier{
 		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1"},
@@ -1271,7 +1344,8 @@ func TestListWorkspaceRunsAndQueue(t *testing.T) {
 func TestRunEventsPlanAndApply(t *testing.T) {
 	q := &stubQuerier{
 		workspace: store.Workspace{ID: "ws-1", Name: "dev", OrganizationID: "org-1"},
-		job:       store.Job{ID: 42, OrganizationID: "org-1", WorkspaceID: "ws-1", Status: "pending", PlanChanges: true},
+		job:       store.Job{ID: 42, OrganizationID: "org-1", WorkspaceID: "ws-1", Status: "waitingApproval", PlanChanges: true},
+		step:      store.Step{ID: "step-100", JobID: 42, StepNumber: 100, Status: stringPtr("completed"), Output: stringPtr("plan output")},
 	}
 	handler := newTestAPI(t, q)
 
@@ -1301,8 +1375,12 @@ func TestRunEventsPlanAndApply(t *testing.T) {
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"type":"plans"`) {
 		t.Fatalf("plan status = %d; body = %s", rec.Code, rec.Body.String())
 	}
-	if !strings.Contains(rec.Body.String(), "/remote/tfe/v2/plans/logs/42/0") {
-		t.Errorf("missing log-read-url: %s", rec.Body.String())
+	if !strings.Contains(rec.Body.String(), `"status":"finished"`) {
+		t.Errorf("plan status should come from the completed plan step: %s", rec.Body.String())
+	}
+	logURL := extractLogReadURL(t, rec.Body.Bytes())
+	if !strings.Contains(logURL, "/remote/tfe/v2/plans/logs/42/") {
+		t.Errorf("missing log-read-url: %s", logURL)
 	}
 
 	rec = httptest.NewRecorder()
@@ -1310,12 +1388,41 @@ func TestRunEventsPlanAndApply(t *testing.T) {
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"type":"applies"`) {
 		t.Fatalf("apply status = %d; body = %s", rec.Code, rec.Body.String())
 	}
+	if !strings.Contains(rec.Body.String(), `"status":"pending"`) {
+		t.Errorf("apply status should come from the pending apply step: %s", rec.Body.String())
+	}
+
+	// The log read URL is a capability: no Authorization header is required.
+	logPath := strings.TrimPrefix(logURL, "https://terrakube.local/remote/tfe/v2")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, logPath+"?offset=0&limit=100", nil))
+	if rec.Code != http.StatusOK || rec.Body.String() != "plan output" {
+		t.Fatalf("plan logs status = %d; body = %q", rec.Code, rec.Body.String())
+	}
 
 	rec = httptest.NewRecorder()
-	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/plans/logs/42/0?offset=0&limit=10", nil))
-	if rec.Code != http.StatusOK {
-		t.Fatalf("plan logs status = %d", rec.Code)
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/plans/logs/42/not-a-token?offset=0&limit=10", nil))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("invalid log token status = %d, want 403", rec.Code)
 	}
+}
+
+func extractLogReadURL(t *testing.T, body []byte) string {
+	t.Helper()
+	var doc struct {
+		Data struct {
+			Attributes struct {
+				LogReadURL string `json:"log-read-url"`
+			} `json:"attributes"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &doc); err != nil {
+		t.Fatalf("decode plan: %v", err)
+	}
+	if doc.Data.Attributes.LogReadURL == "" {
+		t.Fatalf("plan has no log-read-url: %s", body)
+	}
+	return doc.Data.Attributes.LogReadURL
 }
 
 func stringPtr(value string) *string {
