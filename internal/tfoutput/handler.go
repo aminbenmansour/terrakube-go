@@ -11,6 +11,7 @@ import (
 	"crypto/subtle"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -22,7 +23,9 @@ import (
 
 	internalauth "github.com/aminbenmansour/terrakube-go/internal/auth"
 	"github.com/aminbenmansour/terrakube-go/internal/queue"
+	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
+	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
 )
 
 const (
@@ -37,6 +40,8 @@ const (
 type Deps struct {
 	Store        store.Querier
 	Queue        *queue.Queue
+	Storage      storage.Backend
+	Layout       tfstate.Layout
 	Logger       *slog.Logger
 	AuthToken    string
 	InternalAuth *internalauth.Validator
@@ -111,6 +116,21 @@ func (h *Handler) getStepLog(w http.ResponseWriter, r *http.Request) {
 				_, _ = w.Write([]byte(live.String()))
 				return
 			}
+		}
+	}
+
+	if h.deps.Storage != nil {
+		key := h.deps.Layout.Output(job.OrganizationID, job.ID, step.ID)
+		if rc, err := h.deps.Storage.Get(r.Context(), key); err == nil {
+			defer rc.Close()
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.WriteHeader(http.StatusOK)
+			if _, err := io.Copy(w, rc); err != nil {
+				h.deps.Logger.Warn("stream archived step log failed", "job_id", job.ID, "step_id", step.ID, "error", err)
+			}
+			return
+		} else if !errors.Is(err, storage.ErrNotFound) {
+			h.deps.Logger.Warn("read archived step log failed", "job_id", job.ID, "step_id", step.ID, "error", err)
 		}
 	}
 
