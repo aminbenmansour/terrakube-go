@@ -14,6 +14,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
@@ -229,6 +231,10 @@ type historyStub struct {
 func (s *historyStub) CreateHistory(_ context.Context, arg store.CreateHistoryParams) (store.History, error) {
 	s.created = &arg
 	return store.History{ID: arg.ID}, nil
+}
+
+func (s *historyStub) GetHistoryByJobReference(context.Context, store.GetHistoryByJobReferenceParams) (store.History, error) {
+	return store.History{}, pgx.ErrNoRows
 }
 
 type memoryBackend struct {

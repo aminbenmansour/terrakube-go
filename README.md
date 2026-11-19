@@ -110,7 +110,7 @@ Set `TERRAKUBE_STORAGE_TYPE=s3` for S3/MinIO.
 | M1 | JSON:API management API: org, project, workspace, variable, tag | done |
 | M2 | State backend `/tfstate/v1` (executor HTTP backend) | done — [v0.2.0](https://github.com/aminbenmansour/terrakube-go/releases/tag/v0.2.0) |
 | M3 | TFE v2 remote CLI workflow (`terraform init/plan/apply`) | done — [v0.3.0](https://github.com/aminbenmansour/terrakube-go/releases/tag/v0.3.0) |
-| M4 | Executor hardening: VCS clone, remote agents, policy checks, cost estimation | planned |
+| M4 | Executor hardening: queue reliability, VCS clone, isolation, durable logs and artifacts | planned |
 | M5 | Upstream UI compatibility, GraphQL + subscriptions | planned |
 | M6 | RBAC, templates, VCS, policies, registry, parity | planned |
 

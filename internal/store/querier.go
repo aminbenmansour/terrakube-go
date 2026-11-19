@@ -28,10 +28,13 @@ type Querier interface {
 	GetArchive(ctx context.Context, id string) (GetArchiveRow, error)
 	GetContent(ctx context.Context, id string) (Content, error)
 	GetHistory(ctx context.Context, id string) (History, error)
+	GetHistoryByJobReference(ctx context.Context, arg GetHistoryByJobReferenceParams) (History, error)
 	GetJob(ctx context.Context, id int64) (Job, error)
 	GetLatestHistory(ctx context.Context, workspaceID string) (History, error)
 	GetOrganization(ctx context.Context, id string) (Organization, error)
 	GetOrganizationByName(ctx context.Context, name string) (Organization, error)
+	// "running" is included so an executor that reclaims a crashed job resumes the
+	// interrupted step instead of treating the job as finished.
 	GetPendingStepByJob(ctx context.Context, jobID int64) (Step, error)
 	GetProject(ctx context.Context, id string) (Project, error)
 	GetProjectByName(ctx context.Context, arg GetProjectByNameParams) (Project, error)

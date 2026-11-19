@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aminbenmansour/terrakube-go/internal/queue"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 )
@@ -23,18 +22,30 @@ const (
 )
 
 func (e *Executor) runPlan(ctx context.Context, job store.Job, ws store.Workspace, step store.Step) error {
+	jobCtx, stopWatching := e.watchJob(ctx, job.ID)
+	defer stopWatching()
+
 	binary := e.binary(ws)
-	workDir, runDir, env, err := e.prepareWorkspace(ctx, job, ws, step)
+	workDir, runDir, env, err := e.prepareWorkspace(jobCtx, job, ws, step)
 	if err != nil {
+		if jobCtx.Err() != nil && ctx.Err() == nil {
+			return errJobCancelled
+		}
 		return err
 	}
 	defer func() { _ = os.RemoveAll(workDir) }()
 
 	sink := newLogSink(ctx, e.deps.Queue, e.deps.Logger, job.ID, step.ID)
-	e.startStep(ctx, job, step)
+	if !e.startStep(ctx, job, step) {
+		return errJobCancelled
+	}
 	sink.WriteString("Executing terraform init\n")
 
-	if err := e.runCommand(ctx, runDir, env, sink, binary, "init", "-input=false", "-no-color"); err != nil {
+	if err := e.runCommand(jobCtx, runDir, env, sink, binary, "init", "-input=false", "-no-color"); err != nil {
+		if jobCtx.Err() != nil && ctx.Err() == nil {
+			e.completeStep(ctx, job, step, sink, "cancelled")
+			return errJobCancelled
+		}
 		e.completeStep(ctx, job, step, sink, "failed")
 		return fmt.Errorf("terraform init: %w", err)
 	}
@@ -44,9 +55,13 @@ func (e *Executor) runPlan(ctx context.Context, job store.Job, ws store.Workspac
 	if job.Command != nil && strings.EqualFold(*job.Command, "destroy") {
 		args = []string{"plan", "-destroy", "-input=false", "-no-color", "-detailed-exitcode", "-out=" + planFileName}
 	}
-	err = e.runCommand(ctx, runDir, env, sink, binary, args...)
+	err = e.runCommand(jobCtx, runDir, env, sink, binary, args...)
 	changes := false
 	if err != nil {
+		if jobCtx.Err() != nil && ctx.Err() == nil {
+			e.completeStep(ctx, job, step, sink, "cancelled")
+			return errJobCancelled
+		}
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) && exitErr.ExitCode() == 2 {
 			// -detailed-exitcode uses 2 to signal a non-empty diff.
@@ -74,18 +89,30 @@ func (e *Executor) runPlan(ctx context.Context, job store.Job, ws store.Workspac
 }
 
 func (e *Executor) runApply(ctx context.Context, job store.Job, ws store.Workspace, step store.Step) error {
+	jobCtx, stopWatching := e.watchJob(ctx, job.ID)
+	defer stopWatching()
+
 	binary := e.binary(ws)
-	workDir, runDir, env, err := e.prepareWorkspace(ctx, job, ws, step)
+	workDir, runDir, env, err := e.prepareWorkspace(jobCtx, job, ws, step)
 	if err != nil {
+		if jobCtx.Err() != nil && ctx.Err() == nil {
+			return errJobCancelled
+		}
 		return err
 	}
 	defer func() { _ = os.RemoveAll(workDir) }()
 
 	sink := newLogSink(ctx, e.deps.Queue, e.deps.Logger, job.ID, step.ID)
-	e.startStep(ctx, job, step)
+	if !e.startStep(ctx, job, step) {
+		return errJobCancelled
+	}
 	sink.WriteString("Executing terraform init\n")
 
-	if err := e.runCommand(ctx, runDir, env, sink, binary, "init", "-input=false", "-no-color"); err != nil {
+	if err := e.runCommand(jobCtx, runDir, env, sink, binary, "init", "-input=false", "-no-color"); err != nil {
+		if jobCtx.Err() != nil && ctx.Err() == nil {
+			e.completeStep(ctx, job, step, sink, "cancelled")
+			return errJobCancelled
+		}
 		e.completeStep(ctx, job, step, sink, "failed")
 		return fmt.Errorf("terraform init: %w", err)
 	}
@@ -96,7 +123,7 @@ func (e *Executor) runApply(ctx context.Context, job store.Job, ws store.Workspa
 		JobID:      job.ID,
 		StepNumber: planStepNumber,
 	}); err == nil {
-		hasPlan = e.downloadPlan(ctx, job, planStep, runDir) == nil
+		hasPlan = e.downloadPlan(jobCtx, job, planStep, runDir) == nil
 	}
 	args := []string{"apply", "-auto-approve", "-input=false", "-no-color"}
 	if hasPlan {
@@ -104,7 +131,11 @@ func (e *Executor) runApply(ctx context.Context, job store.Job, ws store.Workspa
 	} else {
 		sink.WriteString("Saved plan not available; applying a fresh plan\n")
 	}
-	if err := e.runCommand(ctx, runDir, env, sink, binary, args...); err != nil {
+	if err := e.runCommand(jobCtx, runDir, env, sink, binary, args...); err != nil {
+		if jobCtx.Err() != nil && ctx.Err() == nil {
+			e.completeStep(ctx, job, step, sink, "cancelled")
+			return errJobCancelled
+		}
 		e.completeStep(ctx, job, step, sink, "failed")
 		return fmt.Errorf("terraform apply: %w", err)
 	}
@@ -118,7 +149,13 @@ func (e *Executor) runApply(ctx context.Context, job store.Job, ws store.Workspa
 	return nil
 }
 
-func (e *Executor) startStep(ctx context.Context, job store.Job, step store.Step) {
+// startStep marks the job and step running. It returns false when the job was
+// cancelled while the workspace was being prepared, so a discarded run is not
+// resurrected by the executor.
+func (e *Executor) startStep(ctx context.Context, job store.Job, step store.Step) bool {
+	if current, err := e.deps.Store.GetJob(ctx, job.ID); err == nil && isCancelledStatus(current.Status) {
+		return false
+	}
 	if _, err := e.deps.Store.UpdateJobStatus(ctx, store.UpdateJobStatusParams{
 		ID:     job.ID,
 		Status: "running",
@@ -131,6 +168,7 @@ func (e *Executor) startStep(ctx context.Context, job store.Job, step store.Step
 	}); err != nil {
 		e.deps.Logger.Warn("could not mark step running", "step_id", step.ID, "error", err)
 	}
+	return true
 }
 
 func (e *Executor) completeStep(ctx context.Context, job store.Job, step store.Step, sink *logSink, status string) {
@@ -222,7 +260,7 @@ func (e *Executor) binary(ws store.Workspace) string {
 // step row.
 type logSink struct {
 	ctx    context.Context
-	queue  *queue.Queue
+	queue  LogPublisher
 	logger *slog.Logger
 	jobID  int64
 	stepID string
@@ -233,7 +271,7 @@ type logSink struct {
 	trunc   bool
 }
 
-func newLogSink(ctx context.Context, q *queue.Queue, logger *slog.Logger, jobID int64, stepID string) *logSink {
+func newLogSink(ctx context.Context, q LogPublisher, logger *slog.Logger, jobID int64, stepID string) *logSink {
 	return &logSink{ctx: ctx, queue: q, logger: logger, jobID: jobID, stepID: stepID}
 }
 
