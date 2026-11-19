@@ -129,10 +129,15 @@ func (e *Executor) runApply(ctx context.Context, job store.Job, ws store.Workspa
 		return e.handleCommandError(ctx, jobCtx, job, step, sink, "terraform apply", err)
 	}
 
+	return e.finishApply(ctx, job, ws, step, sink)
+}
+
+// finishApply archives the state produced by apply and completes the step. A
+// history upload failure is a run failure, not a warning.
+func (e *Executor) finishApply(ctx context.Context, job store.Job, ws store.Workspace, step store.Step, sink *logSink) error {
 	if err := e.archiveHistory(ctx, job, ws); err != nil {
-		// The apply itself succeeded; a history failure should not mark the run
-		// failed, but it must be visible.
-		e.deps.Logger.Warn("could not archive state history", "job_id", job.ID, "error", err)
+		_ = e.completeStep(ctx, job, step, sink, "failed")
+		return fmt.Errorf("archive state history: %w", err)
 	}
 	return e.completeStep(ctx, job, step, sink, "completed")
 }

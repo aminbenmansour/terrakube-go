@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -76,6 +77,41 @@ func TestCompleteStepCancelledKeepsStatusWhenLogUploadFails(t *testing.T) {
 	}
 	if st.stepStatus != "cancelled" {
 		t.Errorf("step status = %q, want cancelled", st.stepStatus)
+	}
+}
+
+func TestFinishApplyFailsWhenHistoryArchiveFails(t *testing.T) {
+	ctx := context.Background()
+	backend := newMemoryBackend()
+	layout := tfstate.NewLayout("local")
+	state := []byte(`{"version":4,"serial":3,"lineage":"lineage-1"}`)
+	if err := backend.Put(ctx, layout.CurrentState("org-1", "ws-1"), bytes.NewReader(state), int64(len(state)), "application/json"); err != nil {
+		t.Fatalf("seed state: %v", err)
+	}
+	st := &artifactStore{historyErr: errors.New("history database down")}
+	e := New(Deps{Store: st, Storage: backend, Layout: layout, Logger: testLogger()})
+
+	sink := newLogSink(ctx, nil, testLogger(), 9, "step-1", nil)
+	err := e.finishApply(ctx, store.Job{ID: 9, OrganizationID: "org-1", WorkspaceID: "ws-1"}, store.Workspace{ID: "ws-1"}, store.Step{ID: "step-1"}, sink)
+	if err == nil || !strings.Contains(err.Error(), "archive state history") {
+		t.Fatalf("error = %v, want archive state history", err)
+	}
+	if st.stepStatus != "failed" {
+		t.Errorf("step status = %q, want failed", st.stepStatus)
+	}
+}
+
+func TestFinishApplyCompletesStep(t *testing.T) {
+	ctx := context.Background()
+	st := &artifactStore{}
+	e := New(Deps{Store: st, Logger: testLogger()})
+
+	sink := newLogSink(ctx, nil, testLogger(), 9, "step-1", nil)
+	if err := e.finishApply(ctx, store.Job{ID: 9, OrganizationID: "org-1"}, store.Workspace{ID: "ws-1"}, store.Step{ID: "step-1"}, sink); err != nil {
+		t.Fatalf("finishApply: %v", err)
+	}
+	if st.stepStatus != "completed" {
+		t.Errorf("step status = %q, want completed", st.stepStatus)
 	}
 }
 

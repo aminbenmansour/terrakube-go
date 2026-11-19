@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -71,11 +72,12 @@ func (e *Executor) archiveHistory(ctx context.Context, job store.Job, ws store.W
 		return fmt.Errorf("check existing history: %w", err)
 	}
 
+	output := e.stateJSONURL(job, ws, historyID)
 	if _, err := e.deps.Store.CreateHistory(ctx, store.CreateHistoryParams{
 		ID:           historyID,
 		WorkspaceID:  ws.ID,
 		JobReference: &jobReference,
-		Output:       nil,
+		Output:       &output,
 		Serial:       metadata.Serial,
 		Md5:          hex.EncodeToString(sum[:]),
 		Lineage:      lineage,
@@ -93,4 +95,14 @@ func (e *Executor) archiveHistory(ctx context.Context, job store.Job, ws store.W
 		return fmt.Errorf("archive raw state: %w", err)
 	}
 	return nil
+}
+
+// stateJSONURL is the upstream state URL stored on a history row.
+func (e *Executor) stateJSONURL(job store.Job, ws store.Workspace, historyID string) string {
+	base := strings.TrimRight(e.deps.PublicURL, "/")
+	if base == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s/tfstate/v1/organization/%s/workspace/%s/state/%s.json",
+		base, job.OrganizationID, ws.ID, historyID)
 }
