@@ -9,6 +9,7 @@ func TestLayoutLocalKeys(t *testing.T) {
 		layout.RawState("org", "ws", "history"):  "state/org/ws/state/history.raw.json",
 		layout.JSONState("org", "ws", "history"): "state/org/ws/state/history.json",
 		layout.Plan("org", "ws", "job", "step"):  "state/org/ws/job/step/terraformLibrary.tfPlan",
+		layout.Output("org", 7, "step"):          "tfoutput/org/7/step.tfoutput",
 	}
 	for got, want := range cases {
 		if got != want {
@@ -24,6 +25,7 @@ func TestLayoutS3Keys(t *testing.T) {
 		layout.RawState("org", "ws", "history"):  "tfstate/org/ws/state/history.raw.json",
 		layout.JSONState("org", "ws", "history"): "tfstate/org/ws/state/history.json",
 		layout.Plan("org", "ws", "job", "step"):  "tfstate/org/ws/job/step/terraformLibrary.tfPlan",
+		layout.Output("org", 7, "step"):          "tfoutput/org/7/step.tfoutput",
 	}
 	for got, want := range cases {
 		if got != want {

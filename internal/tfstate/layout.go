@@ -41,6 +41,12 @@ func (l Layout) Plan(organizationID, workspaceID, jobID, stepID string) string {
 	return fmt.Sprintf("%s/%s/%s/%s/%s/terraformLibrary.tfPlan", l.statePrefix(), organizationID, workspaceID, jobID, stepID)
 }
 
+// Output is the archived console log for a job step. Upstream uses the same
+// S3 key; its local backend writes to a home-directory path instead.
+func (l Layout) Output(organizationID string, jobID int64, stepID string) string {
+	return fmt.Sprintf("tfoutput/%s/%d/%s.tfoutput", organizationID, jobID, stepID)
+}
+
 // Content is the uploaded Terraform configuration tarball for a
 // configuration version. Upstream uses the same key for local and S3 storage.
 func (l Layout) Content(contentID string) string {
