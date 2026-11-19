@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -71,19 +72,9 @@ func (e *Executor) archiveHistory(ctx context.Context, job store.Job, ws store.W
 		return fmt.Errorf("check existing history: %w", err)
 	}
 
-	if _, err := e.deps.Store.CreateHistory(ctx, store.CreateHistoryParams{
-		ID:           historyID,
-		WorkspaceID:  ws.ID,
-		JobReference: &jobReference,
-		Output:       nil,
-		Serial:       metadata.Serial,
-		Md5:          hex.EncodeToString(sum[:]),
-		Lineage:      lineage,
-		CreatedBy:    stringPointer("executor"),
-	}); err != nil {
-		return fmt.Errorf("create history row: %w", err)
-	}
-
+	// Upload before creating the row: the row is what advertises the state URL,
+	// and the idempotency check above treats an existing row as already
+	// archived, so a row without its objects would never be repaired.
 	if err := e.deps.Storage.Put(ctx, e.deps.Layout.JSONState(job.OrganizationID, job.WorkspaceID, historyID),
 		bytes.NewReader(data), int64(len(data)), "application/json"); err != nil {
 		return fmt.Errorf("archive json state: %w", err)
@@ -92,5 +83,29 @@ func (e *Executor) archiveHistory(ctx context.Context, job store.Job, ws store.W
 		bytes.NewReader(data), int64(len(data)), "application/json"); err != nil {
 		return fmt.Errorf("archive raw state: %w", err)
 	}
+
+	output := e.stateJSONURL(job, ws, historyID)
+	if _, err := e.deps.Store.CreateHistory(ctx, store.CreateHistoryParams{
+		ID:           historyID,
+		WorkspaceID:  ws.ID,
+		JobReference: &jobReference,
+		Output:       &output,
+		Serial:       metadata.Serial,
+		Md5:          hex.EncodeToString(sum[:]),
+		Lineage:      lineage,
+		CreatedBy:    stringPointer("executor"),
+	}); err != nil {
+		return fmt.Errorf("create history row: %w", err)
+	}
 	return nil
+}
+
+// stateJSONURL is the upstream state URL stored on a history row.
+func (e *Executor) stateJSONURL(job store.Job, ws store.Workspace, historyID string) string {
+	base := strings.TrimRight(e.deps.PublicURL, "/")
+	if base == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s/tfstate/v1/organization/%s/workspace/%s/state/%s.json",
+		base, job.OrganizationID, ws.ID, historyID)
 }

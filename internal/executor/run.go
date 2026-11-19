@@ -68,19 +68,18 @@ func (e *Executor) runPlan(ctx context.Context, job store.Job, ws store.Workspac
 	}
 
 	if err := e.savePlan(ctx, job, step, prepared.runDir); err != nil {
-		e.completeStep(ctx, job, step, sink, "failed")
+		_ = e.completeStep(ctx, job, step, sink, "failed")
 		return fmt.Errorf("save plan artifact: %w", err)
 	}
 	if _, err := e.deps.Store.UpdateJobPlanChanges(ctx, store.UpdateJobPlanChangesParams{
 		ID:          job.ID,
 		PlanChanges: changes,
 	}); err != nil {
-		e.completeStep(ctx, job, step, sink, "failed")
+		_ = e.completeStep(ctx, job, step, sink, "failed")
 		return err
 	}
 
-	e.completeStep(ctx, job, step, sink, "completed")
-	return nil
+	return e.completeStep(ctx, job, step, sink, "completed")
 }
 
 func (e *Executor) runApply(ctx context.Context, job store.Job, ws store.Workspace, step store.Step) error {
@@ -130,13 +129,17 @@ func (e *Executor) runApply(ctx context.Context, job store.Job, ws store.Workspa
 		return e.handleCommandError(ctx, jobCtx, job, step, sink, "terraform apply", err)
 	}
 
+	return e.finishApply(ctx, job, ws, step, sink)
+}
+
+// finishApply archives the state produced by apply and completes the step. A
+// history upload failure is a run failure, not a warning.
+func (e *Executor) finishApply(ctx context.Context, job store.Job, ws store.Workspace, step store.Step, sink *logSink) error {
 	if err := e.archiveHistory(ctx, job, ws); err != nil {
-		// The apply itself succeeded; a history failure should not mark the run
-		// failed, but it must be visible.
-		e.deps.Logger.Warn("could not archive state history", "job_id", job.ID, "error", err)
+		_ = e.completeStep(ctx, job, step, sink, "failed")
+		return fmt.Errorf("archive state history: %w", err)
 	}
-	e.completeStep(ctx, job, step, sink, "completed")
-	return nil
+	return e.completeStep(ctx, job, step, sink, "completed")
 }
 
 // startStep marks the job and step running. It returns false when the job was
@@ -161,9 +164,19 @@ func (e *Executor) startStep(ctx context.Context, job store.Job, step store.Step
 	return true
 }
 
-func (e *Executor) completeStep(ctx context.Context, job store.Job, step store.Step, sink *logSink, status string) {
+func (e *Executor) completeStep(ctx context.Context, job store.Job, step store.Step, sink *logSink, status string) error {
 	sink.Flush()
 	output := sink.String()
+
+	effective := status
+	archiveErr := e.archiveStepLog(ctx, job, step, output)
+	if archiveErr != nil {
+		e.deps.Logger.Warn("could not archive step log", "step_id", step.ID, "error", archiveErr)
+		if status == "completed" {
+			effective = "failed"
+		}
+	}
+
 	if err := e.deps.Store.UpdateStepOutput(ctx, store.UpdateStepOutputParams{
 		ID:     step.ID,
 		Output: stringPointer(output),
@@ -178,10 +191,25 @@ func (e *Executor) completeStep(ctx context.Context, job store.Job, step store.S
 	}
 	if _, err := e.deps.Store.UpdateStepStatus(ctx, store.UpdateStepStatusParams{
 		ID:     step.ID,
-		Status: stringPointer(status),
+		Status: stringPointer(effective),
 	}); err != nil {
 		e.deps.Logger.Warn("could not save step status", "step_id", step.ID, "error", err)
 	}
+
+	if archiveErr != nil && status == "completed" {
+		return fmt.Errorf("archive step log: %w", archiveErr)
+	}
+	return nil
+}
+
+// archiveStepLog writes the final console output under the upstream object
+// key. The inline step.output column remains for the TFE log endpoints.
+func (e *Executor) archiveStepLog(ctx context.Context, job store.Job, step store.Step, output string) error {
+	if e.deps.Storage == nil {
+		return nil
+	}
+	key := e.deps.Layout.Output(job.OrganizationID, job.ID, step.ID)
+	return e.deps.Storage.Put(ctx, key, strings.NewReader(output), int64(len(output)), "text/plain")
 }
 
 // inheritedEnvKeys are the host variables a Terraform command receives. The
@@ -213,14 +241,14 @@ func (e *Executor) handleCommandError(ctx, jobCtx context.Context, job store.Job
 	}
 	if e.timedOut(jobCtx) {
 		sink.WriteString(fmt.Sprintf("Job timed out after %s\n", e.deps.JobTimeout))
-		e.completeStep(ctx, job, step, sink, "failed")
+		_ = e.completeStep(ctx, job, step, sink, "failed")
 		return e.timeoutError(err)
 	}
 	if jobCtx.Err() != nil && ctx.Err() == nil {
-		e.completeStep(ctx, job, step, sink, "cancelled")
+		_ = e.completeStep(ctx, job, step, sink, "cancelled")
 		return errJobCancelled
 	}
-	e.completeStep(ctx, job, step, sink, "failed")
+	_ = e.completeStep(ctx, job, step, sink, "failed")
 	return fmt.Errorf("%s: %w", label, err)
 }
 

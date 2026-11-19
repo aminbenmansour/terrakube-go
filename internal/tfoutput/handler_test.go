@@ -1,7 +1,9 @@
 package tfoutput
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,7 +11,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
+	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
 )
 
 type stubQuerier struct {
@@ -201,5 +205,75 @@ func TestWriteEventFrame(t *testing.T) {
 		t.Fatalf("frame = %q", rec.Body.String())
 	}
 }
+
+func TestGetStepLogPrefersArchivedObject(t *testing.T) {
+	inline := "inline text"
+	q := &stubQuerier{
+		job:  store.Job{ID: 7, OrganizationID: "org-1"},
+		step: store.Step{ID: "step-1", JobID: 7, Output: &inline, Status: stringPtr("completed")},
+	}
+	backend := &logBackend{objects: map[string][]byte{}}
+	layout := tfstate.NewLayout("local")
+	backend.objects[layout.Output("org-1", 7, "step-1")] = []byte("archived text")
+
+	rec := httptest.NewRecorder()
+	handler := New(Deps{Store: q, Storage: backend, Layout: layout})
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/organization/org-1/job/7/step/step-1", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if rec.Body.String() != "archived text" {
+		t.Fatalf("body = %q, want archived text", rec.Body.String())
+	}
+}
+
+func TestGetStepLogFallsBackToInlineOutput(t *testing.T) {
+	inline := "inline text"
+	q := &stubQuerier{
+		job:  store.Job{ID: 7, OrganizationID: "org-1"},
+		step: store.Step{ID: "step-1", JobID: 7, Output: &inline, Status: stringPtr("completed")},
+	}
+	handler := New(Deps{Store: q, Storage: &logBackend{objects: map[string][]byte{}}, Layout: tfstate.NewLayout("local")})
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/organization/org-1/job/7/step/step-1", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if rec.Body.String() != inline {
+		t.Fatalf("body = %q, want inline text", rec.Body.String())
+	}
+}
+
+type logBackend struct{ objects map[string][]byte }
+
+func (b *logBackend) Put(_ context.Context, key string, r io.Reader, _ int64, _ string) error {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	b.objects[key] = data
+	return nil
+}
+
+func (b *logBackend) Get(_ context.Context, key string) (io.ReadCloser, error) {
+	data, ok := b.objects[key]
+	if !ok {
+		return nil, storage.ErrNotFound
+	}
+	return io.NopCloser(bytes.NewReader(data)), nil
+}
+
+func (b *logBackend) Delete(_ context.Context, key string) error { delete(b.objects, key); return nil }
+func (b *logBackend) Stat(_ context.Context, key string) (storage.Object, error) {
+	data, ok := b.objects[key]
+	if !ok {
+		return storage.Object{}, storage.ErrNotFound
+	}
+	return storage.Object{Key: key, Size: int64(len(data))}, nil
+}
+func (b *logBackend) Health(context.Context) error { return nil }
+
+var _ storage.Backend = (*logBackend)(nil)
 
 func stringPtr(value string) *string { return &value }

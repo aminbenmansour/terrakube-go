@@ -173,10 +173,11 @@ func TestArchiveHistory(t *testing.T) {
 
 	q := &historyStub{}
 	e := New(Deps{
-		Store:   q,
-		Storage: backend,
-		Layout:  layout,
-		Logger:  slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Store:     q,
+		Storage:   backend,
+		Layout:    layout,
+		Logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		PublicURL: "https://terrakube.example.com/",
 	})
 	job := store.Job{ID: 9, OrganizationID: "org-1", WorkspaceID: "ws-1"}
 	ws := store.Workspace{ID: "ws-1"}
@@ -196,6 +197,10 @@ func TestArchiveHistory(t *testing.T) {
 	}
 	if q.created.JobReference == nil || *q.created.JobReference != "9" {
 		t.Errorf("history job reference = %v", q.created.JobReference)
+	}
+	wantURL := "https://terrakube.example.com/tfstate/v1/organization/org-1/workspace/ws-1/state/" + q.created.ID + ".json"
+	if q.created.Output == nil || *q.created.Output != wantURL {
+		t.Errorf("history output = %v, want %q", q.created.Output, wantURL)
 	}
 	for _, archiveKey := range []string{
 		layout.JSONState("org-1", "ws-1", q.created.ID),

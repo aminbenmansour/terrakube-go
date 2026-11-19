@@ -120,6 +120,8 @@ func run() error {
 	handler.Mount("/tfoutput/v1", tfoutput.New(tfoutput.Deps{
 		Store:        store.New(pool),
 		Queue:        q,
+		Storage:      storeBackend,
+		Layout:       tfstate.NewLayout(cfg.Storage.Type),
 		Logger:       logger,
 		AuthToken:    cfg.AuthToken,
 		InternalAuth: internalAuth,

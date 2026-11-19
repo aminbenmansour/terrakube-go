@@ -3,7 +3,10 @@ package executor
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -83,6 +86,13 @@ func TestExecutorEndToEnd(t *testing.T) {
 		IacType:        "opentofu",
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
+	}
+
+	// Seed a state so the apply has something to archive into history. The
+	// fake Terraform binary does not speak the HTTP backend protocol.
+	state := []byte(`{"version":4,"serial":3,"lineage":"lineage-e2e"}`)
+	if err := backend.Put(ctx, layout.CurrentState(orgID, wsID), bytes.NewReader(state), int64(len(state)), "application/json"); err != nil {
+		t.Fatalf("seed state: %v", err)
 	}
 
 	callsFile := filepath.Join(t.TempDir(), "calls")
@@ -235,6 +245,25 @@ func TestExecutorEndToEnd(t *testing.T) {
 		if step.StepNumber == planStepNumber && step.Output == nil {
 			t.Error("plan step has no output")
 		}
+		// The approval step has no command output, so it has no archived log.
+		if step.StepNumber == approvalStepNumber {
+			continue
+		}
+		rc, err := backend.Get(ctx, layout.Output(orgID, job.ID, step.ID))
+		if err != nil {
+			t.Fatalf("read archived log for step %d: %v", step.StepNumber, err)
+		}
+		data, err := io.ReadAll(rc)
+		_ = rc.Close()
+		if err != nil {
+			t.Fatalf("read archived log body: %v", err)
+		}
+		if !bytes.Contains(data, []byte("fake tofu")) {
+			t.Errorf("archived log for step %d = %q", step.StepNumber, data)
+		}
+		if bytes.Contains(data, []byte("super-secret-value")) {
+			t.Errorf("archived log for step %d leaked a sensitive variable", step.StepNumber)
+		}
 	}
 
 	if final.Output == nil || !bytes.Contains([]byte(*final.Output), []byte("fake tofu")) {
@@ -251,6 +280,26 @@ func TestExecutorEndToEnd(t *testing.T) {
 	}
 	if !strings.Contains(output, "[REDACTED]") {
 		t.Errorf("job output does not show a redacted secret:\n%s", output)
+	}
+
+	jobReference := strconv.FormatInt(job.ID, 10)
+	history, err := st.GetHistoryByJobReference(ctx, store.GetHistoryByJobReferenceParams{
+		WorkspaceID:  wsID,
+		JobReference: &jobReference,
+	})
+	if err != nil {
+		t.Fatalf("load history: %v", err)
+	}
+	wantURL := "https://example.invalid/tfstate/v1/organization/" + orgID + "/workspace/" + wsID + "/state/" + history.ID + ".json"
+	if history.Output == nil || *history.Output != wantURL {
+		t.Errorf("history output = %v, want %q", history.Output, wantURL)
+	}
+	if history.Serial != 3 || history.Lineage != "lineage-e2e" {
+		t.Errorf("history serial/lineage = %d/%q", history.Serial, history.Lineage)
+	}
+	sum := md5.Sum(state)
+	if history.Md5 != hex.EncodeToString(sum[:]) {
+		t.Errorf("history md5 = %q", history.Md5)
 	}
 
 	calls, err := os.ReadFile(callsFile)
