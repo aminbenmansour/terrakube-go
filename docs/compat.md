@@ -241,10 +241,12 @@ and that the step belongs to the job.
 
 Live records use the Redis stream named after the job ID with the fields
 `stepId` and `output` (one log line per record), matching the upstream
-executor. Final step output is stored in `step.output`; upstream stores a
-`/tfoutput/v1/...` URL there and reads the file from object storage, so a
-deployment that imports upstream rows should read the archived object instead
-of the column.
+executor. Final step output is uploaded to
+`tfoutput/{orgId}/{jobId}/{stepId}.tfoutput`, and the plain endpoint serves
+that object for finished steps before falling back to `step.output`. This
+implementation also keeps the text inline in `step.output`; upstream stores a
+`/tfoutput/v1/...` URL there. Imported upstream rows resolve through the same
+object key.
 
 ## Management API — `/api/v1`
 
@@ -364,14 +366,22 @@ that was delivered to a dead consumer.
   approve themselves and continue; otherwise the job moves to
   `waitingApproval`.
 - **Logs**: each command line is published to the Redis stream named after the
-  job with `stepId`/`output` fields, and the full step output is written to
-  `step.output` and `job.output` (truncated at 10 MiB). The live stream is
-  capped at 200,000 records.
+  job with `stepId`/`output` fields. The stream is capped at 200,000 records;
+  ordering and step boundaries come from the stream order and `stepId`, and the
+  stream ID carries the timestamp. When a step finishes, the final output is
+  uploaded to `tfoutput/{orgId}/{jobId}/{stepId}.tfoutput` (the upstream S3
+  key). `/tfoutput/v1` serves that object for finished steps and falls back to
+  `step.output`, which still holds the same text inline (truncated at 10 MiB)
+  for the TFE log endpoints. A log upload failure marks the step `failed` and
+  fails the run, unless the step was already cancelled or failed.
 - **History**: after a successful apply the executor reads the current state,
-  creates a `history` row with the state `serial`, `lineage` and MD5, and
-  archives the raw and JSON state objects under the upstream `state/...` keys.
-  Archiving is idempotent per job reference, so a retried job cannot create a
-  second row.
+  creates a `history` row with the state `serial`, `lineage` and MD5, sets
+  `history.output` to
+  `{publicUrl}/tfstate/v1/organization/{orgId}/workspace/{wsId}/state/{historyId}.json`,
+  and archives the raw and JSON state objects under the upstream `state/...`
+  keys. Archiving is idempotent per job reference, so a retried job cannot
+  create a second row. A history upload failure marks the step `failed` and
+  fails the run.
 - **Reliability**: transient failures (database, storage, network) are retried
   up to three attempts by republishing the job with an `attempt` field. A
   message is acknowledged only after its work is finished or safely requeued;
@@ -391,8 +401,9 @@ that was delivered to a dead consumer.
 Divergences to keep in mind:
 
 - `step.output` stores log text inline; upstream stores a `/tfoutput/v1/...`
-  URL and reads the file from object storage. `/tfoutput/v1` reads the column
-  for rows created by this implementation.
+  URL there. The executor also archives the text under the upstream
+  `tfoutput/...` object key, which `/tfoutput/v1` prefers; the column remains
+  for the TFE log endpoints and rows written before archiving.
 - The executor has no VCS clone, policy check, cost estimation or remote
   (agent) execution yet; those are M4/M6.
 
