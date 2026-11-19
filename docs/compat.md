@@ -412,8 +412,8 @@ Divergences to keep in mind:
   URL there. The executor also archives the text under the upstream
   `tfoutput/...` object key, which `/tfoutput/v1` prefers; the column remains
   for the TFE log endpoints and rows written before archiving.
-- The executor has no VCS clone, policy check, cost estimation or remote
-  (agent) execution yet; those are M4/M6.
+- The executor has no policy check, cost estimation or remote (agent)
+  execution yet; those are M6.
 
 ## Database
 
@@ -464,5 +464,5 @@ WebSocket. Budget for it explicitly, or plan a UI rewrite instead.
   cost of reusing the upstream UI.
 - Exact JSON:API error objects and RSQL edge cases (differential tests).
 - Terraform login/OAuth broker behaviour (M3/M5).
-- Kubernetes ephemeral executor contract (M4/M6).
+- Kubernetes ephemeral executor contract (M6).
 - Variable encryption and key management (before variable values are exposed).

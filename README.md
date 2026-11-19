@@ -8,9 +8,10 @@ Terraform/OpenTofu CLI (`cloud` block and remote backend), the Terrakube
 Terraform provider and the API clients should keep working while the backend is
 replaced.
 
-> Status: M2 state backend released as `v0.2.0`. M3 is in progress: discovery,
-> workspaces, tags, state versions, configuration versions, runs and locking are
-> implemented; the executor and run log/event streaming follow in M4.
+> Status: M4 executor hardening released as `v0.4.0`. The TFE v2 CLI workflow,
+> the state backend and the executor (queue reliability, VCS clone, isolation,
+> durable logs and artifacts) are implemented. Upstream UI compatibility (M5)
+> is next.
 
 ## Requirements
 
@@ -110,7 +111,7 @@ Set `TERRAKUBE_STORAGE_TYPE=s3` for S3/MinIO.
 | M1 | JSON:API management API: org, project, workspace, variable, tag | done |
 | M2 | State backend `/tfstate/v1` (executor HTTP backend) | done — [v0.2.0](https://github.com/aminbenmansour/terrakube-go/releases/tag/v0.2.0) |
 | M3 | TFE v2 remote CLI workflow (`terraform init/plan/apply`) | done — [v0.3.0](https://github.com/aminbenmansour/terrakube-go/releases/tag/v0.3.0) |
-| M4 | Executor hardening: queue reliability, VCS clone, isolation, durable logs and artifacts | planned |
+| M4 | Executor hardening: queue reliability, VCS clone, isolation, durable logs and artifacts | done — [v0.4.0](https://github.com/aminbenmansour/terrakube-go/releases/tag/v0.4.0) |
 | M5 | Upstream UI compatibility, GraphQL + subscriptions | planned |
 | M6 | RBAC, templates, VCS, policies, registry, parity | planned |
 
