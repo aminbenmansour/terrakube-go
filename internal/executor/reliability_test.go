@@ -227,12 +227,13 @@ func testLogger() *slog.Logger {
 type fakeQueue struct {
 	acks      []string
 	published []map[string]any
+	stale     []queue.Message
 }
 
 func (q *fakeQueue) EnsureGroup(context.Context, string, string) error { return nil }
 
 func (q *fakeQueue) ClaimStale(context.Context, string, string, string, time.Duration, int64) ([]queue.Message, error) {
-	return nil, nil
+	return q.stale, nil
 }
 
 func (q *fakeQueue) ReadGroup(context.Context, string, string, string, int64, time.Duration) ([]queue.Message, error) {

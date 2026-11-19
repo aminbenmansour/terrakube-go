@@ -69,6 +69,7 @@ func run() error {
 		Store:               store.New(pool),
 		Storage:             storeBackend,
 		Queue:               q,
+		Locker:              db.NewLocker(pool),
 		Layout:              tfstate.NewLayout(cfg.Storage.Type),
 		Logger:              logger,
 		PublicURL:           cfg.PublicURL,
