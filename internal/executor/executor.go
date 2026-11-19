@@ -32,7 +32,6 @@ const (
 	applyStepNumber    int32 = 200
 
 	maxLogStreamEntries int64 = 200000
-	claimIdle                 = 30 * time.Second
 
 	// maxJobAttempts bounds how often a transient failure is retried before
 	// the job is marked failed. Attempts are carried in the queue message.
@@ -43,11 +42,18 @@ const (
 // is not a failure: the API already stored the cancelled status.
 var errJobCancelled = errors.New("job cancelled")
 
+// JobLocker takes an exclusive lease on a job so two executors cannot run the
+// same job at the same time.
+type JobLocker interface {
+	TryLock(ctx context.Context, jobID int64) (release func(), ok bool, err error)
+}
+
 // Deps are the collaborators the executor needs.
 type Deps struct {
 	Store               store.Querier
 	Storage             storage.Backend
 	Queue               JobQueue
+	Locker              JobLocker
 	Layout              tfstate.Layout
 	Logger              *slog.Logger
 	PublicURL           string
@@ -70,6 +76,9 @@ type Executor struct {
 	// cancelPollInterval is how often a running job's status is checked for
 	// cancellation.
 	cancelPollInterval time.Duration
+	// claimInterval is how often the executor looks for messages left behind
+	// by a dead executor.
+	claimInterval time.Duration
 }
 
 // New builds an executor.
@@ -83,6 +92,7 @@ func New(deps Deps) *Executor {
 		consumer:           fmt.Sprintf("%s-%d-%s", host, os.Getpid(), uuid.NewString()[:8]),
 		retryDelay:         defaultRetryDelay,
 		cancelPollInterval: 2 * time.Second,
+		claimInterval:      time.Minute,
 	}
 }
 
@@ -109,15 +119,14 @@ func (e *Executor) Run(ctx context.Context) error {
 	e.deps.Logger.Info("executor consuming jobs", "stream", queue.JobsStream, "group", Group, "consumer", e.consumer)
 
 	// Pick up jobs that were delivered before a previous executor stopped.
-	if stale, err := e.deps.Queue.ClaimStale(ctx, queue.JobsStream, Group, e.consumer, claimIdle, 10); err != nil {
-		e.deps.Logger.Warn("could not claim stale jobs", "error", err)
-	} else {
-		for _, message := range stale {
-			e.handle(ctx, message)
-		}
-	}
+	e.reclaimStale(ctx)
+	lastClaim := time.Now()
 
 	for {
+		if time.Since(lastClaim) >= e.claimInterval {
+			e.reclaimStale(ctx)
+			lastClaim = time.Now()
+		}
 		messages, err := e.deps.Queue.ReadGroup(ctx, queue.JobsStream, Group, e.consumer, 1, time.Second)
 		if err != nil {
 			if ctx.Err() != nil {
@@ -131,6 +140,31 @@ func (e *Executor) Run(ctx context.Context) error {
 			e.handle(ctx, message)
 		}
 	}
+}
+
+// reclaimStale hands messages left by a dead executor to this one. The idle
+// window must exceed the job timeout, otherwise a live worker running a long
+// plan would have its message stolen and the job would run twice.
+func (e *Executor) reclaimStale(ctx context.Context) {
+	messages, err := e.deps.Queue.ClaimStale(ctx, queue.JobsStream, Group, e.consumer, e.staleClaimIdle(), 10)
+	if err != nil {
+		if ctx.Err() == nil {
+			e.deps.Logger.Warn("could not claim stale jobs", "error", err)
+		}
+		return
+	}
+	for _, message := range messages {
+		e.handle(ctx, message)
+	}
+}
+
+// staleClaimIdle is how long a delivered message must sit untouched before it
+// is treated as abandoned.
+func (e *Executor) staleClaimIdle() time.Duration {
+	if e.deps.JobTimeout > 0 {
+		return e.deps.JobTimeout + 15*time.Minute
+	}
+	return 24 * time.Hour
 }
 
 // staleWorkspaceAge keeps a job directory for one timeout window plus an hour
@@ -151,7 +185,21 @@ func (e *Executor) handle(ctx context.Context, message queue.Message) {
 	}
 	attempt := parseAttempt(message.Values["attempt"])
 
-	err = e.processJob(ctx, jobID)
+	release, ok, lockErr := e.lockJob(ctx, jobID)
+	if lockErr == nil && !ok {
+		// Another executor owns this job; it will finish it. Acknowledging the
+		// duplicate stops it from being redelivered forever.
+		e.deps.Logger.Info("job is already claimed by another executor", "job_id", jobID)
+		e.ack(ctx, message.ID)
+		return
+	}
+	if lockErr != nil {
+		err = transient(lockErr)
+	} else {
+		defer release()
+		err = e.processJob(ctx, jobID)
+	}
+
 	if ctx.Err() != nil {
 		// Shutting down: leave the message pending so another executor can
 		// reclaim it. The interrupted step stays "running" and is resumed.
@@ -169,6 +217,15 @@ func (e *Executor) handle(ctx context.Context, message queue.Message) {
 		}
 		e.ack(ctx, message.ID)
 	}
+}
+
+// lockJob takes the job's lease. Without a locker the executor runs
+// unguarded, which is what the single-process development setup does.
+func (e *Executor) lockJob(ctx context.Context, jobID int64) (func(), bool, error) {
+	if e.deps.Locker == nil {
+		return func() {}, true, nil
+	}
+	return e.deps.Locker.TryLock(ctx, jobID)
 }
 
 func (e *Executor) ack(ctx context.Context, messageID string) {

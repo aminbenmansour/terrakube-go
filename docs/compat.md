@@ -314,9 +314,13 @@ Current M1 limitations (tracked for later milestones):
 ## Executor contract
 
 The M3 executor (`cmd/executor`, `internal/executor`) consumes the Redis Stream
-`terrakube:jobs` with the consumer group `terrakube-executor`. It claims
-messages idle for more than 30 seconds so a restarted executor picks up work
-that was delivered to a dead consumer.
+`terrakube:jobs` with the consumer group `terrakube-executor`. It takes a
+Postgres advisory lock on the job for the length of the run, so a duplicate
+message is acknowledged and skipped instead of running the job twice; the lock
+is released with the connection when an executor dies. Messages idle for longer
+than the job timeout plus 15 minutes are reclaimed, so a surviving executor
+picks up work left by a dead consumer without stealing a job that is still
+running.
 
 - **Configuration**: a job with a VCS source clones that repository, otherwise
   `job.override_source` holds either an object-storage key
@@ -391,7 +395,7 @@ that was delivered to a dead consumer.
   up to three attempts by republishing the job with an `attempt` field. A
   message is acknowledged only after its work is finished or safely requeued;
   during shutdown it is left pending so another executor reclaims it after the
-  30-second idle window. Permanent Terraform failures are not retried. Log and
+  idle window. Permanent Terraform failures are not retried. Log and
   history upload failures are treated as permanent: when a step was completing,
   they mark it `failed` and fail the run, rather than republishing a job that
   would re-run the step.
