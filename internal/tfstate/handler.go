@@ -252,9 +252,9 @@ func (h *Handler) uploadHostedState(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	body, err := io.ReadAll(r.Body)
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, h.deps.MaxStateSizeBytes))
 	if err != nil {
-		h.serverError(w, "read hosted state", err)
+		h.writeBodyError(w, "read hosted state", err)
 		return
 	}
 	if err := h.uploadState(r.Context(), archive.OrganizationID, archive.WorkspaceID, archive.HistoryID, body); err != nil {
@@ -274,9 +274,9 @@ func (h *Handler) uploadJSONHostedState(w http.ResponseWriter, r *http.Request) 
 	if !ok {
 		return
 	}
-	body, err := io.ReadAll(r.Body)
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, h.deps.MaxStateSizeBytes))
 	if err != nil {
-		h.serverError(w, "read hosted JSON state", err)
+		h.writeBodyError(w, "read hosted JSON state", err)
 		return
 	}
 	key := h.deps.Layout.JSONState(archive.OrganizationID, archive.WorkspaceID, archive.HistoryID)
@@ -339,6 +339,18 @@ func (h *Handler) rollback(w http.ResponseWriter, r *http.Request) {
 		h.rollbackFailed(w, err)
 		return
 	}
+
+	// Upload before creating the row: the row is what advertises the state URL,
+	// so a row written first would point at objects that may never exist.
+	if err := h.deps.Storage.Put(r.Context(), h.deps.Layout.JSONState(organizationID, workspaceID, historyID), bytes.NewReader(jsonState), int64(len(jsonState)), "application/json"); err != nil {
+		h.rollbackFailed(w, err)
+		return
+	}
+	if err := h.uploadState(r.Context(), organizationID, workspaceID, historyID, rawState); err != nil {
+		h.rollbackFailed(w, err)
+		return
+	}
+
 	jobReference := filename
 	output := ""
 	if _, err := h.deps.Store.CreateHistory(r.Context(), store.CreateHistoryParams{
@@ -350,15 +362,6 @@ func (h *Handler) rollback(w http.ResponseWriter, r *http.Request) {
 		Md5:          "0",
 		Lineage:      "0",
 	}); err != nil {
-		h.rollbackFailed(w, err)
-		return
-	}
-
-	if err := h.deps.Storage.Put(r.Context(), h.deps.Layout.JSONState(organizationID, workspaceID, historyID), bytes.NewReader(jsonState), int64(len(jsonState)), "application/json"); err != nil {
-		h.rollbackFailed(w, err)
-		return
-	}
-	if err := h.uploadState(r.Context(), organizationID, workspaceID, historyID, rawState); err != nil {
 		h.rollbackFailed(w, err)
 		return
 	}
@@ -516,6 +519,18 @@ func (h *Handler) requestClaims(w http.ResponseWriter, r *http.Request) (*intern
 func (h *Handler) serverError(w http.ResponseWriter, operation string, err error) {
 	h.deps.Logger.Error("state backend request failed", "operation", operation, "error", err)
 	w.WriteHeader(http.StatusInternalServerError)
+}
+
+// writeBodyError reports a body that could not be read, including the case
+// where MaxBytesReader refused an oversized upload.
+func (h *Handler) writeBodyError(w http.ResponseWriter, operation string, err error) {
+	var maxErr *http.MaxBytesError
+	if errors.As(err, &maxErr) {
+		h.deps.Logger.Warn("state upload rejected: body exceeds limit", "operation", operation)
+		w.WriteHeader(http.StatusRequestEntityTooLarge)
+		return
+	}
+	h.serverError(w, operation, err)
 }
 
 func pathIDs(r *http.Request) (string, string) {
