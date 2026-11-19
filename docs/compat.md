@@ -314,11 +314,21 @@ The M3 executor (`cmd/executor`, `internal/executor`) consumes the Redis Stream
 messages idle for more than 30 seconds so a restarted executor picks up work
 that was delivered to a dead consumer.
 
-- **Configuration**: `job.override_source` holds either an object-storage key
+- **Configuration**: a job with a VCS source clones that repository, otherwise
+  `job.override_source` holds either an object-storage key
   (`content/{configurationId}/terraformContent.tar.gz`) or the TFE download URL
   written by run creation. The executor prefers object storage, falls back to
   HTTP, and extracts the gzip tarball with path traversal checks. When the
   workspace has a `folder`, the first entry is used as the working directory.
+- **Git sources**: `job.override_source`/`workspace.source` supply the
+  repository and `job.commit_id`, `job.override_branch` or `workspace.branch`
+  the revision. The synthetic `remote-content` branch is ignored. Clones are
+  shallow (`--depth 1`), use `--no-checkout` plus a shallow fetch of the
+  revision, and disable interactive credential prompts. Embedded credentials
+  are stripped from error messages.
+- **Archive safety**: symlinks and hardlinks in an uploaded tarball are dropped.
+  Extraction is capped at 128 MiB per file, 1 GiB per archive and 100 000
+  entries so a malformed upload cannot exhaust the executor host.
 - **Backend**: the executor writes `terrakube_override.tf` containing only the
   HTTP backend `address` at
   `{TERRAKUBE_PUBLIC_URL}/tfstate/v1/organization/{orgId}/workspace/{wsId}/backend/terraform.tfstate`.
