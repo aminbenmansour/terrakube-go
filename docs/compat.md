@@ -219,9 +219,11 @@ Storage keys mirror upstream per backend:
 Archive uploads are unauthenticated upstream; the unguessable archive UUID is
 the capability. A successful upload deletes the `temp_archive` row. The raw
 upload writes the current state plus `{historyId}.raw.json`; the JSON upload
-writes `{historyId}.json`. Rollback reads the archived JSON and raw state,
-creates a new `history` row with `serial=1`, `md5=0`, `lineage=0`, writes the
-new current/raw/JSON objects, and stores the new state URL in `history.output`.
+writes `{historyId}.json`. Both uploads are bounded by the configured state
+size limit (`TERRAKUBE_STATE_MAX_SIZE_BYTES`) and return `413` beyond it.
+Rollback reads the archived JSON and raw state, writes the new current/raw/JSON
+objects, and only then creates a new `history` row with `serial=1`, `md5=0`,
+`lineage=0` and the new state URL in `history.output`.
 
 ## Executor logs — `/tfoutput/v1`
 

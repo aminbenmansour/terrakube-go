@@ -39,6 +39,7 @@ type memObject struct {
 type memStorage struct {
 	mu      sync.Mutex
 	objects map[string]memObject
+	failPut func(key string) error
 }
 
 func newMemStorage() *memStorage {
@@ -46,6 +47,11 @@ func newMemStorage() *memStorage {
 }
 
 func (m *memStorage) Put(_ context.Context, key string, r io.Reader, _ int64, contentType string) error {
+	if m.failPut != nil {
+		if err := m.failPut(key); err != nil {
+			return err
+		}
+	}
 	data, err := io.ReadAll(r)
 	if err != nil {
 		return err
