@@ -1,0 +1,23 @@
+{
+  project(ids: ["${projectId}"]) {
+    edges {
+      node {
+        projectAccess {
+          edges {
+            node {
+              id
+              name
+              role
+              manageWorkspace
+              manageState
+              manageJob
+              planJob
+              approveJob
+              destroyJob
+            }
+          }
+        }
+      }
+    }
+  }
+}

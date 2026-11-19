@@ -1,0 +1,44 @@
+{
+  organization(ids: ["${organizationId}"]) {
+    edges {
+      node {
+        id
+        name
+        workspace(sort: "name") {
+          edges {
+            node {
+              id
+              name
+              description
+              source
+              branch
+              terraformVersion
+              iacType
+              lastJobStatus
+              lastJobDate
+              locked
+              policyComplianceStatus
+              workspaceTag {
+                edges {
+                  node {
+                    id
+                    tagId
+                    value
+                  }
+                }
+              }
+              project {
+                edges {
+                  node {
+                    id
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

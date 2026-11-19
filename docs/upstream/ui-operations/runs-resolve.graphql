@@ -1,0 +1,25 @@
+query ResolveRun($orgFilter: String, $wsFilter: String, $jobFilter: String) {
+  organization(filter: $orgFilter) {
+    edges {
+      node {
+        id
+        name
+        workspace(filter: $wsFilter) {
+          edges {
+            node {
+              id
+              name
+              job(filter: $jobFilter) {
+                edges {
+                  node {
+                    id
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

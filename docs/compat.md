@@ -454,24 +454,24 @@ Differences from upstream at this stage:
 
 The React UI talks REST/JSON:API plus:
 
-- **GraphQL over HTTP** at `/graphql/api/v1`. This is not optional: the UI uses
-  it for workspace and project lists, organization summaries, tags and more
-  (`ui/src/modules/workspaces/workspaceService.ts`,
-  `ui/src/modules/projects/projectService.ts`,
-  `ui/src/modules/organizations/organizationService.ts`). Only the organization
-  list currently uses REST.
+- **GraphQL over HTTP** at `/graphql/api/v1`, for ten operations: workspace and
+  project lists, workspace/project access lists, notification configuration
+  lists and details, and run resolution by name. Everything else, including the
+  organization list, uses JSON:API REST. The operations are captured verbatim in
+  `docs/upstream/ui-operations.md` and `docs/upstream/ui-operations/`.
 - **GraphQL subscriptions** at `/subscriptions` via **graphql-ws** for live job
   updates (`ui/src/modules/api/subscriptionClient.ts`).
 - **SSE** event streams for run logs (`eventStream.ts`, `Last-Event-ID`
   support).
 
-Consequence: M5 must implement a GraphQL query/subscription surface, not just a
-WebSocket. Budget for it explicitly, or plan a UI rewrite instead.
+Consequence: M5 needs a GraphQL query surface for ten operations over ten entity
+types, not the whole Elide schema. The schema only has to cover the entities and
+relationship paths in `docs/upstream/ui-operations.md`.
 
 ## Open questions
 
-- GraphQL schema and subscriptions used by the UI (M5) — the biggest hidden
-  cost of reusing the upstream UI.
+- GraphQL resolvers, paging and subscriptions for the operations in
+  `docs/upstream/ui-operations.md` (M5).
 - Exact JSON:API error objects and RSQL edge cases (differential tests).
 - Terraform login/OAuth broker behaviour (M3/M5).
 - Kubernetes ephemeral executor contract (M6).
