@@ -57,6 +57,12 @@ The management API lives at `/api/v1` and is exercised by `scripts/smoke.sh`
 bearer token from `TERRAKUBE_AUTH_TOKEN`; leave it empty to disable the check
 during development. PATs and Dex OIDC replace this in M3/M5.
 
+Configuration upload tickets and log-read URLs are signed with
+`TERRAKUBE_UPLOAD_TICKET_SECRET`, falling back to
+`TERRAKUBE_INTERNAL_TOKEN_SECRET` and then `TERRAKUBE_AUTH_TOKEN`. Set one of
+them explicitly when running more than one API replica: without a shared
+secret each process invents its own key and rejects URLs minted by another.
+
 Build everything with `make build`; run the checks with `make check`.
 
 If you prefer compose, `deploy/compose/compose.yaml` mirrors the podman script.

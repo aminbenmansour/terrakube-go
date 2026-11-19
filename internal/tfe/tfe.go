@@ -53,11 +53,11 @@ func New(deps Deps) http.Handler {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
-	if deps.UploadTicketSecret == "" {
-		deps.UploadTicketSecret = deps.AuthToken
-	}
-	if deps.UploadTicketSecret == "" {
-		deps.UploadTicketSecret = uuid.NewString()
+
+	var shared bool
+	deps.UploadTicketSecret, shared = capabilitySecret(deps.UploadTicketSecret, deps.AuthToken)
+	if !shared {
+		deps.Logger.Error("no shared capability secret: set TERRAKUBE_UPLOAD_TICKET_SECRET or TERRAKUBE_AUTH_TOKEN, or upload tickets and log URLs minted by one replica will be rejected by another")
 	}
 	if deps.LogTokenSecret == "" {
 		deps.LogTokenSecret = deps.UploadTicketSecret
@@ -123,6 +123,20 @@ func New(deps Deps) http.Handler {
 	})
 
 	return r
+}
+
+// capabilitySecret picks the key that signs configuration upload tickets and
+// log-read URLs. The second result is false when no shared secret is
+// configured: the process then invents its own key, and another replica cannot
+// verify what this one signed.
+func capabilitySecret(configured, authToken string) (string, bool) {
+	if configured != "" {
+		return configured, true
+	}
+	if authToken != "" {
+		return authToken, true
+	}
+	return uuid.NewString(), false
 }
 
 func (a *API) authenticate(next http.Handler) http.Handler {
