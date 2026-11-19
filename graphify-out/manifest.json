@@ -708,15 +708,15 @@
     "semantic_hash": ""
   },
   "internal/query/page.go": {
-    "mtime": 1795111584.5542173,
-    "seen": 1795111609.6123652,
-    "ast_hash": "a0bf73d63be329830672e2e4c180a5eb",
+    "mtime": 1795111642.2646055,
+    "seen": 1795111658.6434379,
+    "ast_hash": "369bcdf695a983bdbb90ad2b86982f4e",
     "semantic_hash": ""
   },
   "internal/query/page_test.go": {
-    "mtime": 1795111579.6671846,
-    "seen": 1795111609.6123672,
-    "ast_hash": "620e5ffcd5c8bdd40c8ed33419497b0e",
+    "mtime": 1795111647.535641,
+    "seen": 1795111658.643439,
+    "ast_hash": "fe70817713e2a55b9a85a34cb88eb378",
     "semantic_hash": ""
   },
   "internal/query/rsql.go": {
@@ -756,15 +756,15 @@
     "semantic_hash": ""
   },
   "docs/upstream/graphql-entities.md": {
-    "mtime": 1795111604.9683547,
-    "seen": 1795111609.6124747,
-    "ast_hash": "ea469babce750778b2fbedebb923968e",
+    "mtime": 1795111612.451405,
+    "seen": 1795111658.6435103,
+    "ast_hash": "15eb7cd18fbb1f93f9380494c6c8ce12",
     "semantic_hash": ""
   },
   "docs/upstream/ui-operations.md": {
-    "mtime": 1795111457.9313655,
-    "seen": 1795111609.6124759,
-    "ast_hash": "4215ba6fe1871b9c195f17f0088ec02b",
+    "mtime": 1795111650.5736616,
+    "seen": 1795111658.643511,
+    "ast_hash": "13bf3be352293e41a7d35d8ed3a37d7d",
     "semantic_hash": ""
   }
 }
