@@ -23,7 +23,11 @@ dynamic documents rendered for a representative request.
 
 Distinct types the UI reads: `organization`, `workspace`, `project`,
 `projectAccess`, `access`, `notificationConfiguration`, `notificationTrigger`
-(`triggers`), `notificationTemplate` (`templates`), `workspaceTag`, `job`.
+(`triggers`), `template` (`templates`), `workspaceTag`, `job`.
+
+Note: there is no `notificationTemplate` entity upstream. The notification
+"templates" relationship points at the generic `template` entity. Entity and
+relationship names are recorded in `graphql-entities.md`.
 
 Traversed paths:
 

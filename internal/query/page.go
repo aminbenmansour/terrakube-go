@@ -16,14 +16,15 @@ const DefaultPageSize int64 = 500
 const MaxPageSize int64 = 10000
 
 // ParsePage applies Elide's offset paging: first is the page size and after is
-// the decimal offset to start at.
+// the decimal offset to start at. A page larger than the maximum is rejected,
+// as Elide does, rather than silently clamped.
 func ParsePage(first *int, after *string) (limit, offset int64, err error) {
 	limit = DefaultPageSize
 	if first != nil && *first > 0 {
 		limit = int64(*first)
 	}
 	if limit > MaxPageSize {
-		limit = MaxPageSize
+		return 0, 0, fmt.Errorf("query: page size %d exceeds the maximum of %d", limit, MaxPageSize)
 	}
 
 	if after == nil || *after == "" {

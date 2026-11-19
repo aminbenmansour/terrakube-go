@@ -16,7 +16,7 @@ func TestParsePage(t *testing.T) {
 		{"defaults", nil, nil, DefaultPageSize, 0},
 		{"explicit size", first(20), nil, 20, 0},
 		{"offset", first(20), after("40"), 20, 40},
-		{"caps the page size", first(20000), nil, MaxPageSize, 0},
+		{"maximum size", first(int(MaxPageSize)), nil, MaxPageSize, 0},
 		{"ignores a zero size", first(0), nil, DefaultPageSize, 0},
 		{"ignores a negative size", first(-5), nil, DefaultPageSize, 0},
 		{"empty offset", first(10), after(""), 10, 0},
@@ -39,5 +39,12 @@ func TestParsePageRejectsBadOffset(t *testing.T) {
 		if _, _, err := ParsePage(nil, &value); err == nil {
 			t.Fatalf("ParsePage accepted offset %q", value)
 		}
+	}
+}
+
+func TestParsePageRejectsAnOversizedPage(t *testing.T) {
+	size := int(MaxPageSize) + 1
+	if _, _, err := ParsePage(&size, nil); err == nil {
+		t.Fatalf("ParsePage accepted %d, want an error", size)
 	}
 }
