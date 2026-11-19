@@ -198,6 +198,9 @@ func (e *Executor) handle(ctx context.Context, message queue.Message) {
 	} else {
 		defer release()
 		err = e.processJob(ctx, jobID)
+		if ctx.Err() == nil {
+			e.dropLiveLogs(ctx, jobID)
+		}
 	}
 
 	if ctx.Err() != nil {
@@ -231,6 +234,20 @@ func (e *Executor) lockJob(ctx context.Context, jobID int64) (func(), bool, erro
 func (e *Executor) ack(ctx context.Context, messageID string) {
 	if err := e.deps.Queue.Ack(ctx, queue.JobsStream, Group, messageID); err != nil {
 		e.deps.Logger.Warn("ack job message failed", "message_id", messageID, "error", err)
+		return
+	}
+	// Acknowledgement only clears the pending list; the entry itself stays in
+	// Redis until it is deleted.
+	if err := e.deps.Queue.Delete(ctx, queue.JobsStream, messageID); err != nil {
+		e.deps.Logger.Warn("delete job message failed", "message_id", messageID, "error", err)
+	}
+}
+
+// dropLiveLogs removes the per-job log stream once the job is over. Finished
+// step logs are archived, so the UI falls back to them.
+func (e *Executor) dropLiveLogs(ctx context.Context, jobID int64) {
+	if err := e.deps.Queue.DeleteStream(ctx, strconv.FormatInt(jobID, 10)); err != nil {
+		e.deps.Logger.Warn("could not delete live log stream", "job_id", jobID, "error", err)
 	}
 }
 

@@ -179,15 +179,15 @@ func (q *Queue) FirstStreamID(ctx context.Context, stream string) (string, error
 	return entries[0].ID, nil
 }
 
-// TailStream returns up to count of the newest entries in chronological order.
-func (q *Queue) TailStream(ctx context.Context, stream string, count int64) ([]Message, error) {
-	entries, err := q.client.XRevRangeN(ctx, stream, "+", "-", count).Result()
+// HeadStream returns up to count of the oldest entries in chronological order.
+func (q *Queue) HeadStream(ctx context.Context, stream string, count int64) ([]Message, error) {
+	entries, err := q.client.XRangeN(ctx, stream, "-", "+", count).Result()
 	if err != nil {
-		return nil, fmt.Errorf("queue: tail %s: %w", stream, err)
+		return nil, fmt.Errorf("queue: head %s: %w", stream, err)
 	}
 	messages := make([]Message, 0, len(entries))
-	for i := len(entries) - 1; i >= 0; i-- {
-		messages = append(messages, Message{ID: entries[i].ID, Values: entries[i].Values})
+	for _, entry := range entries {
+		messages = append(messages, Message{ID: entry.ID, Values: entry.Values})
 	}
 	return messages, nil
 }
@@ -200,8 +200,19 @@ func (q *Queue) Ack(ctx context.Context, stream, group, id string) error {
 	return nil
 }
 
-// Client exposes the underlying client for callers that need a primitive the
-// wrapper does not cover yet (for example additional stream trimming).
-func (q *Queue) Client() *redis.Client {
-	return q.client
+// Delete removes an entry from the stream. Acknowledgement only clears the
+// pending list; without this the entry stays in Redis forever.
+func (q *Queue) Delete(ctx context.Context, stream, id string) error {
+	if err := q.client.XDel(ctx, stream, id).Err(); err != nil {
+		return fmt.Errorf("queue: delete %s on %s: %w", id, stream, err)
+	}
+	return nil
+}
+
+// DeleteStream removes a whole stream, used for the per-job live log streams.
+func (q *Queue) DeleteStream(ctx context.Context, stream string) error {
+	if err := q.client.Del(ctx, stream).Err(); err != nil {
+		return fmt.Errorf("queue: delete stream %s: %w", stream, err)
+	}
+	return nil
 }

@@ -226,11 +226,23 @@ func testLogger() *slog.Logger {
 // fakeQueue records acknowledgements and republished retries.
 type fakeQueue struct {
 	acks      []string
+	deleted   []string
+	dropped   []string
 	published []map[string]any
 	stale     []queue.Message
 }
 
 func (q *fakeQueue) EnsureGroup(context.Context, string, string) error { return nil }
+
+func (q *fakeQueue) Delete(_ context.Context, _, id string) error {
+	q.deleted = append(q.deleted, id)
+	return nil
+}
+
+func (q *fakeQueue) DeleteStream(_ context.Context, stream string) error {
+	q.dropped = append(q.dropped, stream)
+	return nil
+}
 
 func (q *fakeQueue) ClaimStale(context.Context, string, string, string, time.Duration, int64) ([]queue.Message, error) {
 	return q.stale, nil
