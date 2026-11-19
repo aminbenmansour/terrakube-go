@@ -73,6 +73,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.StateMaxSizeBytes != 104857600 {
 		t.Errorf("StateMaxSizeBytes = %d, want 104857600", cfg.StateMaxSizeBytes)
 	}
+	if cfg.ExecutorJobTimeout != 2*time.Hour {
+		t.Errorf("ExecutorJobTimeout = %v, want 2h", cfg.ExecutorJobTimeout)
+	}
 }
 
 func TestLoadOverrides(t *testing.T) {
@@ -83,6 +86,7 @@ func TestLoadOverrides(t *testing.T) {
 	t.Setenv("TERRAKUBE_STORAGE_TYPE", "s3")
 	t.Setenv("TERRAKUBE_STORAGE_S3_BUCKET", "state")
 	t.Setenv("TERRAKUBE_PUBLIC_URL", "https://terrakube.example.com/")
+	t.Setenv("TERRAKUBE_EXECUTOR_JOB_TIMEOUT", "45m")
 
 	cfg, err := Load()
 	if err != nil {
@@ -100,6 +104,9 @@ func TestLoadOverrides(t *testing.T) {
 	}
 	if cfg.PublicURL != "https://terrakube.example.com" {
 		t.Errorf("PublicURL = %q, want trailing slash trimmed", cfg.PublicURL)
+	}
+	if cfg.ExecutorJobTimeout != 45*time.Minute {
+		t.Errorf("ExecutorJobTimeout = %v, want 45m", cfg.ExecutorJobTimeout)
 	}
 }
 

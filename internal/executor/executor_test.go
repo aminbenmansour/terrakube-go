@@ -115,7 +115,7 @@ func TestIsTerminalStatus(t *testing.T) {
 }
 
 func TestLogSinkSplitsLinesAndKeepsTail(t *testing.T) {
-	sink := newLogSink(t.Context(), nil, nil, 1, "step-1")
+	sink := newLogSink(t.Context(), nil, nil, 1, "step-1", nil)
 	if _, err := sink.Write([]byte("first\nsec")); err != nil {
 		t.Fatalf("write: %v", err)
 	}

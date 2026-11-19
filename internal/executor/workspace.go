@@ -24,20 +24,29 @@ import (
 
 const backendOverrideFile = "terrakube_override.tf"
 
+// preparedWorkspace is a job's isolated working tree and the environment it
+// should run with. secrets are the values that must never reach a log.
+type preparedWorkspace struct {
+	workDir string
+	runDir  string
+	env     []string
+	secrets []string
+}
+
 // prepareWorkspace downloads and extracts the run configuration, writes the
 // HTTP backend override and builds the process environment.
-func (e *Executor) prepareWorkspace(ctx context.Context, job store.Job, ws store.Workspace, step store.Step) (workDir, runDir string, env []string, err error) {
-	workDir, err = os.MkdirTemp(e.deps.WorkDir, fmt.Sprintf("terrakube-job-%d-", job.ID))
+func (e *Executor) prepareWorkspace(ctx context.Context, job store.Job, ws store.Workspace, step store.Step) (*preparedWorkspace, error) {
+	workDir, err := os.MkdirTemp(e.deps.WorkDir, fmt.Sprintf("terrakube-job-%d-", job.ID))
 	if err != nil {
-		return "", "", nil, fmt.Errorf("create workspace: %w", err)
+		return nil, fmt.Errorf("create workspace: %w", err)
 	}
 
 	if err := e.acquireConfiguration(ctx, job, ws, workDir); err != nil {
 		_ = os.RemoveAll(workDir)
-		return "", "", nil, err
+		return nil, err
 	}
 
-	runDir = workDir
+	runDir := workDir
 	if folder := firstFolder(ws.Folder); folder != "" {
 		candidate := filepath.Join(workDir, folder)
 		if info, statErr := os.Stat(candidate); statErr == nil && info.IsDir() {
@@ -47,15 +56,15 @@ func (e *Executor) prepareWorkspace(ctx context.Context, job store.Job, ws store
 
 	if err := e.writeBackendOverride(runDir, job, ws); err != nil {
 		_ = os.RemoveAll(workDir)
-		return "", "", nil, err
+		return nil, err
 	}
 
-	env, err = e.environment(ctx, job, ws, step)
+	env, secrets, err := e.environment(ctx, job, ws, step)
 	if err != nil {
 		_ = os.RemoveAll(workDir)
-		return "", "", nil, err
+		return nil, err
 	}
-	return workDir, runDir, env, nil
+	return &preparedWorkspace{workDir: workDir, runDir: runDir, env: env, secrets: secrets}, nil
 }
 
 // gitConfig is a resolved Git source for a job.
@@ -308,12 +317,13 @@ func (e *Executor) writeBackendOverride(runDir string, job store.Job, ws store.W
 	return os.WriteFile(filepath.Join(runDir, backendOverrideFile), []byte(content), 0o640)
 }
 
-func (e *Executor) environment(ctx context.Context, job store.Job, ws store.Workspace, step store.Step) ([]string, error) {
+func (e *Executor) environment(ctx context.Context, job store.Job, ws store.Workspace, step store.Step) ([]string, []string, error) {
 	env := []string{
 		"TF_IN_AUTOMATION=true",
 		"TF_INPUT=0",
 		"CHECKPOINT_DISABLE=1",
 	}
+	var secrets []string
 
 	if e.deps.InternalTokenSecret != "" {
 		token, err := internalauth.Sign(e.deps.InternalTokenSecret, internalauth.Claims{
@@ -324,21 +334,25 @@ func (e *Executor) environment(ctx context.Context, job store.Job, ws store.Work
 			ExpiresAt:      jwt.NewNumericDate(time.Now().Add(2 * time.Hour)),
 		})
 		if err != nil {
-			return nil, fmt.Errorf("mint workspace token: %w", err)
+			return nil, nil, fmt.Errorf("mint workspace token: %w", err)
 		}
 		env = append(env,
 			"TF_HTTP_USERNAME=terraform",
 			"TF_HTTP_PASSWORD="+token,
 		)
+		secrets = append(secrets, token)
 	}
 
 	variables, err := e.deps.Store.ListVariablesByWorkspace(ctx, ws.ID)
 	if err != nil {
-		return nil, transient(fmt.Errorf("load workspace variables: %w", err))
+		return nil, nil, transient(fmt.Errorf("load workspace variables: %w", err))
 	}
 	for _, variable := range variables {
 		if variable.Incomplete {
 			continue
+		}
+		if variable.Sensitive && variable.VariableValue != "" {
+			secrets = append(secrets, variable.VariableValue)
 		}
 		switch strings.ToUpper(variable.VariableCategory) {
 		case "ENV":
@@ -347,7 +361,40 @@ func (e *Executor) environment(ctx context.Context, job store.Job, ws store.Work
 			env = append(env, "TF_VAR_"+variable.VariableKey+"="+variable.VariableValue)
 		}
 	}
-	return env, nil
+	return env, secrets, nil
+}
+
+// cleanupStaleWorkspaces removes job directories left behind by a crashed or
+// killed executor. Recent directories are kept because another executor may
+// still be using them.
+func cleanupStaleWorkspaces(root string, maxAge time.Duration) error {
+	if root == "" || maxAge <= 0 {
+		return nil
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	cutoff := time.Now().Add(-maxAge)
+	for _, entry := range entries {
+		if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "terrakube-job-") {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		if info.ModTime().After(cutoff) {
+			continue
+		}
+		if err := os.RemoveAll(filepath.Join(root, entry.Name())); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func contentIDFromSource(source *string) string {

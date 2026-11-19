@@ -75,6 +75,7 @@ func run() error {
 		InternalTokenSecret: cfg.InternalTokenSecret,
 		Binary:              cfg.ExecutorBinary,
 		WorkDir:             cfg.ExecutorWorkDir,
+		JobTimeout:          cfg.ExecutorJobTimeout,
 	})
 
 	go func() {

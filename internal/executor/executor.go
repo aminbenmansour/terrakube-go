@@ -54,6 +54,9 @@ type Deps struct {
 	InternalTokenSecret string
 	Binary              string
 	WorkDir             string
+	// JobTimeout bounds a single job, including configuration acquisition and
+	// every Terraform command. Zero disables the timeout.
+	JobTimeout time.Duration
 }
 
 // Executor processes jobs from the Redis stream.
@@ -93,6 +96,13 @@ func defaultRetryDelay(attempt int) time.Duration {
 
 // Run consumes jobs until the context is cancelled.
 func (e *Executor) Run(ctx context.Context) error {
+	if runningAsRoot() {
+		e.deps.Logger.Warn("executor is running as root; run it as an unprivileged user so a job cannot modify the host")
+	}
+	if err := cleanupStaleWorkspaces(e.deps.WorkDir, e.staleWorkspaceAge()); err != nil {
+		e.deps.Logger.Warn("could not clean stale job workspaces", "error", err)
+	}
+
 	if err := e.deps.Queue.EnsureGroup(ctx, queue.JobsStream, Group); err != nil {
 		return err
 	}
@@ -121,6 +131,15 @@ func (e *Executor) Run(ctx context.Context) error {
 			e.handle(ctx, message)
 		}
 	}
+}
+
+// staleWorkspaceAge keeps a job directory for one timeout window plus an hour
+// so a concurrently running executor is never cleaned up underneath.
+func (e *Executor) staleWorkspaceAge() time.Duration {
+	if e.deps.JobTimeout > 0 {
+		return e.deps.JobTimeout + time.Hour
+	}
+	return 24 * time.Hour
 }
 
 func (e *Executor) handle(ctx context.Context, message queue.Message) {

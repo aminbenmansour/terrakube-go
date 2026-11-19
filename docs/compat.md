@@ -336,6 +336,24 @@ that was delivered to a dead consumer.
 - **Variables**: `ENV` variables become plain environment entries; `TERRAFORM`
   variables become `TF_VAR_*`. Incomplete variables are skipped. Values are
   still plaintext in the database.
+- **Secrets**: values of variables marked `sensitive` and the minted internal
+  JWT are replaced with `[REDACTED]` in live logs and in the stored job/step
+  output. Terraform's own `(sensitive value)` masking is preserved.
+- **Isolation**: each job runs in a private `0700` directory under
+  `TERRAKUBE_EXECUTOR_WORK_DIR`, removed when the step finishes. Startup sweeps
+  `terrakube-job-*` directories older than the job timeout plus one hour, which
+  covers an executor that was killed. Terraform commands inherit only an
+  allowlist of host variables (`PATH`, `HOME`, `TMPDIR`, locale, proxy and TLS
+  certificate settings) plus the workspace environment; the executor's own
+  database, Redis, storage and signing secrets are not passed through. The
+  executor warns when it runs as root; production deployments should run it as
+  an unprivileged user. Host network access and credential scope are the
+  deployment's responsibility (container network policy, cloud identity), not
+  something the executor sandboxes.
+- **Timeouts**: `TERRAKUBE_EXECUTOR_JOB_TIMEOUT` (default `2h`, `0` disables)
+  bounds configuration acquisition and every Terraform command. Commands run in
+  their own process group, so a timeout or a cancelled job kills the provider
+  plugins too and marks the step `failed` or `cancelled` respectively.
 - **Auth**: when `TERRAKUBE_INTERNAL_TOKEN_SECRET` is set, the executor mints a
   workspace-scoped internal JWT (two-hour expiry) and passes it as
   `TF_HTTP_PASSWORD` with `TF_HTTP_USERNAME=terraform`.
@@ -360,8 +378,8 @@ that was delivered to a dead consumer.
   during shutdown it is left pending so another executor reclaims it after the
   30-second idle window. Permanent Terraform failures are not retried.
 - **Cancellation**: while a command runs the executor polls the job status. A
-  discard or cancel kills the child process, marks the current step `cancelled`
-  and leaves the API's `cancelled` job status intact.
+  discard or cancel kills the command's process group, marks the current step
+  `cancelled` and leaves the API's `cancelled` job status intact.
 - **Resume**: a reclaimed job treats a `running` step as the next step, so a
   crashed executor resumes the interrupted step instead of finishing early.
 - **Binary**: `TERRAKUBE_EXECUTOR_BINARY` overrides the CLI. Otherwise
