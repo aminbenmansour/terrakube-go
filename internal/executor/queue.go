@@ -15,6 +15,8 @@ type JobQueue interface {
 	ClaimStale(ctx context.Context, stream, group, consumer string, minIdle time.Duration, count int64) ([]queue.Message, error)
 	ReadGroup(ctx context.Context, stream, group, consumer string, count int64, block time.Duration) ([]queue.Message, error)
 	Ack(ctx context.Context, stream, group, id string) error
+	Delete(ctx context.Context, stream, id string) error
+	DeleteStream(ctx context.Context, stream string) error
 	Publish(ctx context.Context, stream string, values map[string]any) (string, error)
 	PublishCapped(ctx context.Context, stream string, values map[string]any, maxLen int64) (string, error)
 }

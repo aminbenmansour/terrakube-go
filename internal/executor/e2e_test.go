@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -310,17 +309,22 @@ func TestExecutorEndToEnd(t *testing.T) {
 		t.Fatalf("terraform calls = %v, want %v", got, want)
 	}
 
-	logs, err := q.ReadStream(ctx, strconv.FormatInt(job.ID, 10), "0", 100, time.Second)
-	if err != nil {
-		t.Fatalf("read live logs: %v", err)
-	}
-	if len(logs) == 0 {
-		t.Fatal("no live log entries were published")
-	}
-	for _, entry := range logs {
-		if strings.Contains(fmt.Sprint(entry.Values["output"]), "super-secret-value") {
-			t.Fatalf("live log leaks a sensitive variable: %v", entry.Values)
+	// The executor drops the per-job live stream once the job is over; the
+	// archived logs above are what the UI falls back to. The status turns
+	// terminal just before the drop, so give it a moment.
+	stream := strconv.FormatInt(job.ID, 10)
+	for deadline := time.Now().Add(5 * time.Second); ; {
+		logs, err := q.ReadStream(ctx, stream, "0", 100, time.Second)
+		if err != nil {
+			t.Fatalf("read live logs: %v", err)
 		}
+		if len(logs) == 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("live log stream still has %d entries after the job finished", len(logs))
+		}
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 

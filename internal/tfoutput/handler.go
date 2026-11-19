@@ -102,7 +102,7 @@ func (h *Handler) getStepLog(w http.ResponseWriter, r *http.Request) {
 	// A step that is still running is served from the live stream. Finished
 	// steps use the archived output written by the executor.
 	if !isTerminal(step.Status) && h.deps.Queue != nil {
-		messages, err := h.deps.Queue.TailStream(r.Context(), streamKey(job.ID), liveTailRecords)
+		messages, err := h.deps.Queue.HeadStream(r.Context(), streamKey(job.ID), liveTailRecords)
 		if err == nil {
 			var live strings.Builder
 			for _, message := range messages {

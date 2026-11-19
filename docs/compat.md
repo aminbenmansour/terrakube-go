@@ -374,8 +374,10 @@ running.
   approve themselves and continue; otherwise the job moves to
   `waitingApproval`.
 - **Logs**: each command line is published to the Redis stream named after the
-  job with `stepId`/`output` fields. The stream is capped at 200,000 records;
-  ordering and step boundaries come from the stream order and `stepId`, and the
+  job with `stepId`/`output` fields. The stream is capped at 200,000 records and
+  deleted when the job finishes, so Redis does not accumulate one stream per
+  run; finished steps are served from their archived output. Ordering and step
+  boundaries come from the stream order and `stepId`, and the
   stream ID carries the timestamp. When a step finishes, the final output is
   uploaded to `tfoutput/{orgId}/{jobId}/{stepId}.tfoutput` (the upstream S3
   key). `/tfoutput/v1` serves that object for finished steps and falls back to
@@ -395,7 +397,9 @@ running.
   step `failed` and fails the run.
 - **Reliability**: transient failures (database, storage, network) are retried
   up to three attempts by republishing the job with an `attempt` field. A
-  message is acknowledged only after its work is finished or safely requeued;
+  message is acknowledged only after its work is finished or safely requeued,
+  and acknowledged entries are deleted from `terrakube:jobs` so the stream does
+  not grow by one entry per run;
   during shutdown it is left pending so another executor reclaims it after the
   idle window. Permanent Terraform failures are not retried. Log and
   history upload failures are treated as permanent: when a step was completing,
