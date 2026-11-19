@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -30,7 +32,7 @@ func (e *Executor) prepareWorkspace(ctx context.Context, job store.Job, ws store
 		return "", "", nil, fmt.Errorf("create workspace: %w", err)
 	}
 
-	if err := e.downloadConfiguration(ctx, job, workDir); err != nil {
+	if err := e.acquireConfiguration(ctx, job, ws, workDir); err != nil {
 		_ = os.RemoveAll(workDir)
 		return "", "", nil, err
 	}
@@ -54,6 +56,125 @@ func (e *Executor) prepareWorkspace(ctx context.Context, job store.Job, ws store
 		return "", "", nil, err
 	}
 	return workDir, runDir, env, nil
+}
+
+// gitConfig is a resolved Git source for a job.
+type gitConfig struct {
+	URL string
+	Ref string
+}
+
+// acquireConfiguration populates dest from the job's Git source when it has
+// one, and otherwise falls back to the uploaded configuration tarball.
+func (e *Executor) acquireConfiguration(ctx context.Context, job store.Job, ws store.Workspace, dest string) error {
+	if cfg, ok := gitSource(job, ws); ok {
+		return e.cloneConfiguration(ctx, cfg, dest)
+	}
+	return e.downloadConfiguration(ctx, job, dest)
+}
+
+// gitSource resolves the repository and revision a job should build from.
+// A run created by the CLI or a VCS webhook carries override_source, while a
+// run created from the UI uses the workspace source. Uploaded configuration
+// tarballs and object-storage keys are not Git sources.
+func gitSource(job store.Job, ws store.Workspace) (gitConfig, bool) {
+	source := ws.Source
+	if job.OverrideSource != nil && *job.OverrideSource != "" && !isConfigurationTarball(*job.OverrideSource) {
+		source = job.OverrideSource
+	}
+	if source == nil || strings.TrimSpace(*source) == "" {
+		return gitConfig{}, false
+	}
+
+	ref := ""
+	if ws.Branch != nil {
+		ref = strings.TrimSpace(*ws.Branch)
+	}
+	// "remote-content" is the synthetic branch written when a run uploads its
+	// configuration; it is not a real revision.
+	if job.OverrideBranch != nil {
+		if branch := strings.TrimSpace(*job.OverrideBranch); branch != "" && branch != "remote-content" {
+			ref = branch
+		}
+	}
+	if job.CommitID != nil && strings.TrimSpace(*job.CommitID) != "" {
+		ref = strings.TrimSpace(*job.CommitID)
+	}
+
+	return gitConfig{URL: normalizeGitURL(*source), Ref: ref}, true
+}
+
+// normalizeGitURL strips the Terraform module source prefix some clients send.
+func normalizeGitURL(source string) string {
+	return strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(source), "git::"))
+}
+
+func isConfigurationTarball(source string) bool {
+	if strings.Contains(source, "/configuration-versions/") {
+		return true
+	}
+	// Object-storage key written by run creation.
+	return strings.HasPrefix(source, "content/") && strings.HasSuffix(source, "/terraformContent.tar.gz")
+}
+
+// sanitizeGitURL removes embedded credentials so they cannot reach logs.
+func sanitizeGitURL(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.User == nil {
+		return raw
+	}
+	parsed.User = nil
+	return parsed.String()
+}
+
+func (e *Executor) cloneConfiguration(ctx context.Context, cfg gitConfig, dest string) error {
+	clone := exec.CommandContext(ctx, "git", "clone", "--quiet", "--no-checkout", "--", cfg.URL, dest)
+	clone.Env = gitEnv()
+	if out, err := clone.CombinedOutput(); err != nil {
+		return transient(fmt.Errorf("clone %s: %w: %s", sanitizeGitURL(cfg.URL), err, strings.TrimSpace(string(out))))
+	}
+
+	ref := cfg.Ref
+	if ref == "" || ref == "HEAD" {
+		if out, err := runGit(ctx, dest, "checkout", "--quiet"); err != nil {
+			return fmt.Errorf("checkout default branch: %w: %s", err, out)
+		}
+		return nil
+	}
+
+	// A commit id is not a ref name, but Git accepts it as a fetch refspec
+	// source. Shallow-fetch it first and fall back to a full fetch when the
+	// server refuses.
+	out, err := runGit(ctx, dest, "fetch", "--quiet", "--depth", "1", "origin", ref)
+	if err != nil {
+		fullOut, fullErr := runGit(ctx, dest, "fetch", "--quiet", "origin")
+		if fullErr != nil {
+			return transient(fmt.Errorf("fetch %s from %s: %w: %s", ref, sanitizeGitURL(cfg.URL), err, strings.TrimSpace(out+fullOut)))
+		}
+		if checkoutOut, checkoutErr := runGit(ctx, dest, "checkout", "--quiet", "--detach", ref); checkoutErr != nil {
+			return fmt.Errorf("checkout %s: %w: %s", ref, checkoutErr, checkoutOut)
+		}
+		return nil
+	}
+	if checkoutOut, checkoutErr := runGit(ctx, dest, "checkout", "--quiet", "--detach", "FETCH_HEAD"); checkoutErr != nil {
+		return fmt.Errorf("checkout %s: %w: %s", ref, checkoutErr, checkoutOut)
+	}
+	return nil
+}
+
+// runGit runs a git command in dir and returns its combined output.
+func runGit(ctx context.Context, dir string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd.Dir = dir
+	cmd.Env = gitEnv()
+	out, err := cmd.CombinedOutput()
+	return strings.TrimSpace(string(out)), err
+}
+
+// gitEnv disables interactive credential prompts so a missing credential fails
+// the job instead of hanging the executor.
+func gitEnv() []string {
+	return append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "GIT_ASKPASS=true")
 }
 
 func (e *Executor) downloadConfiguration(ctx context.Context, job store.Job, dest string) error {
@@ -86,7 +207,25 @@ func (e *Executor) downloadConfiguration(ctx context.Context, job store.Job, des
 	return extractTarGz(resp.Body, dest)
 }
 
+// archiveLimits bounds how much a configuration archive may write. The limits
+// protect the executor host from malformed or hostile uploads.
+type archiveLimits struct {
+	MaxFileBytes  int64
+	MaxTotalBytes int64
+	MaxEntries    int
+}
+
+var defaultArchiveLimits = archiveLimits{
+	MaxFileBytes:  128 << 20, // 128 MiB per file
+	MaxTotalBytes: 1 << 30,   // 1 GiB per archive
+	MaxEntries:    100000,
+}
+
 func extractTarGz(r io.Reader, dest string) error {
+	return extractTarGzWithLimits(r, dest, defaultArchiveLimits)
+}
+
+func extractTarGzWithLimits(r io.Reader, dest string, limits archiveLimits) error {
 	gz, err := gzip.NewReader(r)
 	if err != nil {
 		return fmt.Errorf("open configuration archive: %w", err)
@@ -94,6 +233,8 @@ func extractTarGz(r io.Reader, dest string) error {
 	defer gz.Close()
 
 	tr := tar.NewReader(gz)
+	entries := 0
+	var total int64
 	for {
 		header, err := tr.Next()
 		if errors.Is(err, io.EOF) {
@@ -101,6 +242,11 @@ func extractTarGz(r io.Reader, dest string) error {
 		}
 		if err != nil {
 			return fmt.Errorf("read configuration archive: %w", err)
+		}
+
+		entries++
+		if limits.MaxEntries > 0 && entries > limits.MaxEntries {
+			return fmt.Errorf("configuration archive has more than %d entries", limits.MaxEntries)
 		}
 
 		name := filepath.Clean(header.Name)
@@ -118,6 +264,17 @@ func extractTarGz(r io.Reader, dest string) error {
 				return err
 			}
 		case tar.TypeReg:
+			if limits.MaxFileBytes > 0 && header.Size > limits.MaxFileBytes {
+				_ = os.Remove(target)
+				return fmt.Errorf("configuration file %s exceeds %d bytes", name, limits.MaxFileBytes)
+			}
+			if limits.MaxTotalBytes > 0 {
+				total += header.Size
+				if total > limits.MaxTotalBytes {
+					_ = os.Remove(target)
+					return fmt.Errorf("configuration archive exceeds %d bytes", limits.MaxTotalBytes)
+				}
+			}
 			if err := os.MkdirAll(filepath.Dir(target), 0o750); err != nil {
 				return err
 			}
@@ -136,6 +293,10 @@ func extractTarGz(r io.Reader, dest string) error {
 			if err := file.Close(); err != nil {
 				return err
 			}
+		case tar.TypeSymlink, tar.TypeLink:
+			// Symlinks and hardlinks could escape the workspace or point at
+			// host files, so they are dropped rather than extracted.
+			continue
 		}
 	}
 }
