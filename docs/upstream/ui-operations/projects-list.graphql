@@ -1,0 +1,17 @@
+{
+  organization(ids: ["${organizationId}"]) {
+    edges {
+      node {
+        project {
+          edges {
+            node {
+              id
+              name
+              description
+            }
+          }
+        }
+      }
+    }
+  }
+}

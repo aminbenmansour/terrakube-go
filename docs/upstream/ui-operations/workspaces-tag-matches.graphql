@@ -1,0 +1,12 @@
+# Template from workspaceService.ts: one alias per tag filter, so the generated
+# document grows with the number of filters. This is the shape for two filters.
+query WorkspaceTagMatches($organizationIds: [String], $p0: String, $p1: String) {
+  organization(ids: $organizationIds) {
+    edges {
+      node {
+        p0: workspace(first: "10000", filter: $p0) { edges { node { id } } pageInfo { totalRecords } }
+        p1: workspace(first: "10000", filter: $p1) { edges { node { id } } pageInfo { totalRecords } }
+      }
+    }
+  }
+}

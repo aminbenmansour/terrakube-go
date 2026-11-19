@@ -1,0 +1,22 @@
+{
+  workspace(ids: ["${workspaceId}"]) {
+    edges {
+      node {
+        access {
+          edges {
+            node {
+              id
+              name
+              role
+              manageWorkspace
+              manageState
+              planJob
+              approveJob
+              destroyJob
+            }
+          }
+        }
+      }
+    }
+  }
+}

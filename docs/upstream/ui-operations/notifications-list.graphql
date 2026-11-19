@@ -1,0 +1,17 @@
+{
+  organization(ids: ["${orgId}"]) {
+    edges { node {
+      notificationConfiguration {
+        edges { node {
+          id
+          name
+          description
+          channelType
+          destinationUrl
+          active
+          workspace { edges { node { id } } }
+        } }
+      }
+    } }
+  }
+}

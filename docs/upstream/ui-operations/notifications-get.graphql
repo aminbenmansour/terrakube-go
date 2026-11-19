@@ -1,0 +1,10 @@
+{
+  notification_configuration(ids: ["${configId}"]) {
+    edges { node {
+      name description channelType destinationUrl active messageStyle
+      workspace { edges { node { id } } }
+      triggers { edges { node { id jobStatus } } }
+      templates { edges { node { id } } }
+    } }
+  }
+}

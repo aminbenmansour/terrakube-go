@@ -1,0 +1,42 @@
+# Template from workspaceService.ts: the $filter and facet-count variable
+# declarations are conditional on the request, and one alias is emitted per
+# facet count. This is the shape for a filtered page with two facet counts.
+query WorkspacePage(
+  $organizationIds: [String]
+  $first: StringOrInt
+  $after: StringOrInt
+  $filter: String
+  $sort: String
+  $statusAll: String
+  $policyAll: String
+) {
+  organization(ids: $organizationIds) {
+    edges {
+      node {
+        name
+        workspace(first: $first, after: $after, filter: $filter, sort: $sort) {
+          edges {
+            node {
+              id
+              name
+              description
+              source
+              branch
+              terraformVersion
+              iacType
+              lastJobStatus
+              lastJobDate
+              locked
+              policyComplianceStatus
+              workspaceTag { edges { node { tagId value } } }
+              project { edges { node { id name } } }
+            }
+          }
+          pageInfo { endCursor hasNextPage totalRecords }
+        }
+        statusAll: workspace(first: "1", filter: $statusAll) { pageInfo { totalRecords } }
+        policyAll: workspace(first: "1", filter: $policyAll) { pageInfo { totalRecords } }
+      }
+    }
+  }
+}
