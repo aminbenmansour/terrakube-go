@@ -3,9 +3,11 @@ package executor
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -83,6 +85,31 @@ func TestExecutorEndToEnd(t *testing.T) {
 		t.Fatalf("create workspace: %v", err)
 	}
 
+	callsFile := filepath.Join(t.TempDir(), "calls")
+
+	for _, variable := range []struct {
+		key       string
+		value     string
+		category  string
+		sensitive bool
+	}{
+		{key: "E2E_ENV", value: "env-value", category: "ENV"},
+		{key: "E2E_VAR", value: "var-value", category: "TERRAFORM"},
+		{key: "E2E_SECRET", value: "super-secret-value", category: "ENV", sensitive: true},
+		{key: "E2E_CALLS_FILE", value: callsFile, category: "ENV"},
+	} {
+		if _, err := st.CreateVariable(ctx, store.CreateVariableParams{
+			ID:               uuid.NewString(),
+			VariableKey:      variable.key,
+			VariableValue:    variable.value,
+			VariableCategory: variable.category,
+			Sensitive:        variable.sensitive,
+			WorkspaceID:      wsID,
+		}); err != nil {
+			t.Fatalf("create variable %s: %v", variable.key, err)
+		}
+	}
+
 	contentID := uuid.NewString()
 	archive := tarGz(t, map[string]string{
 		"main.tf": `resource "terraform_data" "example" {}`,
@@ -136,7 +163,11 @@ func TestExecutorEndToEnd(t *testing.T) {
 
 	binary := filepath.Join(t.TempDir(), "tofu")
 	script := "#!/bin/sh\n" +
+		"echo \"$1\" >> \"$E2E_CALLS_FILE\"\n" +
 		"echo \"fake tofu $*\"\n" +
+		"echo \"env E2E_ENV=$E2E_ENV\"\n" +
+		"echo \"var E2E_VAR=$TF_VAR_E2E_VAR\"\n" +
+		"echo \"secret E2E_SECRET=$E2E_SECRET\"\n" +
 		"case \"$1\" in\n" +
 		"  plan) : > tfplan ;;\n" +
 		"esac\n" +
@@ -209,6 +240,26 @@ func TestExecutorEndToEnd(t *testing.T) {
 	if final.Output == nil || !bytes.Contains([]byte(*final.Output), []byte("fake tofu")) {
 		t.Fatalf("job output does not contain the fake terraform output: %v", deref(final.Output))
 	}
+	output := deref(final.Output)
+	for _, want := range []string{"env E2E_ENV=env-value", "var E2E_VAR=var-value"} {
+		if !strings.Contains(output, want) {
+			t.Errorf("job output is missing %q:\n%s", want, output)
+		}
+	}
+	if strings.Contains(output, "super-secret-value") {
+		t.Errorf("job output leaks a sensitive variable:\n%s", output)
+	}
+	if !strings.Contains(output, "[REDACTED]") {
+		t.Errorf("job output does not show a redacted secret:\n%s", output)
+	}
+
+	calls, err := os.ReadFile(callsFile)
+	if err != nil {
+		t.Fatalf("read terraform calls: %v", err)
+	}
+	if got, want := strings.Fields(string(calls)), []string{"init", "plan", "init", "apply"}; strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Fatalf("terraform calls = %v, want %v", got, want)
+	}
 
 	logs, err := q.ReadStream(ctx, strconv.FormatInt(job.ID, 10), "0", 100, time.Second)
 	if err != nil {
@@ -216,6 +267,11 @@ func TestExecutorEndToEnd(t *testing.T) {
 	}
 	if len(logs) == 0 {
 		t.Fatal("no live log entries were published")
+	}
+	for _, entry := range logs {
+		if strings.Contains(fmt.Sprint(entry.Values["output"]), "super-secret-value") {
+			t.Fatalf("live log leaks a sensitive variable: %v", entry.Values)
+		}
 	}
 }
 

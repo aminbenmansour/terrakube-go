@@ -46,6 +46,8 @@ type Config struct {
 	ExecutorBinary string
 	// ExecutorWorkDir is the parent directory for job workspaces.
 	ExecutorWorkDir string
+	// ExecutorJobTimeout bounds a single job. Zero disables the timeout.
+	ExecutorJobTimeout time.Duration
 
 	Storage Storage
 }
@@ -94,6 +96,7 @@ func Load() (Config, error) {
 		RegistryHTTPAddr:    env("TERRAKUBE_REGISTRY_HTTP_ADDR", ":8082"),
 		ExecutorBinary:      env("TERRAKUBE_EXECUTOR_BINARY", ""),
 		ExecutorWorkDir:     env("TERRAKUBE_EXECUTOR_WORK_DIR", ""),
+		ExecutorJobTimeout:  envDuration("TERRAKUBE_EXECUTOR_JOB_TIMEOUT", 2*time.Hour),
 		Storage: Storage{
 			Type:      strings.ToLower(env("TERRAKUBE_STORAGE_TYPE", StorageTypeLocal)),
 			LocalPath: env("TERRAKUBE_STORAGE_LOCAL_PATH", ".data"),
