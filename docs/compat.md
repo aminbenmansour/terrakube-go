@@ -342,6 +342,18 @@ that was delivered to a dead consumer.
 - **History**: after a successful apply the executor reads the current state,
   creates a `history` row with the state `serial`, `lineage` and MD5, and
   archives the raw and JSON state objects under the upstream `state/...` keys.
+  Archiving is idempotent per job reference, so a retried job cannot create a
+  second row.
+- **Reliability**: transient failures (database, storage, network) are retried
+  up to three attempts by republishing the job with an `attempt` field. A
+  message is acknowledged only after its work is finished or safely requeued;
+  during shutdown it is left pending so another executor reclaims it after the
+  30-second idle window. Permanent Terraform failures are not retried.
+- **Cancellation**: while a command runs the executor polls the job status. A
+  discard or cancel kills the child process, marks the current step `cancelled`
+  and leaves the API's `cancelled` job status intact.
+- **Resume**: a reclaimed job treats a `running` step as the next step, so a
+  crashed executor resumes the interrupted step instead of finishing early.
 - **Binary**: `TERRAKUBE_EXECUTOR_BINARY` overrides the CLI. Otherwise
   `iac_type` containing `tofu` selects `tofu`; other workspaces use
   `terraform` when installed and fall back to `tofu`.

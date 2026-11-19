@@ -11,6 +11,7 @@ import (
 	"io"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
@@ -56,6 +57,19 @@ func (e *Executor) archiveHistory(ctx context.Context, job store.Job, ws store.W
 	sum := md5.Sum(data)
 	historyID := uuid.NewString()
 	jobReference := fmt.Sprintf("%d", job.ID)
+
+	// A retried or reclaimed job may already have archived this state. Creating
+	// a second row would duplicate the history and the archived objects.
+	_, err = e.deps.Store.GetHistoryByJobReference(ctx, store.GetHistoryByJobReferenceParams{
+		WorkspaceID:  ws.ID,
+		JobReference: &jobReference,
+	})
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("check existing history: %w", err)
+	}
 
 	if _, err := e.deps.Store.CreateHistory(ctx, store.CreateHistoryParams{
 		ID:           historyID,

@@ -64,7 +64,7 @@ func (e *Executor) downloadConfiguration(ctx context.Context, job store.Job, des
 			return extractTarGz(rc, dest)
 		}
 		if !errors.Is(err, storage.ErrNotFound) {
-			return fmt.Errorf("read configuration tarball: %w", err)
+			return transient(fmt.Errorf("read configuration tarball: %w", err))
 		}
 	}
 
@@ -77,11 +77,11 @@ func (e *Executor) downloadConfiguration(ctx context.Context, job store.Job, des
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("download configuration: %w", err)
+		return transient(fmt.Errorf("download configuration: %w", err))
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download configuration: unexpected status %s", resp.Status)
+		return transient(fmt.Errorf("download configuration: unexpected status %s", resp.Status))
 	}
 	return extractTarGz(resp.Body, dest)
 }
@@ -173,7 +173,7 @@ func (e *Executor) environment(ctx context.Context, job store.Job, ws store.Work
 
 	variables, err := e.deps.Store.ListVariablesByWorkspace(ctx, ws.ID)
 	if err != nil {
-		return nil, fmt.Errorf("load workspace variables: %w", err)
+		return nil, transient(fmt.Errorf("load workspace variables: %w", err))
 	}
 	for _, variable := range variables {
 		if variable.Incomplete {
