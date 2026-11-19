@@ -261,6 +261,9 @@ func TestExecutorEndToEnd(t *testing.T) {
 		if !bytes.Contains(data, []byte("fake tofu")) {
 			t.Errorf("archived log for step %d = %q", step.StepNumber, data)
 		}
+		if bytes.Contains(data, []byte("super-secret-value")) {
+			t.Errorf("archived log for step %d leaked a sensitive variable", step.StepNumber)
+		}
 	}
 
 	if final.Output == nil || !bytes.Contains([]byte(*final.Output), []byte("fake tofu")) {

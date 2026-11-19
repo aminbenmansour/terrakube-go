@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "docs/compat.md": {
-    "mtime": 1795081433.7799945,
-    "seen": 1795081441.3199837,
-    "ast_hash": "04b5cd7e4403228972829d6536b82015",
+    "mtime": 1795102203.5840473,
+    "seen": 1795102215.0682738,
+    "ast_hash": "4336064e201b668f32c66ce307a6144e",
     "semantic_hash": ""
   },
   "internal/executor/executor.go": {
@@ -558,9 +558,9 @@
     "semantic_hash": ""
   },
   "internal/executor/history.go": {
-    "mtime": 1795081331.0772622,
-    "seen": 1795081441.3199127,
-    "ast_hash": "8e945235759ca16922455919b7b7dd8e",
+    "mtime": 1795102206.2930665,
+    "seen": 1795102215.0681095,
+    "ast_hash": "3eb21044489a9f95b2ab868e658b7f2c",
     "semantic_hash": ""
   },
   "internal/executor/run.go": {
@@ -600,9 +600,9 @@
     "semantic_hash": ""
   },
   "internal/executor/e2e_test.go": {
-    "mtime": 1795081375.233577,
-    "seen": 1795081441.3199098,
-    "ast_hash": "9f9fe4e197133a79ad75a75d414197c5",
+    "mtime": 1795102050.952875,
+    "seen": 1795102095.8493536,
+    "ast_hash": "004b5ed39f9c3d654c251ed659917bea",
     "semantic_hash": ""
   },
   "internal/executor/queue.go": {
@@ -654,9 +654,9 @@
     "semantic_hash": ""
   },
   "internal/executor/artifacts_test.go": {
-    "mtime": 1795081343.4943507,
-    "seen": 1795081441.3199086,
-    "ast_hash": "76da5e02424af2e896bfee8641d62fc9",
+    "mtime": 1795102043.8547688,
+    "seen": 1795102095.8493364,
+    "ast_hash": "dc599ed2da3c7d082882da6283935eca",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-19-m4-run-artifacts.md": {

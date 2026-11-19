@@ -72,6 +72,18 @@ func (e *Executor) archiveHistory(ctx context.Context, job store.Job, ws store.W
 		return fmt.Errorf("check existing history: %w", err)
 	}
 
+	// Upload before creating the row: the row is what advertises the state URL,
+	// and the idempotency check above treats an existing row as already
+	// archived, so a row without its objects would never be repaired.
+	if err := e.deps.Storage.Put(ctx, e.deps.Layout.JSONState(job.OrganizationID, job.WorkspaceID, historyID),
+		bytes.NewReader(data), int64(len(data)), "application/json"); err != nil {
+		return fmt.Errorf("archive json state: %w", err)
+	}
+	if err := e.deps.Storage.Put(ctx, e.deps.Layout.RawState(job.OrganizationID, job.WorkspaceID, historyID),
+		bytes.NewReader(data), int64(len(data)), "application/json"); err != nil {
+		return fmt.Errorf("archive raw state: %w", err)
+	}
+
 	output := e.stateJSONURL(job, ws, historyID)
 	if _, err := e.deps.Store.CreateHistory(ctx, store.CreateHistoryParams{
 		ID:           historyID,
@@ -84,15 +96,6 @@ func (e *Executor) archiveHistory(ctx context.Context, job store.Job, ws store.W
 		CreatedBy:    stringPointer("executor"),
 	}); err != nil {
 		return fmt.Errorf("create history row: %w", err)
-	}
-
-	if err := e.deps.Storage.Put(ctx, e.deps.Layout.JSONState(job.OrganizationID, job.WorkspaceID, historyID),
-		bytes.NewReader(data), int64(len(data)), "application/json"); err != nil {
-		return fmt.Errorf("archive json state: %w", err)
-	}
-	if err := e.deps.Storage.Put(ctx, e.deps.Layout.RawState(job.OrganizationID, job.WorkspaceID, historyID),
-		bytes.NewReader(data), int64(len(data)), "application/json"); err != nil {
-		return fmt.Errorf("archive raw state: %w", err)
 	}
 	return nil
 }

@@ -80,6 +80,57 @@ func TestCompleteStepCancelledKeepsStatusWhenLogUploadFails(t *testing.T) {
 	}
 }
 
+func TestArchiveHistoryDoesNotCreateRowWhenUploadFails(t *testing.T) {
+	ctx := context.Background()
+	layout := tfstate.NewLayout("local")
+	mem := newMemoryBackend()
+	state := []byte(`{"version":4,"serial":3,"lineage":"lineage-1"}`)
+	if err := mem.Put(ctx, layout.CurrentState("org-1", "ws-1"), bytes.NewReader(state), int64(len(state)), "application/json"); err != nil {
+		t.Fatalf("seed state: %v", err)
+	}
+	backend := &failingKeyBackend{memoryBackend: mem, failSuffix: ".raw.json"}
+	st := &artifactStore{}
+	e := New(Deps{Store: st, Storage: backend, Layout: layout, Logger: testLogger(), PublicURL: "https://example.invalid"})
+
+	err := e.archiveHistory(ctx, store.Job{ID: 9, OrganizationID: "org-1", WorkspaceID: "ws-1"}, store.Workspace{ID: "ws-1"})
+	if err == nil {
+		t.Fatal("archiveHistory succeeded with a failing raw-state upload")
+	}
+	if st.created != nil {
+		t.Fatalf("created history row %q before all state objects were stored", st.created.ID)
+	}
+}
+
+func TestStateJSONURL(t *testing.T) {
+	job := store.Job{OrganizationID: "org-1"}
+	ws := store.Workspace{ID: "ws-1"}
+	want := "https://terrakube.example.com/tfstate/v1/organization/org-1/workspace/ws-1/state/h-1.json"
+	cases := map[string]string{
+		"":                               "",
+		"/":                              "",
+		"https://terrakube.example.com":  want,
+		"https://terrakube.example.com/": want,
+	}
+	for publicURL, expected := range cases {
+		e := New(Deps{PublicURL: publicURL})
+		if got := e.stateJSONURL(job, ws, "h-1"); got != expected {
+			t.Errorf("stateJSONURL(%q) = %q, want %q", publicURL, got, expected)
+		}
+	}
+}
+
+type failingKeyBackend struct {
+	*memoryBackend
+	failSuffix string
+}
+
+func (b *failingKeyBackend) Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error {
+	if strings.HasSuffix(key, b.failSuffix) {
+		return errors.New("storage down")
+	}
+	return b.memoryBackend.Put(ctx, key, r, size, contentType)
+}
+
 func TestFinishApplyFailsWhenHistoryArchiveFails(t *testing.T) {
 	ctx := context.Background()
 	backend := newMemoryBackend()

@@ -207,12 +207,14 @@ Storage keys mirror upstream per backend:
 
 - Local: `backend/{orgId}/{wsId}/terraform.tfstate`,
   `state/{orgId}/{wsId}/state/{historyId}.raw.json`,
-  `state/{orgId}/{wsId}/state/{historyId}.json` and
-  `state/{orgId}/{wsId}/{jobId}/{stepId}/terraformLibrary.tfPlan`.
+  `state/{orgId}/{wsId}/state/{historyId}.json`,
+  `state/{orgId}/{wsId}/{jobId}/{stepId}/terraformLibrary.tfPlan` and
+  `tfoutput/{orgId}/{jobId}/{stepId}.tfoutput`.
 - S3: `tfstate/{orgId}/{wsId}/terraform.tfstate`,
   `tfstate/{orgId}/{wsId}/state/{historyId}.raw.json`,
-  `tfstate/{orgId}/{wsId}/state/{historyId}.json` and
-  `tfstate/{orgId}/{wsId}/{jobId}/{stepId}/terraformLibrary.tfPlan`.
+  `tfstate/{orgId}/{wsId}/state/{historyId}.json`,
+  `tfstate/{orgId}/{wsId}/{jobId}/{stepId}/terraformLibrary.tfPlan` and
+  `tfoutput/{orgId}/{jobId}/{stepId}.tfoutput`.
 
 Archive uploads are unauthenticated upstream; the unguessable archive UUID is
 the capability. A successful upload deletes the `temp_archive` row. The raw
@@ -372,21 +374,27 @@ that was delivered to a dead consumer.
   uploaded to `tfoutput/{orgId}/{jobId}/{stepId}.tfoutput` (the upstream S3
   key). `/tfoutput/v1` serves that object for finished steps and falls back to
   `step.output`, which still holds the same text inline (truncated at 10 MiB)
-  for the TFE log endpoints. A log upload failure marks the step `failed` and
+  for the TFE log endpoints; `job.output` keeps the latest step's text for the
+  TFE run-log fallback. A log upload failure marks the step `failed` and
   fails the run, unless the step was already cancelled or failed.
 - **History**: after a successful apply the executor reads the current state,
-  creates a `history` row with the state `serial`, `lineage` and MD5, sets
-  `history.output` to
-  `{publicUrl}/tfstate/v1/organization/{orgId}/workspace/{wsId}/state/{historyId}.json`,
-  and archives the raw and JSON state objects under the upstream `state/...`
-  keys. Archiving is idempotent per job reference, so a retried job cannot
-  create a second row. A history upload failure marks the step `failed` and
-  fails the run.
+  uploads the raw and JSON state objects under the upstream `state/...`
+  (local) or `tfstate/...` (S3) keys,
+  then creates a `history` row with the state `serial`, `lineage` and MD5 and
+  sets `history.output` to
+  `{publicUrl}/tfstate/v1/organization/{orgId}/workspace/{wsId}/state/{historyId}.json`.
+  The row is created last, so a failed upload leaves no state version pointing
+  at a missing artifact. Archiving is idempotent per job reference, so a
+  retried job cannot create a second row. A history upload failure marks the
+  step `failed` and fails the run.
 - **Reliability**: transient failures (database, storage, network) are retried
   up to three attempts by republishing the job with an `attempt` field. A
   message is acknowledged only after its work is finished or safely requeued;
   during shutdown it is left pending so another executor reclaims it after the
-  30-second idle window. Permanent Terraform failures are not retried.
+  30-second idle window. Permanent Terraform failures are not retried. Log and
+  history upload failures are treated as permanent: when a step was completing,
+  they mark it `failed` and fail the run, rather than republishing a job that
+  would re-run the step.
 - **Cancellation**: while a command runs the executor polls the job status. A
   discard or cancel kills the command's process group, marks the current step
   `cancelled` and leaves the API's `cancelled` job status intact.
