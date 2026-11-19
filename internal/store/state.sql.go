@@ -280,6 +280,37 @@ func (q *Queries) GetHistory(ctx context.Context, id string) (History, error) {
 	return i, err
 }
 
+const getHistoryByJobReference = `-- name: GetHistoryByJobReference :one
+SELECT id, workspace_id, job_reference, output, serial, md5, lineage, created_date, created_by, updated_date, updated_by FROM history
+WHERE workspace_id = $1 AND job_reference = $2
+ORDER BY created_date DESC, id DESC
+LIMIT 1
+`
+
+type GetHistoryByJobReferenceParams struct {
+	WorkspaceID  string  `json:"workspace_id"`
+	JobReference *string `json:"job_reference"`
+}
+
+func (q *Queries) GetHistoryByJobReference(ctx context.Context, arg GetHistoryByJobReferenceParams) (History, error) {
+	row := q.db.QueryRow(ctx, getHistoryByJobReference, arg.WorkspaceID, arg.JobReference)
+	var i History
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.JobReference,
+		&i.Output,
+		&i.Serial,
+		&i.Md5,
+		&i.Lineage,
+		&i.CreatedDate,
+		&i.CreatedBy,
+		&i.UpdatedDate,
+		&i.UpdatedBy,
+	)
+	return i, err
+}
+
 const getJob = `-- name: GetJob :one
 SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch FROM job WHERE id = $1
 `
@@ -343,11 +374,13 @@ func (q *Queries) GetLatestHistory(ctx context.Context, workspaceID string) (His
 
 const getPendingStepByJob = `-- name: GetPendingStepByJob :one
 SELECT id, job_id, step_number, name, status, log_status, output FROM step
-WHERE job_id = $1 AND status IN ('pending', 'queue')
+WHERE job_id = $1 AND status IN ('pending', 'queue', 'running')
 ORDER BY step_number ASC
 LIMIT 1
 `
 
+// "running" is included so an executor that reclaims a crashed job resumes the
+// interrupted step instead of treating the job as finished.
 func (q *Queries) GetPendingStepByJob(ctx context.Context, jobID int64) (Step, error) {
 	row := q.db.QueryRow(ctx, getPendingStepByJob, jobID)
 	var i Step

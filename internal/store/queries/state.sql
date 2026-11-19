@@ -13,6 +13,12 @@ WHERE workspace_id = $1
 ORDER BY created_date DESC, id DESC
 LIMIT 1;
 
+-- name: GetHistoryByJobReference :one
+SELECT * FROM history
+WHERE workspace_id = $1 AND job_reference = $2
+ORDER BY created_date DESC, id DESC
+LIMIT 1;
+
 -- name: CreateHistory :one
 INSERT INTO history (id, workspace_id, job_reference, output, serial, md5, lineage, created_by)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -119,8 +125,10 @@ WHERE job_id = $1 AND step_number = $2
 LIMIT 1;
 
 -- name: GetPendingStepByJob :one
+-- "running" is included so an executor that reclaims a crashed job resumes the
+-- interrupted step instead of treating the job as finished.
 SELECT * FROM step
-WHERE job_id = $1 AND status IN ('pending', 'queue')
+WHERE job_id = $1 AND status IN ('pending', 'queue', 'running')
 ORDER BY step_number ASC
 LIMIT 1;
 
