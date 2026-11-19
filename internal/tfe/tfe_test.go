@@ -1428,3 +1428,30 @@ func extractLogReadURL(t *testing.T, body []byte) string {
 func stringPtr(value string) *string {
 	return &value
 }
+
+func TestCapabilitySecretPrefersSharedValues(t *testing.T) {
+	cases := []struct {
+		configured string
+		authToken  string
+		want       string
+		shared     bool
+	}{
+		{"ticket-secret", "auth-token", "ticket-secret", true},
+		{"", "auth-token", "auth-token", true},
+	}
+	for _, tc := range cases {
+		got, shared := capabilitySecret(tc.configured, tc.authToken)
+		if got != tc.want || shared != tc.shared {
+			t.Errorf("capabilitySecret(%q, %q) = (%q, %v), want (%q, %v)",
+				tc.configured, tc.authToken, got, shared, tc.want, tc.shared)
+		}
+	}
+
+	got, shared := capabilitySecret("", "")
+	if shared {
+		t.Fatal("a random per-process secret must not be reported as shared")
+	}
+	if got == "" {
+		t.Fatal("capabilitySecret returned an empty secret")
+	}
+}

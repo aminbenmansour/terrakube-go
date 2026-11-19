@@ -31,6 +31,7 @@ type Config struct {
 	RedisURL            string
 	AuthToken           string
 	InternalTokenSecret string
+	UploadTicketSecret  string
 	StateMaxSizeBytes   int64
 	ShutdownTimeout     time.Duration
 	DexClientID         string
@@ -86,6 +87,7 @@ func Load() (Config, error) {
 		RedisURL:            envFirst([]string{"TERRAKUBE_REDIS_URL", "REDIS_URL"}, "redis://localhost:6379/0"),
 		AuthToken:           env("TERRAKUBE_AUTH_TOKEN", ""),
 		InternalTokenSecret: envFirst([]string{"TERRAKUBE_INTERNAL_TOKEN_SECRET", "IO_TERRAKUBE_TOKEN_INTERNAL"}, ""),
+		UploadTicketSecret:  env("TERRAKUBE_UPLOAD_TICKET_SECRET", ""),
 		StateMaxSizeBytes:   envInt64([]string{"TERRAKUBE_STATE_MAX_SIZE_BYTES", "IO_TERRAKUBE_STATE_MAX_SIZE_BYTES"}, 104857600),
 		ShutdownTimeout:     envDuration("TERRAKUBE_SHUTDOWN_TIMEOUT", 15*time.Second),
 		DexClientID:         env("TERRAKUBE_DEX_CLIENT_ID", "terrakube"),
@@ -109,6 +111,12 @@ func Load() (Config, error) {
 				UsePathStyle:    envBool("TERRAKUBE_STORAGE_S3_USE_PATH_STYLE", false),
 			},
 		},
+	}
+
+	// The internal token secret doubles as a capability secret, so deployments
+	// that only set it keep working.
+	if cfg.UploadTicketSecret == "" {
+		cfg.UploadTicketSecret = cfg.InternalTokenSecret
 	}
 
 	switch cfg.Storage.Type {

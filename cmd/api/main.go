@@ -109,7 +109,7 @@ func run() error {
 		Logger:             logger,
 		PublicURL:          cfg.PublicURL,
 		AuthToken:          cfg.AuthToken,
-		UploadTicketSecret: cfg.InternalTokenSecret,
+		UploadTicketSecret: cfg.UploadTicketSecret,
 		InternalAuth:       internalAuth,
 		DexClientID:        cfg.DexClientID,
 		DexIssuerURL:       cfg.DexIssuerURL,
