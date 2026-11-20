@@ -63,6 +63,19 @@ Configuration upload tickets and log-read URLs are signed with
 them explicitly when running more than one API replica: without a shared
 secret each process invents its own key and rejects URLs minted by another.
 
+The upstream React UI is served from the API when you point it at a build:
+
+```bash
+TERRAKUBE_UI_DIR=/path/to/terrakube/ui/build make run-api   # http://localhost:8080/
+```
+
+`index.html` is returned for deep links, `/env-config.js` is generated from
+`TERRAKUBE_PUBLIC_URL`, `TERRAKUBE_DEX_CLIENT_ID` and `TERRAKUBE_DEX_ISSUER_URL`.
+Login needs a Dex ID token validator, which is not implemented yet: the UI
+completes the OIDC redirect and then receives 401s until the API accepts Dex
+tokens. With an empty `TERRAKUBE_AUTH_TOKEN` the API accepts everything, which is
+the current way to browse the UI locally.
+
 Build everything with `make build`; run the checks with `make check`.
 
 If you prefer compose, `deploy/compose/compose.yaml` mirrors the podman script.

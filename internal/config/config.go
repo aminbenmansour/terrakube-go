@@ -37,6 +37,8 @@ type Config struct {
 	DexClientID         string
 	DexIssuerURL        string
 	TerraformLogin      bool
+	// UIDir is the built upstream React UI to serve at /. Empty disables it.
+	UIDir string
 
 	HTTPAddr         string
 	ExecutorHTTPAddr string
@@ -93,6 +95,7 @@ func Load() (Config, error) {
 		DexClientID:         env("TERRAKUBE_DEX_CLIENT_ID", "terrakube"),
 		DexIssuerURL:        strings.TrimRight(env("TERRAKUBE_DEX_ISSUER_URL", "http://localhost:5556/dex"), "/"),
 		TerraformLogin:      envBool("TERRAKUBE_TERRAFORM_LOGIN_ENABLED", false),
+		UIDir:               env("TERRAKUBE_UI_DIR", ""),
 		HTTPAddr:            env("TERRAKUBE_HTTP_ADDR", ":8080"),
 		ExecutorHTTPAddr:    env("TERRAKUBE_EXECUTOR_HTTP_ADDR", ":8081"),
 		RegistryHTTPAddr:    env("TERRAKUBE_REGISTRY_HTTP_ADDR", ":8082"),

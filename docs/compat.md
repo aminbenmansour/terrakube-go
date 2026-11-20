@@ -485,13 +485,22 @@ Implemented so far (`internal/graphql`, backed by gqlgen):
 - Missing tables the UI reads were added in migration `0005_graphql_entities.sql`
   (`access`, `project_access`, `notification_configuration`,
   `notification_trigger`, `notification_configuration_template`).
+- **Static hosting.** Set `TERRAKUBE_UI_DIR` to an upstream UI build and the API
+  serves it at `/`: `index.html` for `/` and every extensionless path (so deep
+  links work), `/assets/*` immutable, a missing asset a real 404, and
+  `/env-config.js` generated from `TERRAKUBE_PUBLIC_URL`,
+  `TERRAKUBE_DEX_CLIENT_ID`, `TERRAKUBE_DEX_ISSUER_URL` and the build version
+  with `Cache-Control: no-store`. UI and API share an origin, so no CORS
+  exception is required; a split-origin deployment would need one.
+- Not implemented: validating the Dex ID token the UI gets after login. The
+  bearer token (`TERRAKUBE_AUTH_TOKEN`) is the only accepted user credential, so
+  a stock UI build completes the OIDC redirect and then receives 401s.
 
 Not implemented: GraphQL mutations and the rest of the 53 upstream entities.
 
 ## Open questions
 
-- GraphQL subscriptions for the operations in `docs/upstream/ui-operations.md`
-  (the query surface is implemented; mutations and subscriptions are not).
+- GraphQL mutations for the operations in `docs/upstream/ui-operations.md`.
 - Exact JSON:API error objects and RSQL edge cases (differential tests).
 - Terraform login/OAuth broker behaviour (M3/M5).
 - Kubernetes ephemeral executor contract (M6).
