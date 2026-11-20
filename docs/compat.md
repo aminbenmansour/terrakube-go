@@ -259,7 +259,10 @@ object key.
 
 ## Management API — `/api/v1`
 
-Elide-generated JSON:API. Reference specification (upstream, v2.27.0) is at
+Elide-generated JSON:API. This API implements 22 routes (organization, project,
+workspace, variable); the 106 REST operations the UI actually sends are listed in
+`docs/upstream/ui-rest-operations.md`, with what is missing. Reference
+specification (upstream, v2.27.0) is at
 `openapi-spec/v2_27_0.yml`; resources include organization, project, workspace,
 variable, tag, workspacetag, job, step, template, history, team, token, vcs,
 module, provider, schedule, agent, webhook and policy objects.

@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "docs/compat.md": {
-    "mtime": 1795204578.278953,
-    "seen": 1795204593.3216493,
-    "ast_hash": "a1ad0457e47a7c8cab7b76a72b000225",
+    "mtime": 1795204726.25129,
+    "seen": 1795204731.6901784,
+    "ast_hash": "4ee61df25894a05d3143e30a6718f8a5",
     "semantic_hash": ""
   },
   "internal/executor/executor.go": {
@@ -828,8 +828,8 @@
     "semantic_hash": ""
   },
   "internal/graphql/subscriptions_test.go": {
-    "mtime": 1795204574.0770898,
-    "seen": 1795204593.3215716,
+    "mtime": 1795204685.4006405,
+    "seen": 1795204731.6900988,
     "ast_hash": "9751f5844e3a1e4d1796f9e26c252382",
     "semantic_hash": ""
   },
@@ -867,6 +867,36 @@
     "mtime": 1795204497.0579684,
     "seen": 1795204593.3216176,
     "ast_hash": "3352fc62749fd7e60ef06202346598f9",
+    "semantic_hash": ""
+  },
+  "internal/api/routes_test.go": {
+    "mtime": 1795204720.6380463,
+    "seen": 1795204731.6900642,
+    "ast_hash": "eaa33ec2061b432d220dde9472039297",
+    "semantic_hash": ""
+  },
+  "scripts/ui-rest-inventory.sh": {
+    "mtime": 1795204703.9678912,
+    "seen": 1795204731.6901643,
+    "ast_hash": "319e897ba0684de47730d6123792645a",
+    "semantic_hash": ""
+  },
+  "docs/upstream/ui-rest-operations.md": {
+    "mtime": 1795204726.2510445,
+    "seen": 1795204731.690183,
+    "ast_hash": "ca3d2f0231c4b49935564bad18283b17",
+    "semantic_hash": ""
+  },
+  "docs/upstream/ui-rest-operations.txt": {
+    "mtime": 1795204708.6086555,
+    "seen": 1795204731.6901836,
+    "ast_hash": "aaea47dd37382a813ba1e8ba5f492457",
+    "semantic_hash": ""
+  },
+  "internal/api/testdata/routes.txt": {
+    "mtime": 1795204722.9761431,
+    "seen": 1795204731.6901844,
+    "ast_hash": "06fc43393f45b8e4931f8cac607935da",
     "semantic_hash": ""
   }
 }
