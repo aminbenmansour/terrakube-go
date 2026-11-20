@@ -91,6 +91,12 @@ setting `TERRAKUBE_UI_DIR`:
 docker compose -f deploy/compose/compose.yaml --profile app --profile ui up
 ```
 
+That pulls `ghcr.io/aminbenmansour/terrakube-ui`, a private package: log in to
+`ghcr.io` first, or set `TERRAKUBE_UI_IMAGE` to a local build of
+[terrakube-ui](https://github.com/aminbenmansour/terrakube-ui). The image takes
+its configuration from `REACT_APP_*` environment variables, so the same image
+serves any stack.
+
 `TERRAKUBE_CORS_ORIGINS` (comma-separated) restricts browser access to
 `/api/v1`, `/graphql/api/v1` and `/subscriptions`; leaving it empty keeps the
 permissive `Access-Control-Allow-Origin: *` default, and a UI served by this API

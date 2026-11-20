@@ -1,7 +1,7 @@
 # Graph Report - terrakube-go  (2026-11-20)
 
 ## Corpus Check
-- 167 files · ~124,693 words
+- 167 files · ~124,742 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 18 file(s) not represented in the graph (top: .graphql 10, (none) 4, .example 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `001c3eec`
+- Built from commit: `f6e52a44`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -434,16 +434,16 @@ Nodes (3): Deps, JobLocker, transientError
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `executionContext` connect `executionContext` to `executionContext`, `.marshalOBoolean2bool`, `.___EnumValue`, `.___Field`, `generated.go`, `WorkspaceTagConnection`, `.___Directive`, `StringOrInt`, `models_gen.go`, `.unmarshalOString2ᚕᚖstring`, `._NotificationTrigger`, `github.com/99designs/gqlgen/graphql.Marshaler`, `.writeRun`, `github.com/vektah/gqlparser/v2/ast.SelectionSet`?**
-  _High betweenness centrality (0.047) - this node is a cross-community bridge._
+  _High betweenness centrality (0.039) - this node is a cross-community bridge._
 - **What connects `TF_HTTP_PASSWORD`, `TF_HTTP_USERNAME`, `TF_IN_AUTOMATION` to the rest of the system?**
   _11 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `net/http.ResponseWriter` be split into smaller, more focused modules?**
   _Cohesion score 0.1216644052464948 - nodes in this community are weakly interconnected._
-- **Why does `Querier` connect `.Exec` to `net/http.ResponseWriter`, `stubQuerier`, `Handler`, `TFE Handler Tests`, `WriteResource`, `reliabilityStore`, `.QueryRow`, `run`, `cancelRunStore`, `stubStore`, `testing.T`, `go_pkg_context`, `Layout`, `Querier`, `New`, `REST contract, captured from upstream`, `UpdateStepOutputParams`, `UpdateJobOutputParams`, `.CreateVariable`, `stubQuerier`, `UpdateWorkspaceTagValueParams`, `.GetTagByName`, `.CreateStep`, `.SetJobOverrideSource`, `.GetWorkspaceByName`, `.UpdateOrganization`, `CreateProjectParams`, `.ApproveJob`, `executor.go`?**
-  _High betweenness centrality (0.037) - this node is a cross-community bridge._
+- **Why does `API` connect `net/http.ResponseWriter` to `DecodeRequest`, `jsonapi.go`, `go_pkg_strings`?**
+  _High betweenness centrality (0.032) - this node is a cross-community bridge._
 - **Should `executionContext` be split into smaller, more focused modules?**
   _Cohesion score 0.0803633822501747 - nodes in this community are weakly interconnected._
-- **Why does `API` connect `net/http.ResponseWriter` to `DecodeRequest`, `jsonapi.go`, `go_pkg_strings`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+- **Why does `newLogSink()` connect `testLogger` to `executionContext`, `testing.T`, `go_pkg_context`, `go_pkg_os`, `logSink`, `Executor`?**
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **Should `Agent Workflows and Compatibility Docs` be split into smaller, more focused modules?**
   _Cohesion score 0.05989110707803993 - nodes in this community are weakly interconnected._
