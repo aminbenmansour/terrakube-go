@@ -39,6 +39,9 @@ type Config struct {
 	TerraformLogin      bool
 	// UIDir is the built upstream React UI to serve at /. Empty disables it.
 	UIDir string
+	// CORSOrigins restricts browser access to the management API. Empty allows
+	// any origin, matching the behaviour before this was configurable.
+	CORSOrigins []string
 
 	HTTPAddr         string
 	ExecutorHTTPAddr string
@@ -96,6 +99,7 @@ func Load() (Config, error) {
 		DexIssuerURL:        strings.TrimRight(env("TERRAKUBE_DEX_ISSUER_URL", "http://localhost:5556/dex"), "/"),
 		TerraformLogin:      envBool("TERRAKUBE_TERRAFORM_LOGIN_ENABLED", false),
 		UIDir:               env("TERRAKUBE_UI_DIR", ""),
+		CORSOrigins:         envList("TERRAKUBE_CORS_ORIGINS"),
 		HTTPAddr:            env("TERRAKUBE_HTTP_ADDR", ":8080"),
 		ExecutorHTTPAddr:    env("TERRAKUBE_EXECUTOR_HTTP_ADDR", ":8081"),
 		RegistryHTTPAddr:    env("TERRAKUBE_REGISTRY_HTTP_ADDR", ":8082"),
@@ -175,6 +179,22 @@ func envFirst(keys []string, fallback string) string {
 		}
 	}
 	return fallback
+}
+
+// envList reads a comma-separated list, trimming blanks so that a trailing
+// comma is harmless.
+func envList(key string) []string {
+	raw := os.Getenv(key)
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	var values []string
+	for _, value := range strings.Split(raw, ",") {
+		if value = strings.TrimSpace(value); value != "" {
+			values = append(values, value)
+		}
+	}
+	return values
 }
 
 func envBool(key string, fallback bool) bool {

@@ -27,6 +27,10 @@ type Deps struct {
 	Logger    *slog.Logger
 	PublicURL string
 	AuthToken string
+	// CORSOrigins lists the origins allowed to call the API from a browser.
+	// Empty allows any origin, which is the historical behaviour; a UI served
+	// by this API shares its origin and needs no entry.
+	CORSOrigins []string
 }
 
 // API holds the HTTP handlers.
@@ -48,7 +52,7 @@ func New(deps Deps) http.Handler {
 	a := &API{deps: deps}
 
 	r := chi.NewRouter()
-	r.Use(corsMiddleware)
+	r.Use(corsMiddleware(deps.CORSOrigins))
 	r.Use(a.authenticate)
 
 	// Organizations
@@ -93,17 +97,33 @@ func New(deps Deps) http.Handler {
 	return r
 }
 
-func corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+func corsMiddleware(origins []string) func(http.Handler) http.Handler {
+	allowed := make(map[string]bool, len(origins))
+	for _, origin := range origins {
+		allowed[strings.TrimSpace(origin)] = true
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			origin := r.Header.Get("Origin")
+			switch {
+			case len(allowed) == 0:
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+			case allowed[origin]:
+				// Echoing the origin keeps credentials and any future
+				// Vary-sensitive caching correct.
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Add("Vary", "Origin")
+			}
+			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 func (a *API) authenticate(next http.Handler) http.Handler {

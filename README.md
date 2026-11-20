@@ -76,7 +76,12 @@ completes the OIDC redirect and then receives 401s until the API accepts Dex
 tokens. With an empty `TERRAKUBE_AUTH_TOKEN` the API accepts everything, which is
 the current way to browse the UI locally.
 
-Build everything with `make build`; run the checks with `make check`.
+`TERRAKUBE_CORS_ORIGINS` (comma-separated) restricts browser access to
+`/api/v1`; leaving it empty keeps the permissive `Access-Control-Allow-Origin: *`
+default, and a UI served by this API needs no entry at all.
+
+Build everything with `make build`; run the checks with `make check`, and scan
+dependencies with `make vuln` (`govulncheck`; CI runs it too).
 
 If you prefer compose, `deploy/compose/compose.yaml` mirrors the podman script.
 The `app` profile starts the API too:

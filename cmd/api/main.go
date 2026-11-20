@@ -109,10 +109,11 @@ func run() error {
 		Storage: storeBackend,
 	})
 	handler.Mount("/api/v1", api.New(api.Deps{
-		Store:     querier,
-		Logger:    logger,
-		PublicURL: cfg.PublicURL,
-		AuthToken: cfg.AuthToken,
+		Store:       querier,
+		Logger:      logger,
+		PublicURL:   cfg.PublicURL,
+		AuthToken:   cfg.AuthToken,
+		CORSOrigins: cfg.CORSOrigins,
 	}))
 	tfeDeps := tfe.Deps{
 		Store:              querier,

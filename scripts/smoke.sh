@@ -52,6 +52,13 @@ org_id=$(req -X POST "${BASE}/organization" -d "{
   \"data\": {\"type\": \"organization\", \"attributes\": {\"name\": \"${name}\", \"description\": \"smoke test\"}}
 }" | jq -r '.data.id')
 [[ -n "$org_id" && "$org_id" != "null" ]] || { echo "FAIL: organization id" >&2; exit 1; }
+
+# A failure halfway through would otherwise leave a half-built organisation in
+# the database for every run.
+cleanup() {
+  curl -s -o /dev/null -X DELETE "${auth[@]}" "${json[@]}" "${BASE}/organization/${org_id}" || true
+}
+trap cleanup EXIT
 echo "ok: organization ${org_id}"
 
 got_name=$(req "${BASE}/organization/${org_id}" | jq -r '.data.attributes.name')
