@@ -487,6 +487,9 @@ Implemented so far (`internal/graphql`, backed by gqlgen):
   store wrapper, so every writer (management API and executor) notifies
   subscribers without call-site changes. The UI sends its token as a
   connection parameter, so it is checked after the socket upgrade.
+  `TestSubscriptionSeesAStatusWrittenThroughTheStore` covers the whole loop
+  against Redis: a status written through the wrapped store reaches an open
+  socket.
 - Missing tables the UI reads were added in migration `0005_graphql_entities.sql`
   (`access`, `project_access`, `notification_configuration`,
   `notification_trigger`, `notification_configuration_template`).
