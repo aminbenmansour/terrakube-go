@@ -77,14 +77,18 @@ available in this environment. `.data/` holds local state and is git-ignored.
 
 1. Read `docs/compat.md` before touching the API or schema.
 2. Prefer small, focused commits with conventional messages (`feat:`, `fix:`,
-   `docs:`, `chore:`, `test:`).
-3. Keep generated-code changes in their own commit when practical.
-4. Add or update tests for behavior changes.
-5. Run verification before committing:
+   `docs:`, `chore:`, `test:`). One concern per commit, and every commit must
+   build and pass on its own: migration, then queries, then generated code
+   (`chore(store): regenerate sqlc`), then handlers, then docs. Generated code
+   never shares a commit with hand-written logic, and a behaviour change never
+   hides inside a refactor. Roughly 200 lines per commit; past ~400 in a pull
+   request, split it into stacked PRs.
+3. Add or update tests for behavior changes.
+4. Run verification before committing:
    - always: `make check` (or at least `go build ./... && go vet ./... && go test ./...`)
    - API changes: start the stack and run `scripts/smoke.sh`
    - migration changes: test against a clean database
-6. Update `docs/compat.md` when an observed upstream contract changes.
+5. Update `docs/compat.md` when an observed upstream contract changes.
 
 ## Verification details
 
