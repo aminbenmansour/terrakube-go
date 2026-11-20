@@ -41,7 +41,7 @@ func (a *API) listVariables(w http.ResponseWriter, r *http.Request) {
 	for _, variable := range items {
 		resources = append(resources, variableResource(variable))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), false)
+	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), jsonapi.Page{})
 }
 
 func (a *API) getVariable(w http.ResponseWriter, r *http.Request) {

@@ -38,7 +38,7 @@ func (a *API) getCurrentStateVersionOutputs(w http.ResponseWriter, r *http.Reque
 
 	rc, err := a.deps.Storage.Get(r.Context(), a.deps.Layout.CurrentState(ws.OrganizationID, ws.ID))
 	if errors.Is(err, storage.ErrNotFound) {
-		jsonapi.WriteCollection(w, http.StatusOK, nil, 0, false)
+		jsonapi.WriteCollection(w, http.StatusOK, nil, 0, jsonapi.Page{})
 		return
 	}
 	if err != nil {
@@ -53,14 +53,14 @@ func (a *API) getCurrentStateVersionOutputs(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if len(body) == 0 {
-		jsonapi.WriteCollection(w, http.StatusOK, nil, 0, false)
+		jsonapi.WriteCollection(w, http.StatusOK, nil, 0, jsonapi.Page{})
 		return
 	}
 
 	var state stateWithOutputs
 	if err := json.Unmarshal(body, &state); err != nil {
 		a.deps.Logger.Warn("current state outputs are not valid JSON", "error", err, "workspace_id", ws.ID)
-		jsonapi.WriteCollection(w, http.StatusOK, nil, 0, false)
+		jsonapi.WriteCollection(w, http.StatusOK, nil, 0, jsonapi.Page{})
 		return
 	}
 
@@ -91,5 +91,5 @@ func (a *API) getCurrentStateVersionOutputs(w http.ResponseWriter, r *http.Reque
 			},
 		})
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), false)
+	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), jsonapi.Page{})
 }

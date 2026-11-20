@@ -133,15 +133,35 @@ func WriteResource(w http.ResponseWriter, status int, resource Resource) {
 	Write(w, status, Document{Data: resource})
 }
 
-// WriteCollection writes a resource collection. When totals is true a
-// meta.totals member is included, matching Elide's page[totals] behaviour.
-func WriteCollection(w http.ResponseWriter, status int, resources []Resource, total int, totals bool) {
+// Page describes how a collection was cut. The zero value means no page
+// parameter was sent, and no meta is emitted, which is what Elide does.
+type Page struct {
+	Number int
+	Limit  int
+	Totals bool
+}
+
+// WriteCollection writes a resource collection. When the request carried page
+// parameters, a meta.page member is included in Elide's shape:
+//
+//	{"page":{"number":1,"limit":2,"totalPages":1,"totalRecords":2}}
+//
+// totalPages and totalRecords appear only for page[totals]. Verified against
+// upstream 2.34.3 (docs/upstream/rest/organization-list.json).
+func WriteCollection(w http.ResponseWriter, status int, resources []Resource, total int, page Page) {
 	if resources == nil {
 		resources = []Resource{}
 	}
 	doc := Document{Data: resources}
-	if totals {
-		doc.Meta = map[string]any{"totals": total}
+	if page.Number > 0 || page.Limit > 0 || page.Totals {
+		number := max(page.Number, 1)
+		limit := max(page.Limit, 1)
+		meta := map[string]any{"number": number, "limit": limit}
+		if page.Totals {
+			meta["totalPages"] = (total + limit - 1) / limit
+			meta["totalRecords"] = total
+		}
+		doc.Meta = map[string]any{"page": meta}
 	}
 	Write(w, status, doc)
 }
