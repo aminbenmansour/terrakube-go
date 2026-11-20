@@ -22,9 +22,9 @@ type Organization {
   disabled: Boolean!
   executionMode: String!
   icon: String
-  project(first: StringOrInt, after: StringOrInt, filter: String, sort: String): ProjectConnection!
-  workspace(first: StringOrInt, after: StringOrInt, filter: String, sort: String): WorkspaceConnection!
-  notificationConfiguration(first: StringOrInt, after: StringOrInt, filter: String, sort: String): NotificationConfigurationConnection!
+  project(ids: [String], first: StringOrInt, after: StringOrInt, filter: String, sort: String): ProjectConnection!
+  workspace(ids: [String], first: StringOrInt, after: StringOrInt, filter: String, sort: String): WorkspaceConnection!
+  notificationConfiguration(ids: [String], first: StringOrInt, after: StringOrInt, filter: String, sort: String): NotificationConfigurationConnection!
 }
 
 type Workspace {
@@ -42,17 +42,17 @@ type Workspace {
   policyComplianceStatus: String!
   allowRemoteApply: Boolean!
   executionMode: String
-  workspaceTag(first: StringOrInt, after: StringOrInt, filter: String, sort: String): WorkspaceTagConnection!
-  project(first: StringOrInt, after: StringOrInt, filter: String, sort: String): ProjectConnection!
-  job(first: StringOrInt, after: StringOrInt, filter: String, sort: String): JobConnection!
-  access(first: StringOrInt, after: StringOrInt, filter: String, sort: String): AccessConnection!
+  workspaceTag(ids: [String], first: StringOrInt, after: StringOrInt, filter: String, sort: String): WorkspaceTagConnection!
+  project(ids: [String], first: StringOrInt, after: StringOrInt, filter: String, sort: String): ProjectConnection!
+  job(ids: [String], first: StringOrInt, after: StringOrInt, filter: String, sort: String): JobConnection!
+  access(ids: [String], first: StringOrInt, after: StringOrInt, filter: String, sort: String): AccessConnection!
 }
 
 type Project {
   id: String!
   name: String!
   description: String
-  projectAccess(first: StringOrInt, after: StringOrInt, filter: String, sort: String): ProjectAccessConnection!
+  projectAccess(ids: [String], first: StringOrInt, after: StringOrInt, filter: String, sort: String): ProjectAccessConnection!
 }
 
 type WorkspaceTag {
@@ -106,9 +106,9 @@ type NotificationConfiguration {
   destinationUrl: String
   active: Boolean
   messageStyle: String
-  workspace(first: StringOrInt, after: StringOrInt, filter: String, sort: String): WorkspaceConnection!
-  triggers(first: StringOrInt, after: StringOrInt, filter: String, sort: String): NotificationTriggerConnection!
-  templates(first: StringOrInt, after: StringOrInt, filter: String, sort: String): TemplateConnection!
+  workspace(ids: [String], first: StringOrInt, after: StringOrInt, filter: String, sort: String): WorkspaceConnection!
+  triggers(ids: [String], first: StringOrInt, after: StringOrInt, filter: String, sort: String): NotificationTriggerConnection!
+  templates(ids: [String], first: StringOrInt, after: StringOrInt, filter: String, sort: String): TemplateConnection!
 }
 
 type NotificationTrigger {

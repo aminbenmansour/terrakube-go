@@ -433,3 +433,40 @@ func TestSubscriptionsNeedAnEventSource(t *testing.T) {
 		t.Fatal("a missing event source was accepted")
 	}
 }
+
+// projects-get.graphql asks for one project through the relationship's ids
+// argument, so an ignored ids argument would silently return every project.
+func TestRelationshipIDsSelectOneRow(t *testing.T) {
+	deps := testDeps(t)
+	ctx := context.Background()
+
+	orgID := uuid.NewString()
+	if _, err := deps.DB.(*pgxpool.Pool).Exec(ctx, `INSERT INTO organization (id, name) VALUES ($1, $2)`, orgID, "gql-test-"+orgID[:8]); err != nil {
+		t.Fatalf("insert organization: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = deps.DB.(*pgxpool.Pool).Exec(context.Background(), `DELETE FROM organization WHERE id = $1`, orgID)
+	})
+
+	first, second := uuid.NewString(), uuid.NewString()
+	for _, project := range []struct{ id, name string }{{first, "alpha"}, {second, "beta"}} {
+		if _, err := deps.DB.(*pgxpool.Pool).Exec(ctx,
+			`INSERT INTO project (id, name, organization_id) VALUES ($1, $2, $3)`, project.id, project.name, orgID); err != nil {
+			t.Fatalf("insert project: %v", err)
+		}
+	}
+
+	page := runQuery(t, New(deps), `query Get($orgId: String, $projectId: String) {
+  organization(ids: [$orgId]) { edges { node { project(ids: [$projectId]) { edges { node { id name } } pageInfo { totalRecords } } } } }
+}`, map[string]any{"orgId": orgID, "projectId": second})
+
+	node := page["organization"].(map[string]any)["edges"].([]any)[0].(map[string]any)["node"].(map[string]any)
+	projects := node["project"].(map[string]any)
+	edges := projects["edges"].([]any)
+	if len(edges) != 1 || edges[0].(map[string]any)["node"].(map[string]any)["name"] != "beta" {
+		t.Fatalf("project(ids) = %#v", edges)
+	}
+	if total := projects["pageInfo"].(map[string]any)["totalRecords"].(float64); total != 1 {
+		t.Fatalf("totalRecords = %v, want 1", total)
+	}
+}
