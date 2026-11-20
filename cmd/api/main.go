@@ -25,6 +25,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/tfe"
 	"github.com/aminbenmansour/terrakube-go/internal/tfoutput"
 	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
+	"github.com/aminbenmansour/terrakube-go/internal/ui"
 	"github.com/aminbenmansour/terrakube-go/migrations"
 )
 
@@ -156,6 +157,19 @@ func run() error {
 		MaxStateSizeBytes: cfg.StateMaxSizeBytes,
 		PublicURL:         cfg.PublicURL,
 	}))
+
+	// The UI is mounted last so every API path wins over the catch-all SPA
+	// fallback. Serving it from the API keeps it on one origin, which is why no
+	// CORS exception is needed.
+	if uiHandler := ui.New(ui.Deps{
+		Dir:          cfg.UIDir,
+		PublicURL:    cfg.PublicURL,
+		DexClientID:  cfg.DexClientID,
+		DexAuthority: cfg.DexIssuerURL,
+		Logger:       logger,
+	}); uiHandler != nil {
+		handler.Mount("/", uiHandler)
+	}
 
 	return httpapi.Serve(ctx, logger, cfg.HTTPAddr, handler, cfg.ShutdownTimeout)
 }
