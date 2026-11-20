@@ -91,3 +91,58 @@ func TestVersion(t *testing.T) {
 		t.Error("version is empty")
 	}
 }
+
+func TestCORSAllowsAnyOriginByDefault(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Origin", "https://anywhere.example")
+	rec := httptest.NewRecorder()
+
+	CORS(nil)(next).ServeHTTP(rec, req)
+
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "*" {
+		t.Fatalf("Access-Control-Allow-Origin = %q, want *", got)
+	}
+}
+
+func TestCORSAllowsOnlyListedOrigins(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	handler := CORS([]string{"https://ui.example.com"})(next)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Origin", "https://ui.example.com")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://ui.example.com" {
+		t.Fatalf("allowed origin = %q", got)
+	}
+	if got := rec.Header().Get("Vary"); got != "Origin" {
+		t.Fatalf("Vary = %q, want Origin", got)
+	}
+
+	// An unlisted origin gets no CORS header, so the browser blocks the read.
+	req = httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Origin", "https://evil.example")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("unlisted origin was allowed: %q", got)
+	}
+}
+
+func TestCORSPreflightDoesNotReachTheHandler(t *testing.T) {
+	called := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { called = true })
+	req := httptest.NewRequest(http.MethodOptions, "/", nil)
+	req.Header.Set("Origin", "https://ui.example.com")
+	rec := httptest.NewRecorder()
+
+	CORS([]string{"https://ui.example.com"})(next).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204", rec.Code)
+	}
+	if called {
+		t.Fatal("the preflight reached the handler")
+	}
+}
