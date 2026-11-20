@@ -15,6 +15,7 @@ import (
 	internalauth "github.com/aminbenmansour/terrakube-go/internal/auth"
 	"github.com/aminbenmansour/terrakube-go/internal/config"
 	"github.com/aminbenmansour/terrakube-go/internal/db"
+	graphqlapi "github.com/aminbenmansour/terrakube-go/internal/graphql"
 	"github.com/aminbenmansour/terrakube-go/internal/httpapi"
 	"github.com/aminbenmansour/terrakube-go/internal/logging"
 	"github.com/aminbenmansour/terrakube-go/internal/queue"
@@ -115,6 +116,11 @@ func run() error {
 		DexIssuerURL:       cfg.DexIssuerURL,
 		TerraformLogin:     cfg.TerraformLogin,
 	}
+	handler.Mount("/graphql/api/v1", graphqlapi.New(graphqlapi.Deps{
+		DB:        pool,
+		Logger:    logger,
+		AuthToken: cfg.AuthToken,
+	}))
 	handler.Get("/.well-known/terraform.json", tfe.Discovery(tfeDeps))
 	handler.Mount("/remote/tfe/v2", tfe.New(tfeDeps))
 	handler.Mount("/tfoutput/v1", tfoutput.New(tfoutput.Deps{

@@ -1,0 +1,37 @@
+schema:
+  - internal/graphql/schema.graphqls
+exec:
+  filename: internal/graphql/generated.go
+  package: graphql
+model:
+  filename: internal/graphql/models_gen.go
+  package: graphql
+resolver:
+  layout: follow-schema
+  dir: internal/graphql
+  package: graphql
+  filename_template: "{name}.resolvers.go"
+omit_slice_element_pointers: true
+models:
+  StringOrInt:
+    model: github.com/aminbenmansour/terrakube-go/internal/graphql.StringOrInt
+  Organization:
+    model: github.com/aminbenmansour/terrakube-go/internal/graphql.Organization
+  Workspace:
+    model: github.com/aminbenmansour/terrakube-go/internal/graphql.Workspace
+  Project:
+    model: github.com/aminbenmansour/terrakube-go/internal/graphql.Project
+  WorkspaceTag:
+    model: github.com/aminbenmansour/terrakube-go/internal/graphql.WorkspaceTag
+  Job:
+    model: github.com/aminbenmansour/terrakube-go/internal/graphql.Job
+  Template:
+    model: github.com/aminbenmansour/terrakube-go/internal/graphql.Template
+  ProjectAccess:
+    model: github.com/aminbenmansour/terrakube-go/internal/graphql.ProjectAccess
+  Access:
+    model: github.com/aminbenmansour/terrakube-go/internal/graphql.Access
+  NotificationConfiguration:
+    model: github.com/aminbenmansour/terrakube-go/internal/graphql.NotificationConfiguration
+  NotificationTrigger:
+    model: github.com/aminbenmansour/terrakube-go/internal/graphql.NotificationTrigger

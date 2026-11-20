@@ -1,0 +1,145 @@
+# GraphQL surface the upstream UI uses, at /graphql/api/v1.
+#
+# Field names, entity names and the Relay connection shape are copied from the
+# upstream Elide schema (see docs/upstream/graphql-entities.md). Only the
+# entities and fields the UI actually reads are declared; adding the rest of
+# the 53 upstream entities is mechanical and can follow when a screen needs it.
+
+scalar StringOrInt
+
+type PageInfo {
+  startCursor: String
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  totalRecords: Int!
+}
+
+type Organization {
+  id: String!
+  name: String!
+  description: String
+  disabled: Boolean!
+  executionMode: String!
+  icon: String
+  project(first: StringOrInt, after: StringOrInt, filter: String, sort: String): ProjectConnection!
+  workspace(first: StringOrInt, after: StringOrInt, filter: String, sort: String): WorkspaceConnection!
+  notificationConfiguration(first: StringOrInt, after: StringOrInt, filter: String, sort: String): NotificationConfigurationConnection!
+}
+
+type Workspace {
+  id: String!
+  name: String!
+  description: String
+  source: String
+  branch: String
+  folder: String
+  terraformVersion: String
+  iacType: String!
+  lastJobStatus: String!
+  lastJobDate: String
+  locked: Boolean!
+  policyComplianceStatus: String!
+  allowRemoteApply: Boolean!
+  executionMode: String
+  workspaceTag(first: StringOrInt, after: StringOrInt, filter: String, sort: String): WorkspaceTagConnection!
+  project(first: StringOrInt, after: StringOrInt, filter: String, sort: String): ProjectConnection!
+  job(first: StringOrInt, after: StringOrInt, filter: String, sort: String): JobConnection!
+  access(first: StringOrInt, after: StringOrInt, filter: String, sort: String): AccessConnection!
+}
+
+type Project {
+  id: String!
+  name: String!
+  description: String
+  projectAccess(first: StringOrInt, after: StringOrInt, filter: String, sort: String): ProjectAccessConnection!
+}
+
+type WorkspaceTag {
+  id: String!
+  tagId: String!
+  value: String
+}
+
+type Job {
+  id: Int!
+  status: String!
+  command: String
+  createdDate: String
+}
+
+type Template {
+  id: String!
+  name: String!
+  description: String
+  version: String
+}
+
+type ProjectAccess {
+  id: String!
+  name: String!
+  role: String
+  manageWorkspace: Boolean
+  manageState: Boolean
+  manageJob: Boolean
+  planJob: Boolean
+  approveJob: Boolean
+  destroyJob: Boolean
+}
+
+type Access {
+  id: String!
+  name: String!
+  role: String
+  manageWorkspace: Boolean
+  manageState: Boolean
+  planJob: Boolean
+  approveJob: Boolean
+  destroyJob: Boolean
+}
+
+type NotificationConfiguration {
+  id: String!
+  name: String!
+  description: String
+  channelType: String
+  destinationUrl: String
+  active: Boolean
+  messageStyle: String
+  workspace(first: StringOrInt, after: StringOrInt, filter: String, sort: String): WorkspaceConnection!
+  triggers(first: StringOrInt, after: StringOrInt, filter: String, sort: String): NotificationTriggerConnection!
+  templates(first: StringOrInt, after: StringOrInt, filter: String, sort: String): TemplateConnection!
+}
+
+type NotificationTrigger {
+  id: String!
+  jobStatus: String
+}
+
+type OrganizationEdge { cursor: String!, node: Organization! }
+type OrganizationConnection { edges: [OrganizationEdge!]!, pageInfo: PageInfo! }
+type WorkspaceEdge { cursor: String!, node: Workspace! }
+type WorkspaceConnection { edges: [WorkspaceEdge!]!, pageInfo: PageInfo! }
+type ProjectEdge { cursor: String!, node: Project! }
+type ProjectConnection { edges: [ProjectEdge!]!, pageInfo: PageInfo! }
+type WorkspaceTagEdge { cursor: String!, node: WorkspaceTag! }
+type WorkspaceTagConnection { edges: [WorkspaceTagEdge!]!, pageInfo: PageInfo! }
+type JobEdge { cursor: String!, node: Job! }
+type JobConnection { edges: [JobEdge!]!, pageInfo: PageInfo! }
+type TemplateEdge { cursor: String!, node: Template! }
+type TemplateConnection { edges: [TemplateEdge!]!, pageInfo: PageInfo! }
+type ProjectAccessEdge { cursor: String!, node: ProjectAccess! }
+type ProjectAccessConnection { edges: [ProjectAccessEdge!]!, pageInfo: PageInfo! }
+type AccessEdge { cursor: String!, node: Access! }
+type AccessConnection { edges: [AccessEdge!]!, pageInfo: PageInfo! }
+type NotificationConfigurationEdge { cursor: String!, node: NotificationConfiguration! }
+type NotificationConfigurationConnection { edges: [NotificationConfigurationEdge!]!, pageInfo: PageInfo! }
+type NotificationTriggerEdge { cursor: String!, node: NotificationTrigger! }
+type NotificationTriggerConnection { edges: [NotificationTriggerEdge!]!, pageInfo: PageInfo! }
+
+type Query {
+  organization(ids: [String], filter: String, first: StringOrInt, after: StringOrInt, sort: String): OrganizationConnection!
+  workspace(ids: [String], filter: String, first: StringOrInt, after: StringOrInt, sort: String): WorkspaceConnection!
+  project(ids: [String], filter: String, first: StringOrInt, after: StringOrInt, sort: String): ProjectConnection!
+  notification_configuration(ids: [String], filter: String, first: StringOrInt, after: StringOrInt, sort: String): NotificationConfigurationConnection!
+}
