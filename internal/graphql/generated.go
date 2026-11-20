@@ -91,9 +91,9 @@ type ComplexityRoot struct {
 		ID             func(childComplexity int) int
 		MessageStyle   func(childComplexity int) int
 		Name           func(childComplexity int) int
-		Templates      func(childComplexity int, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
-		Triggers       func(childComplexity int, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
-		Workspace      func(childComplexity int, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
+		Templates      func(childComplexity int, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
+		Triggers       func(childComplexity int, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
+		Workspace      func(childComplexity int, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
 	}
 
 	NotificationConfigurationConnection struct {
@@ -128,9 +128,9 @@ type ComplexityRoot struct {
 		ID                        func(childComplexity int) int
 		Icon                      func(childComplexity int) int
 		Name                      func(childComplexity int) int
-		NotificationConfiguration func(childComplexity int, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
-		Project                   func(childComplexity int, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
-		Workspace                 func(childComplexity int, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
+		NotificationConfiguration func(childComplexity int, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
+		Project                   func(childComplexity int, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
+		Workspace                 func(childComplexity int, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
 	}
 
 	OrganizationConnection struct {
@@ -155,7 +155,7 @@ type ComplexityRoot struct {
 		Description   func(childComplexity int) int
 		ID            func(childComplexity int) int
 		Name          func(childComplexity int) int
-		ProjectAccess func(childComplexity int, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
+		ProjectAccess func(childComplexity int, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
 	}
 
 	ProjectAccess struct {
@@ -220,7 +220,7 @@ type ComplexityRoot struct {
 	}
 
 	Workspace struct {
-		Access                 func(childComplexity int, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
+		Access                 func(childComplexity int, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
 		AllowRemoteApply       func(childComplexity int) int
 		Branch                 func(childComplexity int) int
 		Description            func(childComplexity int) int
@@ -228,16 +228,16 @@ type ComplexityRoot struct {
 		Folder                 func(childComplexity int) int
 		ID                     func(childComplexity int) int
 		IacType                func(childComplexity int) int
-		Job                    func(childComplexity int, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
+		Job                    func(childComplexity int, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
 		LastJobDate            func(childComplexity int) int
 		LastJobStatus          func(childComplexity int) int
 		Locked                 func(childComplexity int) int
 		Name                   func(childComplexity int) int
 		PolicyComplianceStatus func(childComplexity int) int
-		Project                func(childComplexity int, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
+		Project                func(childComplexity int, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
 		Source                 func(childComplexity int) int
 		TerraformVersion       func(childComplexity int) int
-		WorkspaceTag           func(childComplexity int, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
+		WorkspaceTag           func(childComplexity int, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) int
 	}
 
 	WorkspaceConnection struct {
@@ -272,17 +272,17 @@ type ComplexityRoot struct {
 // region    ************************** generated!.gotpl **************************
 
 type NotificationConfigurationResolver interface {
-	Workspace(ctx context.Context, obj *NotificationConfiguration, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*WorkspaceConnection, error)
-	Triggers(ctx context.Context, obj *NotificationConfiguration, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*NotificationTriggerConnection, error)
-	Templates(ctx context.Context, obj *NotificationConfiguration, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*TemplateConnection, error)
+	Workspace(ctx context.Context, obj *NotificationConfiguration, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*WorkspaceConnection, error)
+	Triggers(ctx context.Context, obj *NotificationConfiguration, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*NotificationTriggerConnection, error)
+	Templates(ctx context.Context, obj *NotificationConfiguration, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*TemplateConnection, error)
 }
 type OrganizationResolver interface {
-	Project(ctx context.Context, obj *Organization, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*ProjectConnection, error)
-	Workspace(ctx context.Context, obj *Organization, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*WorkspaceConnection, error)
-	NotificationConfiguration(ctx context.Context, obj *Organization, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*NotificationConfigurationConnection, error)
+	Project(ctx context.Context, obj *Organization, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*ProjectConnection, error)
+	Workspace(ctx context.Context, obj *Organization, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*WorkspaceConnection, error)
+	NotificationConfiguration(ctx context.Context, obj *Organization, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*NotificationConfigurationConnection, error)
 }
 type ProjectResolver interface {
-	ProjectAccess(ctx context.Context, obj *Project, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*ProjectAccessConnection, error)
+	ProjectAccess(ctx context.Context, obj *Project, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*ProjectAccessConnection, error)
 }
 type QueryResolver interface {
 	Organization(ctx context.Context, ids []*string, filter *string, first *StringOrInt, after *StringOrInt, sort *string) (*OrganizationConnection, error)
@@ -295,10 +295,10 @@ type SubscriptionResolver interface {
 	OrganizationJobStatusChanged(ctx context.Context, organizationID string) (<-chan *JobStatusEvent, error)
 }
 type WorkspaceResolver interface {
-	WorkspaceTag(ctx context.Context, obj *Workspace, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*WorkspaceTagConnection, error)
-	Project(ctx context.Context, obj *Workspace, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*ProjectConnection, error)
-	Job(ctx context.Context, obj *Workspace, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*JobConnection, error)
-	Access(ctx context.Context, obj *Workspace, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*AccessConnection, error)
+	WorkspaceTag(ctx context.Context, obj *Workspace, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*WorkspaceTagConnection, error)
+	Project(ctx context.Context, obj *Workspace, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*ProjectConnection, error)
+	Job(ctx context.Context, obj *Workspace, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*JobConnection, error)
+	Access(ctx context.Context, obj *Workspace, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*AccessConnection, error)
 }
 
 // endregion ************************** generated!.gotpl **************************
@@ -516,7 +516,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.NotificationConfiguration.Templates(childComplexity, args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
+		return e.ComplexityRoot.NotificationConfiguration.Templates(childComplexity, args["ids"].([]*string), args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
 	case "NotificationConfiguration.triggers":
 		if e.ComplexityRoot.NotificationConfiguration.Triggers == nil {
 			break
@@ -527,7 +527,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.NotificationConfiguration.Triggers(childComplexity, args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
+		return e.ComplexityRoot.NotificationConfiguration.Triggers(childComplexity, args["ids"].([]*string), args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
 	case "NotificationConfiguration.workspace":
 		if e.ComplexityRoot.NotificationConfiguration.Workspace == nil {
 			break
@@ -538,7 +538,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.NotificationConfiguration.Workspace(childComplexity, args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
+		return e.ComplexityRoot.NotificationConfiguration.Workspace(childComplexity, args["ids"].([]*string), args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
 
 	case "NotificationConfigurationConnection.edges":
 		if e.ComplexityRoot.NotificationConfigurationConnection.Edges == nil {
@@ -651,7 +651,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Organization.NotificationConfiguration(childComplexity, args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
+		return e.ComplexityRoot.Organization.NotificationConfiguration(childComplexity, args["ids"].([]*string), args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
 	case "Organization.project":
 		if e.ComplexityRoot.Organization.Project == nil {
 			break
@@ -662,7 +662,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Organization.Project(childComplexity, args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
+		return e.ComplexityRoot.Organization.Project(childComplexity, args["ids"].([]*string), args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
 	case "Organization.workspace":
 		if e.ComplexityRoot.Organization.Workspace == nil {
 			break
@@ -673,7 +673,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Organization.Workspace(childComplexity, args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
+		return e.ComplexityRoot.Organization.Workspace(childComplexity, args["ids"].([]*string), args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
 
 	case "OrganizationConnection.edges":
 		if e.ComplexityRoot.OrganizationConnection.Edges == nil {
@@ -760,7 +760,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Project.ProjectAccess(childComplexity, args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
+		return e.ComplexityRoot.Project.ProjectAccess(childComplexity, args["ids"].([]*string), args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
 
 	case "ProjectAccess.approveJob":
 		if e.ComplexityRoot.ProjectAccess.ApproveJob == nil {
@@ -998,7 +998,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Workspace.Access(childComplexity, args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
+		return e.ComplexityRoot.Workspace.Access(childComplexity, args["ids"].([]*string), args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
 	case "Workspace.allowRemoteApply":
 		if e.ComplexityRoot.Workspace.AllowRemoteApply == nil {
 			break
@@ -1051,7 +1051,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Workspace.Job(childComplexity, args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
+		return e.ComplexityRoot.Workspace.Job(childComplexity, args["ids"].([]*string), args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
 	case "Workspace.lastJobDate":
 		if e.ComplexityRoot.Workspace.LastJobDate == nil {
 			break
@@ -1092,7 +1092,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Workspace.Project(childComplexity, args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
+		return e.ComplexityRoot.Workspace.Project(childComplexity, args["ids"].([]*string), args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
 	case "Workspace.source":
 		if e.ComplexityRoot.Workspace.Source == nil {
 			break
@@ -1115,7 +1115,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Workspace.WorkspaceTag(childComplexity, args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
+		return e.ComplexityRoot.Workspace.WorkspaceTag(childComplexity, args["ids"].([]*string), args["first"].(*StringOrInt), args["after"].(*StringOrInt), args["filter"].(*string), args["sort"].(*string)), true
 
 	case "WorkspaceConnection.edges":
 		if e.ComplexityRoot.WorkspaceConnection.Edges == nil {
@@ -1842,266 +1842,322 @@ func (ec *executionContext) childFields___Type(ctx context.Context, field graphq
 func (ec *executionContext) field_NotificationConfiguration_templates_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "first",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "ids",
+		func(ctx context.Context, v any) ([]*string, error) {
+			return ec.unmarshalOString2ᚕᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["ids"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["first"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+	args["first"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "after",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+	args["after"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["filter"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
+	args["filter"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["sort"] = arg3
+	args["sort"] = arg4
 	return args, nil
 }
 
 func (ec *executionContext) field_NotificationConfiguration_triggers_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "first",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "ids",
+		func(ctx context.Context, v any) ([]*string, error) {
+			return ec.unmarshalOString2ᚕᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["ids"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["first"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+	args["first"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "after",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+	args["after"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["filter"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
+	args["filter"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["sort"] = arg3
+	args["sort"] = arg4
 	return args, nil
 }
 
 func (ec *executionContext) field_NotificationConfiguration_workspace_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "first",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "ids",
+		func(ctx context.Context, v any) ([]*string, error) {
+			return ec.unmarshalOString2ᚕᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["ids"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["first"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+	args["first"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "after",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+	args["after"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["filter"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
+	args["filter"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["sort"] = arg3
+	args["sort"] = arg4
 	return args, nil
 }
 
 func (ec *executionContext) field_Organization_notificationConfiguration_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "first",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "ids",
+		func(ctx context.Context, v any) ([]*string, error) {
+			return ec.unmarshalOString2ᚕᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["ids"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["first"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+	args["first"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "after",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+	args["after"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["filter"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
+	args["filter"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["sort"] = arg3
+	args["sort"] = arg4
 	return args, nil
 }
 
 func (ec *executionContext) field_Organization_project_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "first",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "ids",
+		func(ctx context.Context, v any) ([]*string, error) {
+			return ec.unmarshalOString2ᚕᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["ids"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["first"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+	args["first"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "after",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+	args["after"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["filter"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
+	args["filter"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["sort"] = arg3
+	args["sort"] = arg4
 	return args, nil
 }
 
 func (ec *executionContext) field_Organization_workspace_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "first",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "ids",
+		func(ctx context.Context, v any) ([]*string, error) {
+			return ec.unmarshalOString2ᚕᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["ids"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["first"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+	args["first"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "after",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+	args["after"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["filter"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
+	args["filter"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["sort"] = arg3
+	args["sort"] = arg4
 	return args, nil
 }
 
 func (ec *executionContext) field_Project_projectAccess_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "first",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "ids",
+		func(ctx context.Context, v any) ([]*string, error) {
+			return ec.unmarshalOString2ᚕᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["ids"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["first"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+	args["first"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "after",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+	args["after"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["filter"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
+	args["filter"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["sort"] = arg3
+	args["sort"] = arg4
 	return args, nil
 }
 
@@ -2334,152 +2390,184 @@ func (ec *executionContext) field_Subscription_organizationJobStatusChanged_args
 func (ec *executionContext) field_Workspace_access_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "first",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "ids",
+		func(ctx context.Context, v any) ([]*string, error) {
+			return ec.unmarshalOString2ᚕᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["ids"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["first"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+	args["first"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "after",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+	args["after"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["filter"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
+	args["filter"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["sort"] = arg3
+	args["sort"] = arg4
 	return args, nil
 }
 
 func (ec *executionContext) field_Workspace_job_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "first",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "ids",
+		func(ctx context.Context, v any) ([]*string, error) {
+			return ec.unmarshalOString2ᚕᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["ids"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["first"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+	args["first"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "after",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+	args["after"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["filter"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
+	args["filter"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["sort"] = arg3
+	args["sort"] = arg4
 	return args, nil
 }
 
 func (ec *executionContext) field_Workspace_project_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "first",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "ids",
+		func(ctx context.Context, v any) ([]*string, error) {
+			return ec.unmarshalOString2ᚕᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["ids"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["first"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+	args["first"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "after",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+	args["after"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["filter"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
+	args["filter"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["sort"] = arg3
+	args["sort"] = arg4
 	return args, nil
 }
 
 func (ec *executionContext) field_Workspace_workspaceTag_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "first",
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "ids",
+		func(ctx context.Context, v any) ([]*string, error) {
+			return ec.unmarshalOString2ᚕᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["ids"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["first"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+	args["first"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "after",
 		func(ctx context.Context, v any) (*StringOrInt, error) {
 			return ec.unmarshalOStringOrInt2ᚖgithubᚗcomᚋaminbenmansourᚋterrakubeᚑgoᚋinternalᚋgraphqlᚐStringOrInt(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["after"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
+	args["after"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "filter",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["filter"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
+	args["filter"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "sort",
 		func(ctx context.Context, v any) (*string, error) {
 			return ec.unmarshalOString2ᚖstring(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["sort"] = arg3
+	args["sort"] = arg4
 	return args, nil
 }
 
@@ -3311,7 +3399,7 @@ func (ec *executionContext) _NotificationConfiguration_workspace(ctx context.Con
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.NotificationConfiguration().Workspace(ctx, obj, fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
+			return ec.Resolvers.NotificationConfiguration().Workspace(ctx, obj, fc.Args["ids"].([]*string), fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *WorkspaceConnection) graphql.Marshaler {
@@ -3355,7 +3443,7 @@ func (ec *executionContext) _NotificationConfiguration_triggers(ctx context.Cont
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.NotificationConfiguration().Triggers(ctx, obj, fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
+			return ec.Resolvers.NotificationConfiguration().Triggers(ctx, obj, fc.Args["ids"].([]*string), fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *NotificationTriggerConnection) graphql.Marshaler {
@@ -3399,7 +3487,7 @@ func (ec *executionContext) _NotificationConfiguration_templates(ctx context.Con
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.NotificationConfiguration().Templates(ctx, obj, fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
+			return ec.Resolvers.NotificationConfiguration().Templates(ctx, obj, fc.Args["ids"].([]*string), fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *TemplateConnection) graphql.Marshaler {
@@ -3865,7 +3953,7 @@ func (ec *executionContext) _Organization_project(ctx context.Context, field gra
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Organization().Project(ctx, obj, fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
+			return ec.Resolvers.Organization().Project(ctx, obj, fc.Args["ids"].([]*string), fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *ProjectConnection) graphql.Marshaler {
@@ -3909,7 +3997,7 @@ func (ec *executionContext) _Organization_workspace(ctx context.Context, field g
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Organization().Workspace(ctx, obj, fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
+			return ec.Resolvers.Organization().Workspace(ctx, obj, fc.Args["ids"].([]*string), fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *WorkspaceConnection) graphql.Marshaler {
@@ -3953,7 +4041,7 @@ func (ec *executionContext) _Organization_notificationConfiguration(ctx context.
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Organization().NotificationConfiguration(ctx, obj, fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
+			return ec.Resolvers.Organization().NotificationConfiguration(ctx, obj, fc.Args["ids"].([]*string), fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *NotificationConfigurationConnection) graphql.Marshaler {
@@ -4300,7 +4388,7 @@ func (ec *executionContext) _Project_projectAccess(ctx context.Context, field gr
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Project().ProjectAccess(ctx, obj, fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
+			return ec.Resolvers.Project().ProjectAccess(ctx, obj, fc.Args["ids"].([]*string), fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *ProjectAccessConnection) graphql.Marshaler {
@@ -5662,7 +5750,7 @@ func (ec *executionContext) _Workspace_workspaceTag(ctx context.Context, field g
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Workspace().WorkspaceTag(ctx, obj, fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
+			return ec.Resolvers.Workspace().WorkspaceTag(ctx, obj, fc.Args["ids"].([]*string), fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *WorkspaceTagConnection) graphql.Marshaler {
@@ -5706,7 +5794,7 @@ func (ec *executionContext) _Workspace_project(ctx context.Context, field graphq
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Workspace().Project(ctx, obj, fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
+			return ec.Resolvers.Workspace().Project(ctx, obj, fc.Args["ids"].([]*string), fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *ProjectConnection) graphql.Marshaler {
@@ -5750,7 +5838,7 @@ func (ec *executionContext) _Workspace_job(ctx context.Context, field graphql.Co
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Workspace().Job(ctx, obj, fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
+			return ec.Resolvers.Workspace().Job(ctx, obj, fc.Args["ids"].([]*string), fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *JobConnection) graphql.Marshaler {
@@ -5794,7 +5882,7 @@ func (ec *executionContext) _Workspace_access(ctx context.Context, field graphql
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Workspace().Access(ctx, obj, fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
+			return ec.Resolvers.Workspace().Access(ctx, obj, fc.Args["ids"].([]*string), fc.Args["first"].(*StringOrInt), fc.Args["after"].(*StringOrInt), fc.Args["filter"].(*string), fc.Args["sort"].(*string))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *AccessConnection) graphql.Marshaler {

@@ -12,8 +12,8 @@ import (
 )
 
 // Workspace is the resolver for the workspace field.
-func (r *notificationConfigurationResolver) Workspace(ctx context.Context, obj *NotificationConfiguration, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*WorkspaceConnection, error) {
-	p, err := loadPage[Workspace](ctx, r.db, workspaceSpec, "id = $1", []any{obj.WorkspaceID}, listArgs{First: first, After: after, Filter: filter, Sort: sort})
+func (r *notificationConfigurationResolver) Workspace(ctx context.Context, obj *NotificationConfiguration, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*WorkspaceConnection, error) {
+	p, err := loadPage[Workspace](ctx, r.db, workspaceSpec, "id = $1", []any{obj.WorkspaceID}, listArgs{IDs: idsFrom(ids), First: first, After: after, Filter: filter, Sort: sort})
 	if err != nil {
 		return nil, err
 	}
@@ -21,8 +21,8 @@ func (r *notificationConfigurationResolver) Workspace(ctx context.Context, obj *
 }
 
 // Triggers is the resolver for the triggers field.
-func (r *notificationConfigurationResolver) Triggers(ctx context.Context, obj *NotificationConfiguration, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*NotificationTriggerConnection, error) {
-	p, err := loadPage[NotificationTrigger](ctx, r.db, notificationTriggerSpec, "configuration_id = $1", []any{obj.ID}, listArgs{First: first, After: after, Filter: filter, Sort: sort})
+func (r *notificationConfigurationResolver) Triggers(ctx context.Context, obj *NotificationConfiguration, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*NotificationTriggerConnection, error) {
+	p, err := loadPage[NotificationTrigger](ctx, r.db, notificationTriggerSpec, "configuration_id = $1", []any{obj.ID}, listArgs{IDs: idsFrom(ids), First: first, After: after, Filter: filter, Sort: sort})
 	if err != nil {
 		return nil, err
 	}
@@ -30,10 +30,10 @@ func (r *notificationConfigurationResolver) Triggers(ctx context.Context, obj *N
 }
 
 // Templates is the resolver for the templates field.
-func (r *notificationConfigurationResolver) Templates(ctx context.Context, obj *NotificationConfiguration, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*TemplateConnection, error) {
+func (r *notificationConfigurationResolver) Templates(ctx context.Context, obj *NotificationConfiguration, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*TemplateConnection, error) {
 	p, err := loadPage[Template](ctx, r.db, templateSpec,
 		"id IN (SELECT template_id FROM notification_configuration_template WHERE configuration_id = $1)",
-		[]any{obj.ID}, listArgs{First: first, After: after, Filter: filter, Sort: sort})
+		[]any{obj.ID}, listArgs{IDs: idsFrom(ids), First: first, After: after, Filter: filter, Sort: sort})
 	if err != nil {
 		return nil, err
 	}
@@ -41,8 +41,8 @@ func (r *notificationConfigurationResolver) Templates(ctx context.Context, obj *
 }
 
 // Project is the resolver for the project field.
-func (r *organizationResolver) Project(ctx context.Context, obj *Organization, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*ProjectConnection, error) {
-	p, err := loadPage[Project](ctx, r.db, projectSpec, "organization_id = $1", []any{obj.ID}, listArgs{First: first, After: after, Filter: filter, Sort: sort})
+func (r *organizationResolver) Project(ctx context.Context, obj *Organization, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*ProjectConnection, error) {
+	p, err := loadPage[Project](ctx, r.db, projectSpec, "organization_id = $1", []any{obj.ID}, listArgs{IDs: idsFrom(ids), First: first, After: after, Filter: filter, Sort: sort})
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +50,8 @@ func (r *organizationResolver) Project(ctx context.Context, obj *Organization, f
 }
 
 // Workspace is the resolver for the workspace field.
-func (r *organizationResolver) Workspace(ctx context.Context, obj *Organization, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*WorkspaceConnection, error) {
-	p, err := loadPage[Workspace](ctx, r.db, workspaceSpec, "organization_id = $1", []any{obj.ID}, listArgs{First: first, After: after, Filter: filter, Sort: sort})
+func (r *organizationResolver) Workspace(ctx context.Context, obj *Organization, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*WorkspaceConnection, error) {
+	p, err := loadPage[Workspace](ctx, r.db, workspaceSpec, "organization_id = $1", []any{obj.ID}, listArgs{IDs: idsFrom(ids), First: first, After: after, Filter: filter, Sort: sort})
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +59,8 @@ func (r *organizationResolver) Workspace(ctx context.Context, obj *Organization,
 }
 
 // NotificationConfiguration is the resolver for the notificationConfiguration field.
-func (r *organizationResolver) NotificationConfiguration(ctx context.Context, obj *Organization, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*NotificationConfigurationConnection, error) {
-	p, err := loadPage[NotificationConfiguration](ctx, r.db, notificationConfigurationSpec, "organization_id = $1", []any{obj.ID}, listArgs{First: first, After: after, Filter: filter, Sort: sort})
+func (r *organizationResolver) NotificationConfiguration(ctx context.Context, obj *Organization, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*NotificationConfigurationConnection, error) {
+	p, err := loadPage[NotificationConfiguration](ctx, r.db, notificationConfigurationSpec, "organization_id = $1", []any{obj.ID}, listArgs{IDs: idsFrom(ids), First: first, After: after, Filter: filter, Sort: sort})
 	if err != nil {
 		return nil, err
 	}
@@ -68,8 +68,8 @@ func (r *organizationResolver) NotificationConfiguration(ctx context.Context, ob
 }
 
 // ProjectAccess is the resolver for the projectAccess field.
-func (r *projectResolver) ProjectAccess(ctx context.Context, obj *Project, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*ProjectAccessConnection, error) {
-	p, err := loadPage[ProjectAccess](ctx, r.db, projectAccessSpec, "project_id = $1", []any{obj.ID}, listArgs{First: first, After: after, Filter: filter, Sort: sort})
+func (r *projectResolver) ProjectAccess(ctx context.Context, obj *Project, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*ProjectAccessConnection, error) {
+	p, err := loadPage[ProjectAccess](ctx, r.db, projectAccessSpec, "project_id = $1", []any{obj.ID}, listArgs{IDs: idsFrom(ids), First: first, After: after, Filter: filter, Sort: sort})
 	if err != nil {
 		return nil, err
 	}
@@ -132,8 +132,8 @@ func (r *subscriptionResolver) OrganizationJobStatusChanged(ctx context.Context,
 }
 
 // WorkspaceTag is the resolver for the workspaceTag field.
-func (r *workspaceResolver) WorkspaceTag(ctx context.Context, obj *Workspace, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*WorkspaceTagConnection, error) {
-	p, err := loadPage[WorkspaceTag](ctx, r.db, workspaceTagSpec, "workspace_id = $1", []any{obj.ID}, listArgs{First: first, After: after, Filter: filter, Sort: sort})
+func (r *workspaceResolver) WorkspaceTag(ctx context.Context, obj *Workspace, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*WorkspaceTagConnection, error) {
+	p, err := loadPage[WorkspaceTag](ctx, r.db, workspaceTagSpec, "workspace_id = $1", []any{obj.ID}, listArgs{IDs: idsFrom(ids), First: first, After: after, Filter: filter, Sort: sort})
 	if err != nil {
 		return nil, err
 	}
@@ -141,8 +141,8 @@ func (r *workspaceResolver) WorkspaceTag(ctx context.Context, obj *Workspace, fi
 }
 
 // Project is the resolver for the project field.
-func (r *workspaceResolver) Project(ctx context.Context, obj *Workspace, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*ProjectConnection, error) {
-	p, err := loadPage[Project](ctx, r.db, projectSpec, "id = $1", []any{obj.ProjectID}, listArgs{First: first, After: after, Filter: filter, Sort: sort})
+func (r *workspaceResolver) Project(ctx context.Context, obj *Workspace, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*ProjectConnection, error) {
+	p, err := loadPage[Project](ctx, r.db, projectSpec, "id = $1", []any{obj.ProjectID}, listArgs{IDs: idsFrom(ids), First: first, After: after, Filter: filter, Sort: sort})
 	if err != nil {
 		return nil, err
 	}
@@ -150,8 +150,8 @@ func (r *workspaceResolver) Project(ctx context.Context, obj *Workspace, first *
 }
 
 // Job is the resolver for the job field.
-func (r *workspaceResolver) Job(ctx context.Context, obj *Workspace, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*JobConnection, error) {
-	p, err := loadPage[Job](ctx, r.db, jobSpec, "workspace_id = $1", []any{obj.ID}, listArgs{First: first, After: after, Filter: filter, Sort: sort})
+func (r *workspaceResolver) Job(ctx context.Context, obj *Workspace, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*JobConnection, error) {
+	p, err := loadPage[Job](ctx, r.db, jobSpec, "workspace_id = $1", []any{obj.ID}, listArgs{IDs: idsFrom(ids), First: first, After: after, Filter: filter, Sort: sort})
 	if err != nil {
 		return nil, err
 	}
@@ -159,8 +159,8 @@ func (r *workspaceResolver) Job(ctx context.Context, obj *Workspace, first *Stri
 }
 
 // Access is the resolver for the access field.
-func (r *workspaceResolver) Access(ctx context.Context, obj *Workspace, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*AccessConnection, error) {
-	p, err := loadPage[Access](ctx, r.db, accessSpec, "workspace_id = $1", []any{obj.ID}, listArgs{First: first, After: after, Filter: filter, Sort: sort})
+func (r *workspaceResolver) Access(ctx context.Context, obj *Workspace, ids []*string, first *StringOrInt, after *StringOrInt, filter *string, sort *string) (*AccessConnection, error) {
+	p, err := loadPage[Access](ctx, r.db, accessSpec, "workspace_id = $1", []any{obj.ID}, listArgs{IDs: idsFrom(ids), First: first, After: after, Filter: filter, Sort: sort})
 	if err != nil {
 		return nil, err
 	}
