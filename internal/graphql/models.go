@@ -142,3 +142,11 @@ type NotificationTrigger struct {
 	ID        string  `db:"id"`
 	JobStatus *string `db:"job_status"`
 }
+
+// JobStatusEvent is what the UI's subscriptions receive. It is produced from
+// the internal event, which also carries the organization.
+type JobStatusEvent struct {
+	JobID       int    `json:"jobId"`
+	WorkspaceID string `json:"workspaceId"`
+	Status      string `json:"status"`
+}

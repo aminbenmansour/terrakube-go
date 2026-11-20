@@ -476,12 +476,17 @@ Implemented so far (`internal/graphql`, backed by gqlgen):
   `first`/`after` as `StringOrInt`, RSQL `filter` and Elide `sort`.
 - Same bearer token as `/api/v1` (`TERRAKUBE_AUTH_TOKEN`). Resolver errors are
   logged and replaced with a generic message.
+- **Subscriptions** at `/subscriptions` over graphql-ws: `jobStatusChanged`
+  and `organizationJobStatusChanged`, matching upstream's
+  `subscriptions.graphqls`. Status updates are published to Redis from a thin
+  store wrapper, so every writer (management API and executor) notifies
+  subscribers without call-site changes. The UI sends its token as a
+  connection parameter, so it is checked after the socket upgrade.
 - Missing tables the UI reads were added in migration `0005_graphql_entities.sql`
   (`access`, `project_access`, `notification_configuration`,
   `notification_trigger`, `notification_configuration_template`).
 
-Not implemented: GraphQL mutations, the rest of the 53 upstream entities, and
-subscriptions.
+Not implemented: GraphQL mutations and the rest of the 53 upstream entities.
 
 ## Open questions
 

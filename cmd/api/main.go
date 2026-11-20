@@ -17,6 +17,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/db"
 	graphqlapi "github.com/aminbenmansour/terrakube-go/internal/graphql"
 	"github.com/aminbenmansour/terrakube-go/internal/httpapi"
+	"github.com/aminbenmansour/terrakube-go/internal/jobstatus"
 	"github.com/aminbenmansour/terrakube-go/internal/logging"
 	"github.com/aminbenmansour/terrakube-go/internal/queue"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
@@ -72,6 +73,12 @@ func run() error {
 		return err
 	}
 
+	events, err := jobstatus.NewBus(cfg.RedisURL)
+	if err != nil {
+		return err
+	}
+	defer events.Close()
+
 	storeBackend, err := storage.New(ctx, cfg.Storage)
 	if err != nil {
 		return err
@@ -88,6 +95,10 @@ func run() error {
 		}
 	}
 
+	// Every job status update is published so the UI's GraphQL subscriptions
+	// see it, whether the change came from the management API or the executor.
+	querier := jobstatus.Wrap(store.New(pool), events.Publish)
+
 	handler := httpapi.New(httpapi.Deps{
 		Logger:  logger,
 		Service: "api",
@@ -97,13 +108,13 @@ func run() error {
 		Storage: storeBackend,
 	})
 	handler.Mount("/api/v1", api.New(api.Deps{
-		Store:     store.New(pool),
+		Store:     querier,
 		Logger:    logger,
 		PublicURL: cfg.PublicURL,
 		AuthToken: cfg.AuthToken,
 	}))
 	tfeDeps := tfe.Deps{
-		Store:              store.New(pool),
+		Store:              querier,
 		Storage:            storeBackend,
 		Queue:              q,
 		Layout:             tfstate.NewLayout(cfg.Storage.Type),
@@ -116,15 +127,18 @@ func run() error {
 		DexIssuerURL:       cfg.DexIssuerURL,
 		TerraformLogin:     cfg.TerraformLogin,
 	}
-	handler.Mount("/graphql/api/v1", graphqlapi.New(graphqlapi.Deps{
+	graphqlDeps := graphqlapi.Deps{
 		DB:        pool,
+		Events:    events,
 		Logger:    logger,
 		AuthToken: cfg.AuthToken,
-	}))
+	}
+	handler.Mount("/graphql/api/v1", graphqlapi.New(graphqlDeps))
+	handler.Mount("/subscriptions", graphqlapi.NewSubscriptions(graphqlDeps))
 	handler.Get("/.well-known/terraform.json", tfe.Discovery(tfeDeps))
 	handler.Mount("/remote/tfe/v2", tfe.New(tfeDeps))
 	handler.Mount("/tfoutput/v1", tfoutput.New(tfoutput.Deps{
-		Store:        store.New(pool),
+		Store:        querier,
 		Queue:        q,
 		Storage:      storeBackend,
 		Layout:       tfstate.NewLayout(cfg.Storage.Type),
@@ -133,7 +147,7 @@ func run() error {
 		InternalAuth: internalAuth,
 	}))
 	handler.Mount("/tfstate/v1", tfstate.New(tfstate.Deps{
-		Store:             store.New(pool),
+		Store:             querier,
 		Storage:           storeBackend,
 		Logger:            logger,
 		Layout:            tfstate.NewLayout(cfg.Storage.Type),

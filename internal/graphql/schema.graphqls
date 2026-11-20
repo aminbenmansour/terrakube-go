@@ -143,3 +143,16 @@ type Query {
   project(ids: [String], filter: String, first: StringOrInt, after: StringOrInt, sort: String): ProjectConnection!
   notification_configuration(ids: [String], filter: String, first: StringOrInt, after: StringOrInt, sort: String): NotificationConfigurationConnection!
 }
+
+
+# Mirrors api/src/main/resources/graphql/subscriptions.graphqls upstream.
+type JobStatusEvent {
+  jobId: Int!
+  workspaceId: ID!
+  status: String!
+}
+
+type Subscription {
+  jobStatusChanged(workspaceId: ID!): JobStatusEvent!
+  organizationJobStatusChanged(organizationId: ID!): JobStatusEvent!
+}

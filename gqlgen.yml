@@ -35,3 +35,5 @@ models:
     model: github.com/aminbenmansour/terrakube-go/internal/graphql.NotificationConfiguration
   NotificationTrigger:
     model: github.com/aminbenmansour/terrakube-go/internal/graphql.NotificationTrigger
+  JobStatusEvent:
+    model: github.com/aminbenmansour/terrakube-go/internal/graphql.JobStatusEvent

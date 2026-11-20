@@ -10,18 +10,26 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	gql "github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 
+	"github.com/aminbenmansour/terrakube-go/internal/jobstatus"
 	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
 )
+
+// EventSource streams job status changes to subscriptions.
+type EventSource interface {
+	SubscribeJobStatus(ctx context.Context) (<-chan jobstatus.Event, error)
+}
 
 // Deps are the collaborators the GraphQL endpoint needs.
 type Deps struct {
 	DB        DB
+	Events    EventSource
 	Logger    *slog.Logger
 	AuthToken string
 }
@@ -32,7 +40,7 @@ func New(deps Deps) http.Handler {
 		deps.Logger = slog.Default()
 	}
 
-	srv := handler.New(NewExecutableSchema(Config{Resolvers: &Resolver{db: deps.DB}}))
+	srv := handler.New(NewExecutableSchema(Config{Resolvers: &Resolver{db: deps.DB, events: deps.Events}}))
 	srv.AddTransport(transport.POST{})
 	srv.SetErrorPresenter(deps.errorPresenter)
 
@@ -41,10 +49,7 @@ func New(deps Deps) http.Handler {
 		return srv
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		header := r.Header.Get("Authorization")
-		const prefix = "Bearer "
-		if !strings.HasPrefix(header, prefix) ||
-			subtle.ConstantTimeCompare([]byte(strings.TrimPrefix(header, prefix)), []byte(deps.AuthToken)) != 1 {
+		if !bearerMatches(r.Header.Get("Authorization"), deps.AuthToken) {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			jsonapi.WriteError(w, http.StatusUnauthorized, "Unauthorized", "A valid bearer token is required.")
 			return
@@ -64,4 +69,34 @@ func (deps Deps) errorPresenter(ctx context.Context, err error) *gqlerror.Error 
 	deps.Logger.Error("graphql request failed", "error", err)
 	presented.Message = "The request could not be completed."
 	return presented
+}
+
+// NewSubscriptions builds the /subscriptions handler. The UI opens a
+// graphql-ws connection here and sends the bearer token as a connection
+// parameter, not as a header, so it is checked after the socket upgrade.
+func NewSubscriptions(deps Deps) http.Handler {
+	if deps.Logger == nil {
+		deps.Logger = slog.Default()
+	}
+
+	srv := handler.New(NewExecutableSchema(Config{Resolvers: &Resolver{db: deps.DB, events: deps.Events}}))
+	srv.SetErrorPresenter(deps.errorPresenter)
+	srv.AddTransport(&transport.Websocket{
+		KeepAlivePingInterval: 10 * time.Second,
+		InitFunc: func(ctx context.Context, payload transport.InitPayload) (context.Context, *transport.InitPayload, error) {
+			if deps.AuthToken == "" {
+				return ctx, nil, nil
+			}
+			if !bearerMatches(payload.Authorization(), deps.AuthToken) {
+				return nil, nil, errors.New("unauthorized")
+			}
+			return ctx, nil, nil
+		},
+	})
+	return srv
+}
+
+func bearerMatches(header, token string) bool {
+	raw, ok := strings.CutPrefix(header, "Bearer ")
+	return ok && subtle.ConstantTimeCompare([]byte(raw), []byte(token)) == 1
 }

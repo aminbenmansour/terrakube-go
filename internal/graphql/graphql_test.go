@@ -11,12 +11,14 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aminbenmansour/terrakube-go/internal/db"
+	"github.com/aminbenmansour/terrakube-go/internal/jobstatus"
 	"github.com/aminbenmansour/terrakube-go/migrations"
 )
 
@@ -370,4 +372,64 @@ func testDeps(t *testing.T) Deps {
 		t.Fatalf("migrate: %v", err)
 	}
 	return Deps{DB: pool, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+}
+
+type fakeEvents struct {
+	events chan jobstatus.Event
+}
+
+func (f *fakeEvents) SubscribeJobStatus(context.Context) (<-chan jobstatus.Event, error) {
+	return f.events, nil
+}
+
+func TestJobStatusSubscriptionKeepsOnlyTheRequestedWorkspace(t *testing.T) {
+	source := &fakeEvents{events: make(chan jobstatus.Event, 4)}
+	resolver := &Resolver{events: source}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	stream, err := streamEvents(ctx, resolver, func(event jobstatus.Event) bool {
+		return event.WorkspaceID == "ws-1"
+	})
+	if err != nil {
+		t.Fatalf("streamEvents: %v", err)
+	}
+
+	source.events <- jobstatus.Event{JobID: 1, WorkspaceID: "ws-2", Status: "running"}
+	source.events <- jobstatus.Event{JobID: 2, WorkspaceID: "ws-1", Status: "running", OrganizationID: "org-1"}
+
+	select {
+	case event := <-stream:
+		if event.JobID != 2 || event.WorkspaceID != "ws-1" || event.Status != "running" {
+			t.Fatalf("event = %#v", event)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("no event arrived")
+	}
+}
+
+func TestJobStatusSubscriptionClosesWithTheClient(t *testing.T) {
+	source := &fakeEvents{events: make(chan jobstatus.Event)}
+	resolver := &Resolver{events: source}
+	ctx, cancel := context.WithCancel(context.Background())
+
+	stream, err := streamEvents(ctx, resolver, func(jobstatus.Event) bool { return true })
+	if err != nil {
+		t.Fatalf("streamEvents: %v", err)
+	}
+	cancel()
+	select {
+	case _, ok := <-stream:
+		if ok {
+			t.Fatal("stream was not closed")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("stream stayed open after the client went away")
+	}
+}
+
+func TestSubscriptionsNeedAnEventSource(t *testing.T) {
+	if _, err := streamEvents(context.Background(), &Resolver{}, func(jobstatus.Event) bool { return true }); err == nil {
+		t.Fatal("a missing event source was accepted")
+	}
 }

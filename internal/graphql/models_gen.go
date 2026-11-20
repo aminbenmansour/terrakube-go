@@ -83,6 +83,9 @@ type ProjectEdge struct {
 type Query struct {
 }
 
+type Subscription struct {
+}
+
 type TemplateConnection struct {
 	Edges    []TemplateEdge `json:"edges"`
 	PageInfo *PageInfo      `json:"pageInfo"`

@@ -2,12 +2,14 @@ package graphql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/aminbenmansour/terrakube-go/internal/jobstatus"
 	"github.com/aminbenmansour/terrakube-go/internal/query"
 )
 
@@ -318,4 +320,125 @@ func idsFrom(ids []*string) []string {
 		}
 	}
 	return values
+}
+
+// The generated edge types differ per entity, so each connection needs its own
+// tiny wrapper. Cursors are offsets, which is what the UI passes back as
+// `after`.
+
+func workspaceEdges(p page[Workspace]) []WorkspaceEdge {
+	cursors := p.edges()
+	edges := make([]WorkspaceEdge, len(p.Nodes))
+	for i := range p.Nodes {
+		edges[i] = WorkspaceEdge{Node: &p.Nodes[i], Cursor: cursors[i]}
+	}
+	return edges
+}
+
+func projectEdges(p page[Project]) []ProjectEdge {
+	cursors := p.edges()
+	edges := make([]ProjectEdge, len(p.Nodes))
+	for i := range p.Nodes {
+		edges[i] = ProjectEdge{Node: &p.Nodes[i], Cursor: cursors[i]}
+	}
+	return edges
+}
+
+func workspaceTagEdges(p page[WorkspaceTag]) []WorkspaceTagEdge {
+	cursors := p.edges()
+	edges := make([]WorkspaceTagEdge, len(p.Nodes))
+	for i := range p.Nodes {
+		edges[i] = WorkspaceTagEdge{Node: &p.Nodes[i], Cursor: cursors[i]}
+	}
+	return edges
+}
+
+func jobEdges(p page[Job]) []JobEdge {
+	cursors := p.edges()
+	edges := make([]JobEdge, len(p.Nodes))
+	for i := range p.Nodes {
+		edges[i] = JobEdge{Node: &p.Nodes[i], Cursor: cursors[i]}
+	}
+	return edges
+}
+
+func templateEdges(p page[Template]) []TemplateEdge {
+	cursors := p.edges()
+	edges := make([]TemplateEdge, len(p.Nodes))
+	for i := range p.Nodes {
+		edges[i] = TemplateEdge{Node: &p.Nodes[i], Cursor: cursors[i]}
+	}
+	return edges
+}
+
+func projectAccessEdges(p page[ProjectAccess]) []ProjectAccessEdge {
+	cursors := p.edges()
+	edges := make([]ProjectAccessEdge, len(p.Nodes))
+	for i := range p.Nodes {
+		edges[i] = ProjectAccessEdge{Node: &p.Nodes[i], Cursor: cursors[i]}
+	}
+	return edges
+}
+
+func accessEdges(p page[Access]) []AccessEdge {
+	cursors := p.edges()
+	edges := make([]AccessEdge, len(p.Nodes))
+	for i := range p.Nodes {
+		edges[i] = AccessEdge{Node: &p.Nodes[i], Cursor: cursors[i]}
+	}
+	return edges
+}
+
+func notificationConfigurationEdges(p page[NotificationConfiguration]) []NotificationConfigurationEdge {
+	cursors := p.edges()
+	edges := make([]NotificationConfigurationEdge, len(p.Nodes))
+	for i := range p.Nodes {
+		edges[i] = NotificationConfigurationEdge{Node: &p.Nodes[i], Cursor: cursors[i]}
+	}
+	return edges
+}
+
+func notificationTriggerEdges(p page[NotificationTrigger]) []NotificationTriggerEdge {
+	cursors := p.edges()
+	edges := make([]NotificationTriggerEdge, len(p.Nodes))
+	for i := range p.Nodes {
+		edges[i] = NotificationTriggerEdge{Node: &p.Nodes[i], Cursor: cursors[i]}
+	}
+	return edges
+}
+
+// streamEvents forwards the bus events a subscription asked for, and closes the
+// stream when the client disconnects.
+func streamEvents(ctx context.Context, r *Resolver, keep func(jobstatus.Event) bool) (<-chan *JobStatusEvent, error) {
+	if r.events == nil {
+		return nil, errors.New("subscriptions are not configured: set a Redis URL")
+	}
+	events, err := r.events.SubscribeJobStatus(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make(chan *JobStatusEvent)
+	go func() {
+		defer close(out)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case event, ok := <-events:
+				if !ok {
+					return
+				}
+				if !keep(event) {
+					continue
+				}
+				select {
+				case out <- &JobStatusEvent{JobID: int(event.JobID), WorkspaceID: event.WorkspaceID, Status: event.Status}:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}()
+	return out, nil
 }
