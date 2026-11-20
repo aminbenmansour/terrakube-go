@@ -40,6 +40,10 @@ jobs:
       - name: Build
         run: go build ./...
 
+      # Only reachable vulnerabilities fail the build; the report lists the rest.
+      - name: Vulnerability scan
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.10.0 ./...
+
   integration:
     runs-on: ubuntu-latest
     services:

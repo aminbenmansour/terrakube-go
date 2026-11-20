@@ -95,12 +95,16 @@ docker-build: ## Build the container image (SERVICE=api|executor|registry)
 tools: ## Install code generation tools
 	$(GO) install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
 	$(GO) install github.com/99designs/gqlgen@v0.17.98
+	$(GO) install golang.org/x/vuln/cmd/govulncheck@v1.10.0
 
 generate: ## Regenerate sqlc code
 	sqlc generate
 
 generate-graphql: ## Regenerate the GraphQL server from internal/graphql/schema.graphqls
 	gqlgen generate
+
+vuln: ## Scan dependencies for known vulnerabilities
+	govulncheck ./...
 
 smoke: ## Run the management API smoke test against a running server
 	./scripts/smoke.sh
