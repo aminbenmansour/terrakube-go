@@ -76,9 +76,26 @@ completes the OIDC redirect and then receives 401s until the API accepts Dex
 tokens. With an empty `TERRAKUBE_AUTH_TOKEN` the API accepts everything, which is
 the current way to browse the UI locally.
 
+The build is upstream's, unmodified, and it comes from
+[terrakube-ui](https://github.com/aminbenmansour/terrakube-ui): a pinned pipeline
+that clones `terrakube-io/terrakube` at a tag, builds it with upstream's own
+Node/Yarn, and publishes an nginx image plus a tarball of the static build.
+Nothing is forked, and never run `yarn build` against a patched checkout — a UI
+that only works with our patches would hide exactly the API gaps this project is
+about.
+
+For the split-origin deployment, run the UI as its own container instead of
+setting `TERRAKUBE_UI_DIR`:
+
+```bash
+docker compose -f deploy/compose/compose.yaml --profile app --profile ui up
+```
+
 `TERRAKUBE_CORS_ORIGINS` (comma-separated) restricts browser access to
-`/api/v1`; leaving it empty keeps the permissive `Access-Control-Allow-Origin: *`
-default, and a UI served by this API needs no entry at all.
+`/api/v1`, `/graphql/api/v1` and `/subscriptions`; leaving it empty keeps the
+permissive `Access-Control-Allow-Origin: *` default, and a UI served by this API
+needs no entry at all. Set it to the UI's origin in the split-origin deployment.
+Check a running stack with `./scripts/ui-smoke.sh` (needs `TERRAKUBE_UI_DIR`).
 
 Build everything with `make build`; run the checks with `make check`, and scan
 dependencies with `make vuln` (`govulncheck`; CI runs it too).

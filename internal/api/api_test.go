@@ -180,45 +180,6 @@ func TestAuthMiddleware(t *testing.T) {
 	}
 }
 
-func TestCORSDefaultsToAnyOrigin(t *testing.T) {
-	handler := newTestAPI(t, &stubQuerier{})
-	req := httptest.NewRequest(http.MethodGet, "/organization", nil)
-	req.Header.Set("Origin", "https://anywhere.example")
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "*" {
-		t.Fatalf("Access-Control-Allow-Origin = %q, want *", got)
-	}
-}
-
-func TestCORSAllowsOnlyListedOrigins(t *testing.T) {
-	handler := New(Deps{
-		Store:       &stubQuerier{},
-		Logger:      slog.New(slog.NewTextHandler(io.Discard, nil)),
-		CORSOrigins: []string{"https://ui.example.com"},
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/organization", nil)
-	req.Header.Set("Origin", "https://ui.example.com")
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "https://ui.example.com" {
-		t.Fatalf("allowed origin = %q", got)
-	}
-	if got := rec.Header().Get("Vary"); got != "Origin" {
-		t.Fatalf("Vary = %q, want Origin", got)
-	}
-
-	// An unlisted origin gets no CORS header, so the browser blocks the read.
-	req = httptest.NewRequest(http.MethodGet, "/organization", nil)
-	req.Header.Set("Origin", "https://evil.example")
-	rec = httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
-		t.Fatalf("unlisted origin was allowed: %q", got)
-	}
-}
-
 // Upstream rejects page parameters on organization (it cannot paginate that
 // collection) and answers an unknown path with a JSON:API document. Both were
 // captured from upstream 2.34.3; we are permissive about the first and match the

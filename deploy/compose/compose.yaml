@@ -8,6 +8,12 @@
 #
 #   docker compose -f deploy/compose/compose.yaml --profile app up --build
 #
+# The ui profile adds the upstream React UI as its own container, which is the
+# split-origin deployment. Docker users need the image published to GHCR first;
+# alternatively build it from https://github.com/aminbenmansour/terrakube-ui:
+#
+#   docker compose -f deploy/compose/compose.yaml --profile app --profile ui up --build
+#
 name: terrakube-go
 
 services:
@@ -66,6 +72,8 @@ services:
       TERRAKUBE_STORAGE_TYPE: local
       TERRAKUBE_STORAGE_LOCAL_PATH: /tmp/terrakube
       TERRAKUBE_PUBLIC_URL: http://localhost:8080
+      # Needed only by the ui profile, which serves the UI from another origin.
+      TERRAKUBE_CORS_ORIGINS: http://localhost:3000
     ports:
       - "8080:8080"
     depends_on:
@@ -73,6 +81,23 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  # The upstream UI, built by https://github.com/aminbenmansour/terrakube-ui at
+  # the tag in TERRAKUBE_UI_TAG. Do not point this at a fork: the point of the
+  # UI is that it is the one upstream ships.
+  ui:
+    profiles: ["ui"]
+    image: ghcr.io/aminbenmansour/terrakube-ui:${TERRAKUBE_UI_TAG:-2.34.3}
+    environment:
+      REACT_APP_TERRAKUBE_API_URL: http://localhost:8080/api/v1/
+      REACT_APP_CLIENT_ID: terrakube-app
+      REACT_APP_AUTHORITY: http://localhost:5556/dex
+      REACT_APP_REDIRECT_URI: http://localhost:3000
+      REACT_APP_REGISTRY_URI: http://localhost:8080/registry
+      REACT_APP_SCOPE: openid profile email groups
+      REACT_APP_TERRAKUBE_VERSION: ${TERRAKUBE_UI_TAG:-2.34.3}
+    ports:
+      - "3000:8080"
 
 volumes:
   postgres-data:

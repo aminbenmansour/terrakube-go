@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/aminbenmansour/terrakube-go/internal/httpapi"
 	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 )
@@ -53,7 +54,7 @@ func New(deps Deps) http.Handler {
 	a := &API{deps: deps}
 
 	r := chi.NewRouter()
-	r.Use(corsMiddleware(deps.CORSOrigins))
+	r.Use(httpapi.CORS(deps.CORSOrigins))
 	r.Use(a.authenticate)
 
 	// Organizations
@@ -117,35 +118,6 @@ func unknownCollection(path string) string {
 		return segments[0]
 	}
 	return path
-}
-
-func corsMiddleware(origins []string) func(http.Handler) http.Handler {
-	allowed := make(map[string]bool, len(origins))
-	for _, origin := range origins {
-		allowed[strings.TrimSpace(origin)] = true
-	}
-
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			origin := r.Header.Get("Origin")
-			switch {
-			case len(allowed) == 0:
-				w.Header().Set("Access-Control-Allow-Origin", "*")
-			case allowed[origin]:
-				// Echoing the origin keeps credentials and any future
-				// Vary-sensitive caching correct.
-				w.Header().Set("Access-Control-Allow-Origin", origin)
-				w.Header().Add("Vary", "Origin")
-			}
-			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
-			if r.Method == http.MethodOptions {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
 }
 
 func (a *API) authenticate(next http.Handler) http.Handler {

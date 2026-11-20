@@ -135,8 +135,11 @@ func run() error {
 		Logger:    logger,
 		AuthToken: cfg.AuthToken,
 	}
-	handler.Mount("/graphql/api/v1", graphqlapi.New(graphqlDeps))
-	handler.Mount("/subscriptions", graphqlapi.NewSubscriptions(graphqlDeps))
+	// The UI calls these cross-origin when it is served from another host, and
+	// browsers enforce CORS on the HTTP query endpoint just like any other.
+	cors := httpapi.CORS(cfg.CORSOrigins)
+	handler.Mount("/graphql/api/v1", cors(graphqlapi.New(graphqlDeps)))
+	handler.Mount("/subscriptions", cors(graphqlapi.NewSubscriptions(graphqlDeps)))
 	handler.Get("/.well-known/terraform.json", tfe.Discovery(tfeDeps))
 	handler.Mount("/remote/tfe/v2", tfe.New(tfeDeps))
 	handler.Mount("/tfoutput/v1", tfoutput.New(tfoutput.Deps{
