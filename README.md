@@ -92,9 +92,10 @@ docker compose -f deploy/compose/compose.yaml --profile app --profile ui up
 ```
 
 `TERRAKUBE_CORS_ORIGINS` (comma-separated) restricts browser access to
-`/api/v1`; leaving it empty keeps the permissive `Access-Control-Allow-Origin: *`
-default, and a UI served by this API needs no entry at all. Check a running
-stack with `./scripts/ui-smoke.sh` (needs `TERRAKUBE_UI_DIR`).
+`/api/v1`, `/graphql/api/v1` and `/subscriptions`; leaving it empty keeps the
+permissive `Access-Control-Allow-Origin: *` default, and a UI served by this API
+needs no entry at all. Set it to the UI's origin in the split-origin deployment.
+Check a running stack with `./scripts/ui-smoke.sh` (needs `TERRAKUBE_UI_DIR`).
 
 Build everything with `make build`; run the checks with `make check`, and scan
 dependencies with `make vuln` (`govulncheck`; CI runs it too).

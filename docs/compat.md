@@ -502,9 +502,12 @@ Implemented so far (`internal/graphql`, backed by gqlgen):
   `/env-config.js` generated from `TERRAKUBE_PUBLIC_URL`,
   `TERRAKUBE_DEX_CLIENT_ID`, `TERRAKUBE_DEX_ISSUER_URL` and the build version
   with `Cache-Control: no-store`. UI and API share an origin, so no CORS
-  exception is required. `/api/v1` sends `Access-Control-Allow-Origin: *` by
-  default, as it always has; set `TERRAKUBE_CORS_ORIGINS` to a comma-separated
-  allowlist to restrict browser access for a split-origin deployment.
+  exception is required. `/api/v1`, `/graphql/api/v1` and `/subscriptions` send
+  `Access-Control-Allow-Origin: *` by default, as they always have; set
+  `TERRAKUBE_CORS_ORIGINS` to a comma-separated allowlist to restrict browser
+  access for a split-origin deployment. Verified against a real 2.34.3 build:
+  single-origin serving passes `scripts/ui-smoke.sh`, and the split-origin
+  container answers GraphQL queries with the UI's origin echoed.
 - Not implemented: validating the Dex ID token the UI gets after login. The
   bearer token (`TERRAKUBE_AUTH_TOKEN`) is the only accepted user credential, so
   a stock UI build completes the OIDC redirect and then receives 401s.
