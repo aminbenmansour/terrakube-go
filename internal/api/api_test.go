@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/aminbenmansour/terrakube-go/internal/store"
@@ -93,7 +94,7 @@ func TestListOrganizationsJSONAPI(t *testing.T) {
 func TestGetOrganizationNotFound(t *testing.T) {
 	handler := newTestAPI(t, &stubQuerier{err: pgx.ErrNoRows})
 
-	req := httptest.NewRequest(http.MethodGet, "/organization/missing", nil)
+	req := httptest.NewRequest(http.MethodGet, "/organization/00000000-0000-0000-0000-000000000000", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -237,5 +238,55 @@ func TestPageNumberWithoutSizeUsesElideDefaultLimit(t *testing.T) {
 	}
 	if len(doc.Data) != 0 {
 		t.Errorf("data = %v, want empty second page at the default limit", doc.Data)
+	}
+}
+
+func TestMalformedIDIsBadRequest(t *testing.T) {
+	handler := newTestAPI(t, &stubQuerier{})
+
+	req := httptest.NewRequest(http.MethodGet, "/organization/not-a-uuid", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body = %s", rec.Code, rec.Body.String())
+	}
+	var doc struct {
+		Errors []struct {
+			Detail string `json:"detail"`
+		} `json:"errors"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(doc.Errors) != 1 || doc.Errors[0].Detail != "Invalid value: not-a-uuid" {
+		t.Fatalf("errors = %+v, want upstream's 'Invalid value: not-a-uuid'", doc.Errors)
+	}
+}
+
+// The router is mounted under MountPrefix in production, and chi leaves the
+// prefix in URL.Path while routing against the stripped path. Calling New()
+// directly in the other tests never exercised that.
+func TestMountPrefixDoesNotConfuseTheIDCheck(t *testing.T) {
+	mux := chi.NewMux()
+	mux.Mount(MountPrefix, newTestAPI(t, &stubQuerier{orgs: []store.Organization{{ID: "1", Name: "azure"}}}))
+
+	for _, tc := range []struct {
+		path string
+		want int
+	}{
+		{MountPrefix + "/organization", http.StatusOK},
+		{MountPrefix + "/organization?filter[organization]=name==azure", http.StatusOK},
+		{MountPrefix + "/organization/not-a-uuid", http.StatusBadRequest},
+		{MountPrefix + "/nope", http.StatusNotFound},
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.path, nil))
+		if rec.Code != tc.want {
+			t.Errorf("%s: status = %d, want %d; body = %s", tc.path, rec.Code, tc.want, rec.Body.String())
+		}
+		if tc.want == http.StatusNotFound && !strings.Contains(rec.Body.String(), "Unknown collection nope") {
+			t.Errorf("%s: body = %s, want the collection blamed, not the mount prefix", tc.path, rec.Body.String())
+		}
 	}
 }

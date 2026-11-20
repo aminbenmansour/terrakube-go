@@ -42,6 +42,11 @@ type API struct {
 
 var errProjectOutsideOrganization = errors.New("project does not belong to organization")
 
+// MountPrefix is where cmd/api mounts this router. The UUID check needs it
+// because chi leaves the mount prefix in URL.Path, and a r.Use middleware runs
+// before routing has resolved anything else.
+const MountPrefix = "/api/v1"
+
 // New builds the /api/v1 router.
 func New(deps Deps) http.Handler {
 	if deps.Logger == nil {
@@ -56,6 +61,7 @@ func New(deps Deps) http.Handler {
 	r := chi.NewRouter()
 	r.Use(httpapi.CORS(deps.CORSOrigins))
 	r.Use(a.authenticate)
+	r.Use(requireUUIDParams)
 
 	// Organizations
 	r.Get("/organization", a.listOrganizations)
@@ -108,7 +114,7 @@ func New(deps Deps) http.Handler {
 // unknownCollection names the segment upstream blames: the collection after a
 // /{collection}/{id} prefix, otherwise the first path segment.
 func unknownCollection(path string) string {
-	segments := strings.Split(strings.Trim(path, "/"), "/")
+	segments := strings.Split(strings.Trim(strings.TrimPrefix(path, MountPrefix), "/"), "/")
 	if len(segments) > 2 {
 		if _, err := uuid.Parse(segments[1]); err == nil {
 			return segments[2]
@@ -118,6 +124,28 @@ func unknownCollection(path string) string {
 		return segments[0]
 	}
 	return path
+}
+
+// requireUUIDParams answers a malformed id the way upstream does (400 "Invalid
+// value: x"). Without it the value reaches the store, which reports no rows, and
+// a client bug looks like a legitimate 404.
+//
+// It reads the path rather than chi's params because r.Use middlewares run
+// before routing resolves them; every resource route here is
+// /{collection}/{id}[/...], so the id is always the second segment. The router
+// is mounted under MountPrefix, which chi leaves in URL.Path.
+func requireUUIDParams(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, MountPrefix)
+		segments := strings.Split(strings.Trim(path, "/"), "/")
+		if len(segments) > 1 && segments[1] != "" {
+			if _, err := uuid.Parse(segments[1]); err != nil {
+				jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Value", "Invalid value: "+segments[1])
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (a *API) authenticate(next http.Handler) http.Handler {
