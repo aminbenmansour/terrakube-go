@@ -9,6 +9,8 @@ organization-get	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7
 organization-get-fields	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7?fields[organization]=name,description
 organization-relationships	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7/relationships/project
 organization-projects	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7/project
+workspace-list-paged	200	/api/v1/workspace?page[size]=1&page[number]=1
+workspace-list-totals	200	/api/v1/workspace?page[totals]=true
 organization-missing	404	/api/v1/organization/00000000-0000-0000-0000-000000000000
 organization-bad-id	400	/api/v1/organization/not-a-uuid
 organization-no-token	401	/api/v1/organization
