@@ -1,39 +1,39 @@
 # Graph Report - terrakube-go  (2026-11-20)
 
 ## Corpus Check
-- 145 files · ~120,998 words
+- 145 files · ~121,253 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 17 file(s) not represented in the graph (top: .graphql 10, (none) 4, .example 1)
 
 ## Summary
-- 2320 nodes · 8845 edges · 116 communities (62 shown, 54 thin omitted)
-- Extraction: 80% EXTRACTED · 20% INFERRED · 0% AMBIGUOUS · INFERRED: 1790 edges (avg confidence: 0.85)
+- 2324 nodes · 8870 edges · 120 communities (69 shown, 51 thin omitted)
+- Extraction: 80% EXTRACTED · 20% INFERRED · 0% AMBIGUOUS · INFERRED: 1791 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `536409db`
+- Built from commit: `1cd0831c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - net/http.ResponseWriter
-- ProjectConnection
+- api/main.go
 - Agent Workflows and Compatibility Docs
 - ParseRSQL
 - io.Reader
 - Core Database Schema
 - stubQuerier
-- .applyTagBindings
+- go_pkg_context
 - Handler
 - TFE Handler Tests
 - WriteResource
 - State Backend Tests
-- History
+- CreateHistoryParams
 - jsonapi.go
 - steps
 - TemplateConnection
 - newTestExecutor
-- models_gen.go
+- github.com/vektah/gqlparser/v2/ast.SelectionSet
 - .QueryRow
 - sqlc Generation Config
 - tarGzEntries
@@ -60,52 +60,54 @@
 - State Backend Smoke Test
 - Go Module Definition
 - time.Duration
-- testing.T
+- Migrate
 - JobConnection
 - executor-e2e.sh
 - Layout
 - testLogger
 - loadPage
 - .processJob
-- StringOrInt
-- .Exec
-- Queries
-- ._NotificationConfiguration
-- api/main.go
-- executionContext
-- sort.go
-- Queue
+- AccessConnection
+- Querier
+- workspace.go
+- executor_test.go
+- store/models.go
 - models
-- .listWorkspaces
+- go_pkg_strings
 - collections.go
 - CreateContentParams
-- Migrate
-- generated.go
-- .UpdateJobPlanChanges
+- .planResource
+- newExecutionContext
+- context.Context
+- where_test.go
+- get
 - graphql/models.go
 - New
-- net/http.Handler
-- WorkspaceTagConnection
+- server.go
+- where.go
 - .prepareWorkspace
 - ._Organization
-- UpdateJobStatusParams
+- reliabilityStore
 - idsFrom
-- Resolver
+- generated.go
 - .CreateVariable
 - Load
-- .processJob
+- newRedactor
 - stubQuerier
 - logSink
-- .UpdateProject
+- .Run
 - ._Project
+- New
 - streamEvents
 - .GetTagByName
-- AccessConnection
-- .UpdateWorkspace
+- ParsePage
+- CreateWorkspaceTagParams
+- .GetWorkspaceByName
+- transientError
 
 ## God Nodes (most connected - your core abstractions)
 1. `executionContext` - 520 edges
-2. `Querier` - 84 edges
+2. `Querier` - 85 edges
 3. `API` - 66 edges
 4. `Queries` - 64 edges
 5. `stubQuerier` - 48 edges
@@ -135,23 +137,27 @@
 - **Local Verification and Smoke Test Flow** — _opencode_commands_verify_verify_command, _opencode_commands_smoke_smoke_command, _opencode_skills_dev_stack_skill_local_dev_stack, agents_verification_suite, readme_smoke_scripts [INFERRED 0.85]
 - **sqlc Schema-to-Store Regeneration Flow** — _opencode_skills_sqlc_workflow_skill_sqlc_workflow, _opencode_commands_generate_generate_command, agents_generated_code_off_limits, agents_append_only_migrations, docs_compat_database_schema_parity [INFERRED 0.95]
 
-## Communities (116 total, 54 thin omitted)
+## Communities (120 total, 51 thin omitted)
 
 ### Community 0 - "net/http.ResponseWriter"
-Cohesion: 0.12
-Nodes (18): Write(), WriteCollection(), WriteError(), configurationVersionResource(), approvalGateStatus(), failedJobStatus(), parseRunID(), stepStatusTFE() (+10 more)
+Cohesion: 0.15
+Nodes (13): WriteError(), WriteResource(), parseRunID(), decodeStateAttribute(), stringPointer(), decodeTFEJSON(), New(), chiURLParam() (+5 more)
+
+### Community 1 - "api/main.go"
+Cohesion: 0.16
+Nodes (5): S3, failingRow, graphQLResponse, ptr(), TestCollectionSpecRejectsInjection()
 
 ### Community 2 - "Agent Workflows and Compatibility Docs"
 Cohesion: 0.06
 Nodes (36): Compatibility Reviewer Subagent, Migration Reviewer Subagent, /compat Command, /generate Command, /pr Command, /smoke Command, /verify Command, Local Dev Stack (+28 more)
 
 ### Community 3 - "ParseRSQL"
-Cohesion: 0.10
-Nodes (24): ParseRSQL(), TestParseRSQLAcceptsUIExpressions(), TestParseRSQLBooleanStructure(), TestParseRSQLComparisons(), TestParseRSQLEmpty(), TestParseRSQLErrors(), likePattern(), mustParse() (+16 more)
+Cohesion: 0.18
+Nodes (11): ParseRSQL(), TestParseRSQLAcceptsUIExpressions(), TestParseRSQLBooleanStructure(), TestParseRSQLComparisons(), TestParseRSQLEmpty(), TestParseRSQLErrors(), And, Node (+3 more)
 
 ### Community 4 - "io.Reader"
 Cohesion: 0.07
-Nodes (15): failingBackend, failingKeyBackend, memoryBackend, cleanKey(), pathClean(), TestCleanKey(), isS3NotFound(), NewS3() (+7 more)
+Nodes (14): failingBackend, failingKeyBackend, memoryBackend, cleanKey(), pathClean(), TestCleanKey(), isS3NotFound(), Object (+6 more)
 
 ### Community 5 - "Core Database Schema"
 Cohesion: 0.09
@@ -159,35 +165,35 @@ Nodes (37): history, history_workspace_idx, job, job_organization_idx, job_works
 
 ### Community 6 - "stubQuerier"
 Cohesion: 0.06
-Nodes (8): UpdateContentStatusParams, CreateProjectParams, CreateTagParams, CreateWorkspaceTagParams, UpdateWorkspaceTagValueParams, CreateWorkspaceParams, SetWorkspaceLockParams, stubQuerier
+Nodes (7): UpdateContentStatusParams, CreateProjectParams, CreateTagParams, UpdateWorkspaceTagValueParams, CreateWorkspaceParams, SetWorkspaceLockParams, stubQuerier
 
-### Community 7 - ".applyTagBindings"
-Cohesion: 0.16
-Nodes (10): ResourceIdentifier, RelationshipIdentifiers(), TestRelationshipIdentifiers(), identifierStringAttribute(), normalizeTagValue(), tagValuesEqual(), validateTagBindings(), workspaceTagBindings() (+2 more)
+### Community 7 - "go_pkg_context"
+Cohesion: 0.26
+Nodes (5): organizationAttrs, projectAttrs, variableAttrs, workspaceAttrs, projectAttrs
 
 ### Community 8 - "Handler"
 Cohesion: 0.12
-Nodes (17): Claims, Type, Classify(), TestClassify(), TestEffectiveStepIDFromJTI(), claimsFromContext(), isActiveStepStatus(), isExternalUser() (+9 more)
+Nodes (17): Claims, Type, corsMiddleware(), Classify(), ExtractToken(), claimsFromContext(), isActiveStepStatus(), isExternalUser() (+9 more)
 
 ### Community 9 - "TFE Handler Tests"
-Cohesion: 0.10
-Nodes (38): assertContractJSONAPI(), TestContractOrganizationEnvelope(), TestContractWorkspaceAndRunEnvelopes(), capabilitySecret(), extractLogReadURL(), newTestAPI(), newTestAPIWithQueue(), newTestAPIWithStorage() (+30 more)
+Cohesion: 0.07
+Nodes (61): newTestAPI(), TestAuthMiddleware(), TestCORSAllowsOnlyListedOrigins(), TestCORSDefaultsToAnyOrigin(), TestCreateOrganization(), TestCreateOrganizationRequiresName(), TestGetOrganizationNotFound(), TestListOrganizationsJSONAPI() (+53 more)
 
 ### Community 10 - "WriteResource"
-Cohesion: 0.15
-Nodes (29): API, Deps, listQuery, boolValue(), filterSortPage(), New(), param(), parseList() (+21 more)
+Cohesion: 0.14
+Nodes (30): API, Deps, listQuery, boolValue(), filterSortPage(), New(), param(), parseList() (+22 more)
 
 ### Community 11 - "State Backend Tests"
 Cohesion: 0.15
 Nodes (22): decodeSecret(), NewValidator(), Sign(), TestParseRejectsExpiredToken(), TestParseRejectsWrongSecret(), testSecret(), TestSignAndParse(), TestValidatorAlgorithmByKeyLength() (+14 more)
 
-### Community 12 - "History"
-Cohesion: 0.10
-Nodes (6): artifactStore, historyStub, reliabilityStore, CreateHistoryParams, GetHistoryByJobReferenceParams, UpdateStepStatusParams
+### Community 12 - "CreateHistoryParams"
+Cohesion: 0.20
+Nodes (4): artifactStore, historyStub, CreateHistoryParams, GetHistoryByJobReferenceParams
 
 ### Community 13 - "jsonapi.go"
-Cohesion: 0.14
-Nodes (13): Resource, Link(), LinkList(), TestRelationshipMarshalling(), organizationPermissions(), organizationResource(), projectResource(), activeRunStatus() (+5 more)
+Cohesion: 0.09
+Nodes (26): DecodeAttributes(), Resource, ResourceIdentifier, Link(), LinkList(), TestRelationshipMarshalling(), Write(), configurationVersionResource() (+18 more)
 
 ### Community 14 - "steps"
 Cohesion: 0.06
@@ -197,13 +203,13 @@ Nodes (41): POSTGRES_DB, POSTGRES_HOST_AUTH_METHOD, POSTGRES_USER, TERRAKUBE_TES
 Cohesion: 0.27
 Nodes (11): TestHandleWithoutALockerRunsTheJob(), TestReclaimStaleHandlesClaimedJobs(), TestAckDeletesTheJobMessage(), TestHandleDropsLiveLogsWhenTheJobEnds(), TestHandleKeepsLiveLogsOnShutdown(), jobMessage(), newTestExecutor(), TestHandleAcksTerminalJob() (+3 more)
 
-### Community 17 - "models_gen.go"
-Cohesion: 0.09
-Nodes (8): AccessConnection, AccessEdge, OrganizationConnection, OrganizationEdge, PageInfo, Query, Subscription, WorkspaceConnection
+### Community 17 - "github.com/vektah/gqlparser/v2/ast.SelectionSet"
+Cohesion: 0.06
+Nodes (10): NotificationTriggerConnection, NotificationTriggerEdge, OrganizationConnection, OrganizationEdge, PageInfo, ProjectEdge, Query, Subscription (+2 more)
 
 ### Community 18 - ".QueryRow"
 Cohesion: 0.06
-Nodes (3): GetWorkspaceByNameParams, GetProjectByNameParams, UpdateOrganizationParams
+Nodes (5): UpdateWorkspaceParams, GetProjectByNameParams, UpdateJobPlanChangesParams, UpdateOrganizationParams, UpdateProjectParams
 
 ### Community 20 - "sqlc Generation Config"
 Cohesion: 0.13
@@ -218,11 +224,11 @@ Cohesion: 0.14
 Nodes (13): access (Access), Conventions, GenericAuditFields (shared superclass), job (Job), notification_configuration (NotificationConfiguration), notification_trigger (NotificationTrigger), organization, project (+5 more)
 
 ### Community 23 - "run"
-Cohesion: 0.12
-Nodes (18): main(), run(), Deps, NewExecutableSchema(), TestSchemaLoads(), bearerMatches(), New(), NewSubscriptions() (+10 more)
+Cohesion: 0.14
+Nodes (20): main(), run(), Deps, NewExecutableSchema(), TestSchemaLoads(), bearerMatches(), New(), NewSubscriptions() (+12 more)
 
 ### Community 25 - "cancelRunStore"
-Cohesion: 0.13
+Cohesion: 0.12
 Nodes (4): cancelRunStore, variableStore, UpdateJobOutputParams, UpdateStepOutputParams
 
 ### Community 26 - "Local Dev Services Script"
@@ -286,64 +292,72 @@ Cohesion: 0.70
 Nodes (4): expect_status(), req(), tfe-smoke.sh script, status()
 
 ### Community 51 - "time.Duration"
-Cohesion: 0.12
-Nodes (5): fakeQueue, JobQueue, defaultRetryDelay(), Message, Queue
+Cohesion: 0.10
+Nodes (6): fakeQueue, JobQueue, fakePinger, defaultRetryDelay(), Message, Queue
 
-### Community 52 - "testing.T"
-Cohesion: 0.07
-Nodes (43): newTestAPI(), TestAuthMiddleware(), TestCORSAllowsOnlyListedOrigins(), TestCORSDefaultsToAnyOrigin(), TestCreateOrganization(), TestCreateOrganizationRequiresName(), TestGetOrganizationNotFound(), TestListOrganizationsJSONAPI() (+35 more)
+### Community 52 - "Migrate"
+Cohesion: 0.15
+Nodes (13): appliedVersions(), applyMigration(), Migrate(), path(), TestUpstreamUIQueriesExecute(), runQuery(), testDeps(), TestFilterByTagAndJobStatus() (+5 more)
 
 ### Community 54 - "executor-e2e.sh"
 Cohesion: 0.67
 Nodes (4): fail(), req(), executor-e2e.sh script, wait_for()
 
 ### Community 55 - "Layout"
-Cohesion: 0.13
-Nodes (11): Config, Storage, Global Constraints, M4 run logs and artifacts Implementation Plan, Review Focus, Self-review notes, Task 1: Archive the final step log, Task 2: Serve archived logs from `/tfoutput/v1` (+3 more)
+Cohesion: 0.06
+Nodes (20): Validator, Config, Storage, Global Constraints, M4 run logs and artifacts Implementation Plan, Review Focus, Self-review notes, Task 1: Archive the final step log (+12 more)
 
 ### Community 56 - "testLogger"
 Cohesion: 0.08
-Nodes (45): TestAcquireConfigurationExtractsUploadedArchive(), TestAcquireConfigurationFailsWithoutSource(), TestAcquireConfigurationRejectsInvalidArchive(), TestArchiveHistoryDoesNotCreateRowWhenUploadFails(), TestCompleteStepArchivesLog(), TestCompleteStepCancelledKeepsStatusWhenLogUploadFails(), TestCompleteStepLogUploadFailureFailsStep(), TestFinishApplyCompletesStep() (+37 more)
+Nodes (50): gitOutput(), initGitRepo(), requireGit(), TestAcquireConfigurationClonesGitSource(), TestAcquireConfigurationExtractsUploadedArchive(), TestAcquireConfigurationFailsWithoutSource(), TestAcquireConfigurationRejectsInvalidArchive(), TestCloneConfigurationChecksOutCommit() (+42 more)
 
 ### Community 57 - "loadPage"
-Cohesion: 0.13
-Nodes (10): collectionSpec, DB, failingDB, listArgs, afterString(), loadPage(), ParsePage(), TestParsePage() (+2 more)
+Cohesion: 0.24
+Nodes (3): DB, failingDB, loadPage()
 
 ### Community 58 - ".processJob"
-Cohesion: 0.14
-Nodes (6): isTerminalStatus(), isTransient(), parseAttempt(), TestIsTerminalStatus(), TestCleanupStaleWorkspaces(), cleanupStaleWorkspaces()
+Cohesion: 0.16
+Nodes (5): isTerminalStatus(), isTransient(), parseAttempt(), stringPointer(), TestIsTerminalStatus()
 
-### Community 59 - "StringOrInt"
-Cohesion: 0.22
-Nodes (3): ComplexityRoot, QueryResolver, WorkspaceResolver
-
-### Community 61 - "Queries"
-Cohesion: 0.10
-Nodes (3): New(), DBTX, Queries
-
-### Community 64 - "api/main.go"
+### Community 61 - "Querier"
 Cohesion: 0.06
-Nodes (58): organizationAttrs, projectAttrs, variableAttrs, workspaceAttrs, S3, gitConfig, stateMetadata, transientError (+50 more)
+Nodes (5): New(), Querier, DBTX, Queries, stubQuerier
 
-### Community 66 - "sort.go"
-Cohesion: 0.33
-Nodes (6): Order, OrderBy(), ParseSort(), TestOrderByRendersSQL(), TestParseSort(), TestParseSortRejectsUnknownField()
+### Community 62 - "workspace.go"
+Cohesion: 0.10
+Nodes (12): gitConfig, TestGitSourceDetection(), TestSanitizeGitURL(), configureProcessGroup(), killProcessGroup(), configureProcessGroup(), killProcessGroup(), gitSource() (+4 more)
+
+### Community 64 - "executor_test.go"
+Cohesion: 0.13
+Nodes (14): stateMetadata, Backend, compareStreamIDs(), parseResumeID(), splitStreamID(), TestCompareStreamIDs(), TestParseResumeID(), validStreamID() (+6 more)
+
+### Community 66 - "store/models.go"
+Cohesion: 0.15
+Nodes (14): Access, Content, History, NotificationConfiguration, NotificationConfigurationTemplate, NotificationTrigger, Project, ProjectAccess (+6 more)
 
 ### Community 68 - "models"
 Cohesion: 0.05
 Nodes (38): model, exec, filename, package, model, model, model, filename (+30 more)
 
-### Community 70 - ".listWorkspaces"
-Cohesion: 0.28
-Nodes (6): parseWorkspaceQuery(), matchesTagFilters(), workspaceTagNames(), writeWorkspaceList(), tagFilter, workspaceQuery
+### Community 70 - "go_pkg_strings"
+Cohesion: 0.13
+Nodes (8): parseWorkspaceQuery(), matchesTagFilters(), stateOutput, stateWithOutputs, tagFilter, workspaceAttrs, workspaceQuery, workspaceWithTags
 
 ### Community 71 - "collections.go"
-Cohesion: 0.16
-Nodes (13): page, accessEdges(), column(), jobEdges(), notificationConfigurationEdges(), notificationTriggerEdges(), predicate(), projectAccessEdges() (+5 more)
+Cohesion: 0.11
+Nodes (20): collectionSpec, listArgs, page, accessEdges(), afterString(), column(), jobEdges(), notificationConfigurationEdges() (+12 more)
 
-### Community 73 - "Migrate"
-Cohesion: 0.12
-Nodes (15): main(), run(), Locker, Deps, fakeLocker, JobLocker, NewPool(), NewLocker() (+7 more)
+### Community 73 - ".planResource"
+Cohesion: 0.18
+Nodes (4): approvalGateStatus(), failedJobStatus(), stepStatusTFE(), stepStatusValue()
+
+### Community 76 - "where_test.go"
+Cohesion: 0.44
+Nodes (10): mustParse(), TestWhereCombinesAndOr(), TestWhereEscapesLikeWildcards(), TestWhereNilNode(), TestWhereOperators(), TestWhereRejectsPredicateWithUnsupportedOperator(), TestWhereRejectsUnknownField(), TestWhereRendersCorrelatedPredicates() (+2 more)
+
+### Community 77 - "get"
+Cohesion: 0.31
+Nodes (7): get(), newUI(), TestDeepLinksServeTheIndex(), TestEnvConfigIsNeverCached(), TestMissingAssetsAreNotFound(), TestServesTheIndexAndAssets(), fixture
 
 ### Community 79 - "graphql/models.go"
 Cohesion: 0.11
@@ -351,59 +365,75 @@ Nodes (13): Access, Job, JobStatusEvent, NotificationConfiguration, Notification
 
 ### Community 80 - "New"
 Cohesion: 0.09
-Nodes (25): Validator, ExtractToken(), TestExtractToken(), TestWriteBackendOverride(), isTerminal(), New(), outputOf(), stepOf() (+17 more)
+Nodes (27): TestWriteBackendOverride(), New(), TestDeleteRemovesAMessage(), TestHeadStreamReturnsTheOldestEntries(), testQueue(), isTerminal(), New(), outputOf() (+19 more)
 
-### Community 81 - "net/http.Handler"
-Cohesion: 0.14
-Nodes (16): corsMiddleware(), envConfig(), exists(), New(), get(), newUI(), TestDeepLinksServeTheIndex(), TestEnvConfigIsNeverCached() (+8 more)
+### Community 81 - "server.go"
+Cohesion: 0.20
+Nodes (10): Deps, Pinger, envConfig(), exists(), New(), TestNoDirectoryMeansNoHandler(), Get(), Deps (+2 more)
+
+### Community 82 - "where.go"
+Cohesion: 0.42
+Nodes (3): likePattern(), builder, Compare
 
 ### Community 83 - ".prepareWorkspace"
-Cohesion: 0.21
-Nodes (5): preparedWorkspace, transient(), contentIDFromSource(), gitEnv(), runGit()
+Cohesion: 0.19
+Nodes (6): preparedWorkspace, TestContentIDFromSource(), transient(), contentIDFromSource(), gitEnv(), runGit()
 
-### Community 86 - "UpdateJobStatusParams"
-Cohesion: 0.15
-Nodes (5): UpdateJobStatusParams, Publisher, publishingStore, stubQuerier, mutableQuerier
+### Community 86 - "reliabilityStore"
+Cohesion: 0.08
+Nodes (8): reliabilityStore, statusQuerier, UpdateJobStatusParams, UpdateStepStatusParams, Publisher, publishingStore, stubQuerier, mutableQuerier
 
 ### Community 87 - "idsFrom"
-Cohesion: 0.19
-Nodes (3): NotificationConfigurationResolver, OrganizationResolver, idsFrom()
+Cohesion: 0.15
+Nodes (5): ProjectConnection, WorkspaceResolver, idsFrom(), projectEdges(), workspaceEdges()
 
-### Community 88 - "Resolver"
-Cohesion: 0.12
-Nodes (8): ProjectResolver, Resolver, ResolverRoot, SubscriptionResolver, streamEvents(), TestJobStatusSubscriptionClosesWithTheClient(), TestJobStatusSubscriptionKeepsOnlyTheRequestedWorkspace(), TestSubscriptionsNeedAnEventSource()
+### Community 88 - "generated.go"
+Cohesion: 0.09
+Nodes (9): ComplexityRoot, DirectiveRoot, NotificationConfigurationResolver, OrganizationResolver, ProjectResolver, QueryResolver, Resolver, ResolverRoot (+1 more)
 
 ### Community 90 - "Load"
-Cohesion: 0.07
-Nodes (33): main(), run(), main(), run(), env(), envBool(), envDuration(), envFirst() (+25 more)
+Cohesion: 0.08
+Nodes (35): main(), run(), main(), run(), main(), run(), Locker, env() (+27 more)
+
+### Community 91 - "newRedactor"
+Cohesion: 0.29
+Nodes (6): redactor, TestLogSinkRedactsSecrets(), TestNilRedactorIsSafe(), TestRedactorPrefersLongestValue(), TestRedactorReplacesSensitiveValues(), newRedactor()
 
 ### Community 93 - "logSink"
-Cohesion: 0.12
-Nodes (9): captureLogPublisher, LogPublisher, logSink, redactor, TestLogSinkRedactsSecrets(), TestNilRedactorIsSafe(), TestRedactorPrefersLongestValue(), TestRedactorReplacesSensitiveValues() (+1 more)
+Cohesion: 0.20
+Nodes (3): captureLogPublisher, LogPublisher, logSink
+
+### Community 99 - "New"
+Cohesion: 0.33
+Nodes (6): NewLocal(), TestLocalHealth(), TestLocalLifecycle(), TestLocalRejectsPathTraversal(), NewS3(), New()
 
 ### Community 100 - "streamEvents"
-Cohesion: 0.29
-Nodes (4): EventSource, fakeEvents, Event, Bus
+Cohesion: 0.14
+Nodes (8): EventSource, fakeEvents, streamEvents(), TestJobStatusSubscriptionClosesWithTheClient(), TestJobStatusSubscriptionKeepsOnlyTheRequestedWorkspace(), TestSubscriptionsNeedAnEventSource(), Event, Bus
+
+### Community 102 - "ParsePage"
+Cohesion: 0.60
+Nodes (4): ParsePage(), TestParsePage(), TestParsePageRejectsAnOversizedPage(), TestParsePageRejectsBadOffset()
 
 ## Knowledge Gaps
 - **11 isolated node(s):** `TF_HTTP_PASSWORD`, `TF_HTTP_USERNAME`, `TF_IN_AUTOMATION`, `TF_LOG`, `TF_LOG_PATH` (+6 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 277 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **54 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **51 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `executionContext` connect `executionContext` to `ProjectConnection`, `._Project`, `.marshalOBoolean2bool`, `Resolver`, `generated.go`, `context.Context`, `TemplateConnection`, `models_gen.go`, `WorkspaceTagConnection`, `.unmarshalOString2ᚕᚖstring`, `._Organization`, `JobConnection`, `github.com/99designs/gqlgen/graphql.Marshaler`, `StringOrInt`, `._NotificationConfiguration`, `.___Schema`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
+- **Why does `executionContext` connect `context.Context` to `executionContext`, `._Project`, `._Job`, `.marshalOBoolean2bool`, `newExecutionContext`, `.___Directive`, `TemplateConnection`, `github.com/vektah/gqlparser/v2/ast.SelectionSet`, `.unmarshalOString2ᚕᚖstring`, `._Organization`, `JobConnection`, `generated.go`, `github.com/99designs/gqlgen/graphql.Marshaler`, `AccessConnection`, `.___Type`?**
+  _High betweenness centrality (0.053) - this node is a cross-community bridge._
 - **What connects `TF_HTTP_PASSWORD`, `TF_HTTP_USERNAME`, `TF_IN_AUTOMATION` to the rest of the system?**
   _11 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `net/http.ResponseWriter` be split into smaller, more focused modules?**
-  _Cohesion score 0.11578947368421053 - nodes in this community are weakly interconnected._
-- **Why does `Querier` connect `.Exec` to `net/http.ResponseWriter`, `stubQuerier`, `Handler`, `TFE Handler Tests`, `WriteResource`, `History`, `newTestExecutor`, `.QueryRow`, `cancelRunStore`, `stubStore`, `testing.T`, `Queries`, `api/main.go`, `CreateContentParams`, `Migrate`, `store.CreateArchiveParams`, `.SetJobOverrideSource`, `.UpdateJobPlanChanges`, `New`, `UpdateJobStatusParams`, `.CreateVariable`, `stubQuerier`, `.UpdateProject`, `.GetTagByName`, `.UpdateWorkspace`, `.GetStepByJobAndNumber`?**
-  _High betweenness centrality (0.033) - this node is a cross-community bridge._
+  _Cohesion score 0.14970601537765718 - nodes in this community are weakly interconnected._
+- **Why does `API` connect `net/http.ResponseWriter` to `executor_test.go`, `Handler`, `.planResource`, `jsonapi.go`, `Layout`?**
+  _High betweenness centrality (0.030) - this node is a cross-community bridge._
 - **Should `Agent Workflows and Compatibility Docs` be split into smaller, more focused modules?**
   _Cohesion score 0.05989110707803993 - nodes in this community are weakly interconnected._
-- **Why does `API` connect `net/http.ResponseWriter` to `api/main.go`, `jsonapi.go`, `.listWorkspaces`, `.applyTagBindings`?**
-  _High betweenness centrality (0.019) - this node is a cross-community bridge._
-- **Should `ParseRSQL` be split into smaller, more focused modules?**
-  _Cohesion score 0.10374149659863946 - nodes in this community are weakly interconnected._
+- **Why does `Querier` connect `Querier` to `stubQuerier`, `go_pkg_context`, `Handler`, `TFE Handler Tests`, `WriteResource`, `CreateHistoryParams`, `newTestExecutor`, `.QueryRow`, `run`, `cancelRunStore`, `stubStore`, `Layout`, `.CreateStep`, `CreateContentParams`, `New`, `reliabilityStore`, `.CreateVariable`, `stubQuerier`, `.GetTagByName`, `CreateWorkspaceTagParams`, `.GetWorkspaceByName`, `.ApproveJob`, `.CreateJob`?**
+  _High betweenness centrality (0.029) - this node is a cross-community bridge._
+- **Should `io.Reader` be split into smaller, more focused modules?**
+  _Cohesion score 0.06936026936026936 - nodes in this community are weakly interconnected._
