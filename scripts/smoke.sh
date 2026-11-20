@@ -75,6 +75,19 @@ ws_id=$(req -X POST "${BASE}/organization/${org_id}/workspace" -d "{
 }" | jq -r '.data.id')
 echo "ok: workspace ${ws_id}"
 
+gql="${BASE%/api/v1}/graphql/api/v1"
+gql_query() {
+  curl -fsS "${auth[@]}" -H "Content-Type: application/json" -d "$1" "${gql}"
+}
+ws_page=$(gql_query '{"query":"query($ids:[String]){ organization(ids:$ids){ edges{ node{ workspace(first:10, sort:\"name\", filter:\"name=ini=*smoke*\"){ edges{ node{ id name workspaceTag{edges{node{tagId}}} project{edges{node{id}}} } } pageInfo{ totalRecords } } } } } }","variables":{"ids":["'"${org_id}"'"]}}')
+gql_count=$(echo "$ws_page" | jq -r '.data.organization.edges[0].node.workspace.pageInfo.totalRecords')
+gql_id=$(echo "$ws_page" | jq -r '.data.organization.edges[0].node.workspace.edges[0].node.id')
+[[ "$gql_count" == "1" && "$gql_id" == "$ws_id" ]] || {
+  echo "FAIL: graphql workspace list (${ws_page})" >&2
+  exit 1
+}
+echo "ok: graphql workspace list"
+
 project_ref=$(req "${BASE}/workspace/${ws_id}" | jq -r '.data.relationships.project.data.id')
 [[ "$project_ref" == "$project_id" ]] || { echo "FAIL: workspace project relationship" >&2; exit 1; }
 echo "ok: workspace relationship"

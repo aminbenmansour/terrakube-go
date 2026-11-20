@@ -5,13 +5,13 @@ import (
 	"testing"
 )
 
-var testFields = map[string]string{
-	"name":               "name",
-	"lastJobStatus":      "last_job_status",
-	"lastJobDate":        "last_job_date",
-	"project.id":         "project_id",
-	"workspaceTag.tagId": "workspace_tag_id",
-	"id":                 "id",
+var testFields = map[string]Field{
+	"name":               {Column: "name"},
+	"lastJobStatus":      {Column: "last_job_status"},
+	"lastJobDate":        {Column: "last_job_date"},
+	"project.id":         {Column: "project_id"},
+	"workspaceTag.tagId": {Column: "workspace_tag_id"},
+	"id":                 {Column: "id"},
 }
 
 func mustParse(t *testing.T, expression string) Node {
@@ -115,10 +115,10 @@ func TestWhereEscapesLikeWildcards(t *testing.T) {
 }
 
 func TestWhereCombinesAndOr(t *testing.T) {
-	sql, args, err := Where(mustParse(t, `(name=ini=*prod*,description=ini=*prod*);lastJobStatus=='running'`), map[string]string{
-		"name":          "name",
-		"description":   "description",
-		"lastJobStatus": "last_job_status",
+	sql, args, err := Where(mustParse(t, `(name=ini=*prod*,description=ini=*prod*);lastJobStatus=='running'`), map[string]Field{
+		"name":          {Column: "name"},
+		"description":   {Column: "description"},
+		"lastJobStatus": {Column: "last_job_status"},
 	}, 0)
 	if err != nil {
 		t.Fatalf("Where: %v", err)
@@ -157,5 +157,34 @@ func TestWhereNilNode(t *testing.T) {
 	sql, args, err := Where(nil, testFields, 0)
 	if err != nil || sql != "" || args != nil {
 		t.Fatalf("Where(nil) = (%q, %#v, %v)", sql, args, err)
+	}
+}
+
+func TestWhereRendersCorrelatedPredicates(t *testing.T) {
+	fields := map[string]Field{
+		"id":            {Column: "id"},
+		"lastJobStatus": {Column: "last_job_status"},
+		"job.status":    {Predicate: "EXISTS (SELECT 1 FROM job WHERE job.workspace_id = workspace.id AND job.status = ?)"},
+	}
+	node := mustParse(t, `(lastJobStatus=='waitingApproval',job.status=='waitingApproval')`)
+	sql, args, err := Where(node, fields, 0)
+	if err != nil {
+		t.Fatalf("Where: %v", err)
+	}
+	want := `(last_job_status = $1 OR EXISTS (SELECT 1 FROM job WHERE job.workspace_id = workspace.id AND job.status = $2))`
+	if sql != want {
+		t.Fatalf("sql = %q, want %q", sql, want)
+	}
+	if !reflect.DeepEqual(args, []any{"waitingApproval", "waitingApproval"}) {
+		t.Fatalf("args = %#v", args)
+	}
+}
+
+func TestWhereRejectsPredicateWithUnsupportedOperator(t *testing.T) {
+	fields := map[string]Field{
+		"job.status": {Predicate: "EXISTS (SELECT 1 FROM job WHERE job.status = ?)"},
+	}
+	if _, _, err := Where(mustParse(t, `job.status=in=('a','b')`), fields, 0); err == nil {
+		t.Fatal("in list on a predicate was accepted")
 	}
 }

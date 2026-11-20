@@ -6,11 +6,19 @@ import (
 	"strings"
 )
 
+// Field is what an RSQL path resolves to. Exactly one of Column and Predicate is
+// set. A Predicate is a correlated subquery containing a single ? where the
+// value goes, which is how a filter on a relationship is expressed.
+type Field struct {
+	Column    string
+	Predicate string
+}
+
 // Where renders a filter as a parameterised SQL predicate. fields maps an RSQL
-// dot path to a column expression; a path that is not in the map is rejected,
+// dot path to a column or predicate; a path that is not in the map is rejected,
 // which is what keeps a filter string out of the SQL text. argOffset is the
 // number of placeholders the caller already used.
-func Where(node Node, fields map[string]string, argOffset int) (string, []any, error) {
+func Where(node Node, fields map[string]Field, argOffset int) (string, []any, error) {
 	if node == nil {
 		return "", nil, nil
 	}
@@ -23,7 +31,7 @@ func Where(node Node, fields map[string]string, argOffset int) (string, []any, e
 }
 
 type builder struct {
-	fields map[string]string
+	fields map[string]Field
 	args   int
 	values []any
 }
@@ -63,9 +71,16 @@ func (b *builder) join(nodes []Node, operator string) (string, error) {
 }
 
 func (b *builder) compare(c *Compare) (string, error) {
-	column, ok := b.fields[c.Field]
+	field, ok := b.fields[c.Field]
 	if !ok {
 		return "", fmt.Errorf("query: unknown filter field %q", c.Field)
+	}
+	if field.Predicate != "" {
+		return b.predicate(c, field.Predicate)
+	}
+	column := field.Column
+	if column == "" {
+		return "", fmt.Errorf("query: filter field %q has no column", c.Field)
 	}
 
 	switch c.Op {
@@ -126,6 +141,19 @@ func (b *builder) compare(c *Compare) (string, error) {
 	default:
 		return "", fmt.Errorf("query: unsupported operator %q", c.Op)
 	}
+}
+
+// predicate renders a correlated subquery. Only equality is supported: a
+// relationship filter in the UI is always `==`, and the template already
+// carries its own comparison operator.
+func (b *builder) predicate(c *Compare, template string) (string, error) {
+	if c.Op != OpEq || len(c.Values) != 1 {
+		return "", fmt.Errorf("query: %s on %q is not supported", c.Op, c.Field)
+	}
+	if strings.Count(template, "?") != 1 {
+		return "", fmt.Errorf("query: predicate for %q must contain exactly one placeholder", c.Field)
+	}
+	return strings.Replace(template, "?", b.placeholder(c.Values[0]), 1), nil
 }
 
 // likePattern turns an =ini= value into a LIKE pattern: * is a wildcard, and

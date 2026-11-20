@@ -15,6 +15,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/db"
 	"github.com/aminbenmansour/terrakube-go/internal/executor"
 	"github.com/aminbenmansour/terrakube-go/internal/httpapi"
+	"github.com/aminbenmansour/terrakube-go/internal/jobstatus"
 	"github.com/aminbenmansour/terrakube-go/internal/logging"
 	"github.com/aminbenmansour/terrakube-go/internal/queue"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
@@ -60,13 +61,19 @@ func run() error {
 		return err
 	}
 
+	events, err := jobstatus.NewBus(cfg.RedisURL)
+	if err != nil {
+		return err
+	}
+	defer events.Close()
+
 	storeBackend, err := storage.New(ctx, cfg.Storage)
 	if err != nil {
 		return err
 	}
 
 	runner := executor.New(executor.Deps{
-		Store:               store.New(pool),
+		Store:               jobstatus.Wrap(store.New(pool), events.Publish),
 		Storage:             storeBackend,
 		Queue:               q,
 		Locker:              db.NewLocker(pool),

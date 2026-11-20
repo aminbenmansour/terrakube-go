@@ -13,7 +13,7 @@ type Order struct {
 
 // ParseSort parses Elide sort syntax ("-lastJobDate,+name") against a field
 // whitelist. An empty input yields no ordering.
-func ParseSort(input string, fields map[string]string) ([]Order, error) {
+func ParseSort(input string, fields map[string]Field) ([]Order, error) {
 	input = strings.TrimSpace(input)
 	if input == "" {
 		return nil, nil
@@ -33,11 +33,14 @@ func ParseSort(input string, fields map[string]string) ([]Order, error) {
 		case '+':
 			part = part[1:]
 		}
-		column, ok := fields[part]
+		field, ok := fields[part]
 		if !ok {
 			return nil, fmt.Errorf("query: unknown sort field %q", part)
 		}
-		orders = append(orders, Order{Column: column, Desc: desc})
+		if field.Column == "" {
+			return nil, fmt.Errorf("query: sort field %q is not sortable", part)
+		}
+		orders = append(orders, Order{Column: field.Column, Desc: desc})
 	}
 	return orders, nil
 }

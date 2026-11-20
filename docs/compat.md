@@ -468,10 +468,30 @@ Consequence: M5 needs a GraphQL query surface for ten operations over ten entity
 types, not the whole Elide schema. The schema only has to cover the entities and
 relationship paths in `docs/upstream/ui-operations.md`.
 
+Implemented so far (`internal/graphql`, backed by gqlgen):
+
+- Queries at `/graphql/api/v1` for organization, workspace, project and
+  notification_configuration at the root, with every relationship connection the
+  UI traverses. Relay connection shape, `pageInfo.totalRecords`, offset cursors,
+  `first`/`after` as `StringOrInt`, RSQL `filter` and Elide `sort`.
+- Same bearer token as `/api/v1` (`TERRAKUBE_AUTH_TOKEN`). Resolver errors are
+  logged and replaced with a generic message.
+- **Subscriptions** at `/subscriptions` over graphql-ws: `jobStatusChanged`
+  and `organizationJobStatusChanged`, matching upstream's
+  `subscriptions.graphqls`. Status updates are published to Redis from a thin
+  store wrapper, so every writer (management API and executor) notifies
+  subscribers without call-site changes. The UI sends its token as a
+  connection parameter, so it is checked after the socket upgrade.
+- Missing tables the UI reads were added in migration `0005_graphql_entities.sql`
+  (`access`, `project_access`, `notification_configuration`,
+  `notification_trigger`, `notification_configuration_template`).
+
+Not implemented: GraphQL mutations and the rest of the 53 upstream entities.
+
 ## Open questions
 
-- GraphQL resolvers, paging and subscriptions for the operations in
-  `docs/upstream/ui-operations.md` (M5).
+- GraphQL subscriptions for the operations in `docs/upstream/ui-operations.md`
+  (the query surface is implemented; mutations and subscriptions are not).
 - Exact JSON:API error objects and RSQL edge cases (differential tests).
 - Terraform login/OAuth broker behaviour (M3/M5).
 - Kubernetes ephemeral executor contract (M6).
