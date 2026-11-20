@@ -496,6 +496,11 @@ Implemented so far (`internal/graphql`, backed by gqlgen):
   bearer token (`TERRAKUBE_AUTH_TOKEN`) is the only accepted user credential, so
   a stock UI build completes the OIDC redirect and then receives 401s.
 
+- **Contract tests.** `internal/graphql/contract_test.go` validates every
+  captured UI operation against the SDL and then executes it against Postgres,
+  so a field the UI reads and the SQL behind it are both pinned. CI runs it in
+  the `integration` job, since it skips without a database.
+
 Not implemented: GraphQL mutations and the rest of the 53 upstream entities.
 
 ## Open questions
