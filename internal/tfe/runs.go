@@ -173,7 +173,7 @@ func (a *API) listWorkspaceRuns(w http.ResponseWriter, r *http.Request) {
 	for _, job := range jobs {
 		resources = append(resources, runResource(job, ws))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), false)
+	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), jsonapi.Page{})
 }
 
 func (a *API) getRunQueue(w http.ResponseWriter, r *http.Request) {
@@ -197,7 +197,7 @@ func (a *API) getRunQueue(w http.ResponseWriter, r *http.Request) {
 		}
 		resources = append(resources, runResource(job, ws))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), false)
+	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), jsonapi.Page{})
 }
 
 func (a *API) getRunEvents(w http.ResponseWriter, r *http.Request) {
@@ -370,7 +370,7 @@ func (a *API) getRunPolicyChecks(w http.ResponseWriter, r *http.Request) {
 	if _, _, ok := a.jobAndWorkspace(w, r, "runID"); !ok {
 		return
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, []jsonapi.Resource{}, 0, false)
+	jsonapi.WriteCollection(w, http.StatusOK, []jsonapi.Resource{}, 0, jsonapi.Page{})
 }
 
 func (a *API) getPolicyCheck(w http.ResponseWriter, r *http.Request) {

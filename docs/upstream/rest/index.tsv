@@ -1,0 +1,15 @@
+organization-list	200	/api/v1/organization
+organization-list-totals	400	/api/v1/organization?page[totals]=true
+organization-list-paged	400	/api/v1/organization?page[size]=2&page[number]=2
+organization-list-sorted	200	/api/v1/organization?sort=-name
+organization-list-filtered	200	/api/v1/organization?filter[organization]=name==azure
+organization-list-fields	200	/api/v1/organization?fields[organization]=name
+organization-list-include	200	/api/v1/organization?include=project
+organization-get	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7
+organization-get-fields	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7?fields[organization]=name,description
+organization-relationships	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7/relationships/project
+organization-projects	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7/project
+organization-missing	404	/api/v1/organization/00000000-0000-0000-0000-000000000000
+organization-bad-id	400	/api/v1/organization/not-a-uuid
+organization-no-token	401	/api/v1/organization
+delete-method-not-allowed	500	/api/v1/organization

@@ -272,13 +272,33 @@ Query conventions:
 - `filter[type]=...` uses RSQL: `name==prod*`, `status=in=(failed,cancelled)`,
   `a==1;b==2` (AND), comma between expressions (OR).
 - `sort=name`, `sort=-name`.
-- `page[size]`, `page[number]`, `page[totals]` (adds `meta.totals`).
+- `page[size]`, `page[number]`, `page[totals]`. Any page parameter makes Elide
+  emit `meta.page` (`{number, limit}`, default limit 10000); `page[totals]` adds
+  `totalPages` and `totalRecords`. No page parameter means no `meta` at all.
 - `include=step`, `fields[workspace]=name`.
 - Content type `application/vnd.api+json`; errors use a JSON:API `errors`
   array. `DELETE` must not send a body or content type.
 
 Our initial implementation targets the resources needed by the CLI workflow and
 the UI's core screens. Anything missing is filled in against the upstream spec.
+
+### Verified against a live upstream (2026-11-20)
+
+Captured from `azbuilder/api-server:2.34.3`; the responses are in
+`docs/upstream/rest/` and the differences are listed there. What matters:
+
+- `GET /organization` matches: id plus `name`, `description`, `disabled`,
+  `executionMode`, `icon`, which is all the UI's organization list reads
+  (`listOrganizations` in `organizationService.ts`).
+- Unknown paths answer `404 {"errors":[{"detail":"Unknown collection <name>"}]}`;
+  ours matches. An invalid id is `400 {"errors":[{"detail":"Invalid value: ..."}]}`.
+- We are a superset in two places: `organization` accepts page parameters
+  (upstream answers 400 `Cannot paginate organization`) and our error objects
+  carry `status` and `title` as well as `detail`.
+- We are behind in one: resources have no `relationships` member, because the
+  tables behind them do not exist yet.
+- Upstream answers an unauthenticated request with **401 and an empty body**. A
+  client must use the status code, not the body.
 
 ### Implemented in M1
 

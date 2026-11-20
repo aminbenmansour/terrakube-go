@@ -61,22 +61,50 @@ func TestRelationshipMarshalling(t *testing.T) {
 	}
 }
 
-func TestWriteCollectionTotals(t *testing.T) {
-	rec := httptest.NewRecorder()
-	WriteCollection(rec, http.StatusOK, nil, 3, true)
+// The three shapes below were captured from upstream 2.34.3; see
+// docs/upstream/rest/organization-list.json.
+func TestWriteCollectionPage(t *testing.T) {
+	cases := []struct {
+		name string
+		page Page
+		want map[string]any
+	}{
+		{"no page parameter", Page{}, nil},
+		{"page number only", Page{Number: 2, Limit: 10000}, map[string]any{"number": 2, "limit": 10000}},
+		{"page totals", Page{Number: 1, Limit: 2, Totals: true}, map[string]any{"number": 1, "limit": 2, "totalPages": 2, "totalRecords": 3}},
+	}
 
-	var doc struct {
-		Data []any          `json:"data"`
-		Meta map[string]any `json:"meta"`
-	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	if doc.Data == nil || len(doc.Data) != 0 {
-		t.Errorf("data = %v, want empty array", doc.Data)
-	}
-	if doc.Meta["totals"] != float64(3) {
-		t.Errorf("meta.totals = %v, want 3", doc.Meta["totals"])
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			WriteCollection(rec, http.StatusOK, nil, 3, tc.page)
+
+			var doc struct {
+				Data []any          `json:"data"`
+				Meta map[string]any `json:"meta"`
+			}
+			if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+				t.Fatalf("decode: %v", err)
+			}
+			if doc.Data == nil || len(doc.Data) != 0 {
+				t.Errorf("data = %v, want empty array", doc.Data)
+			}
+			if tc.want == nil {
+				if doc.Meta != nil {
+					t.Fatalf("meta = %v, want none", doc.Meta)
+				}
+				return
+			}
+			got, _ := doc.Meta["page"].(map[string]any)
+			if len(got) != len(tc.want) {
+				t.Fatalf("meta.page = %v, want %v", got, tc.want)
+			}
+			for k, want := range tc.want {
+				if got[k] != float64(want.(int)) {
+					t.Errorf("meta.page.%s = %v, want %v", k, got[k], want)
+				}
+			}
+		})
 	}
 }
 

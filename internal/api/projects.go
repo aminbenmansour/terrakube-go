@@ -37,7 +37,7 @@ func (a *API) listProjects(w http.ResponseWriter, r *http.Request) {
 	for _, project := range page {
 		resources = append(resources, projectResource(project))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, total, q.Totals)
+	jsonapi.WriteCollection(w, http.StatusOK, resources, total, q.page())
 }
 
 func (a *API) getProject(w http.ResponseWriter, r *http.Request) {
