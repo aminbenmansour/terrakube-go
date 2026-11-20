@@ -182,7 +182,21 @@ type listQuery struct {
 	SortDesc     bool
 	PageSize     int
 	PageNumber   int
-	Totals       bool
+	// Paged records that the request carried a page parameter at all, because
+	// Elide emits meta.page only then.
+	Paged  bool
+	Totals bool
+}
+
+// elideDefaultPageLimit is Elide's limit when page[number] is sent alone.
+const elideDefaultPageLimit = 10000
+
+// page is the jsonapi.Page a collection response reports.
+func (q listQuery) page() jsonapi.Page {
+	if !q.Paged {
+		return jsonapi.Page{}
+	}
+	return jsonapi.Page{Number: q.PageNumber, Limit: q.PageSize, Totals: q.Totals}
 }
 
 // parseList reads filter[type], sort and page[*] from the query string. Unknown
@@ -218,6 +232,12 @@ func parseList(r *http.Request, filterType string) listQuery {
 		}
 	}
 	_, q.Totals = values["page[totals]"]
+	_, sized := values["page[size]"]
+	_, numbered := values["page[number]"]
+	q.Paged = q.Totals || sized || numbered
+	if q.Paged && q.PageSize == 0 {
+		q.PageSize = elideDefaultPageLimit
+	}
 
 	return q
 }

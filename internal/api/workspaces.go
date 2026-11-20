@@ -49,7 +49,7 @@ func (a *API) listWorkspaces(w http.ResponseWriter, r *http.Request) {
 	for _, ws := range page {
 		resources = append(resources, workspaceResource(ws))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, total, q.Totals)
+	jsonapi.WriteCollection(w, http.StatusOK, resources, total, q.page())
 }
 
 func (a *API) listProjectWorkspaces(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +73,7 @@ func (a *API) listProjectWorkspaces(w http.ResponseWriter, r *http.Request) {
 	for _, ws := range items {
 		resources = append(resources, workspaceResource(ws))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), false)
+	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), jsonapi.Page{})
 }
 
 func (a *API) getWorkspace(w http.ResponseWriter, r *http.Request) {

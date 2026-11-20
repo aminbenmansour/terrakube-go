@@ -67,7 +67,14 @@ func TestListOrganizationsJSONAPI(t *testing.T) {
 			ID         string         `json:"id"`
 			Attributes map[string]any `json:"attributes"`
 		} `json:"data"`
-		Meta map[string]any `json:"meta"`
+		Meta struct {
+			Page struct {
+				Number       int `json:"number"`
+				Limit        int `json:"limit"`
+				TotalPages   int `json:"totalPages"`
+				TotalRecords int `json:"totalRecords"`
+			} `json:"page"`
+		} `json:"meta"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
 		t.Fatalf("decode: %v", err)
@@ -78,8 +85,8 @@ func TestListOrganizationsJSONAPI(t *testing.T) {
 	if doc.Data[0].Attributes["name"] != "beta" {
 		t.Errorf("first name = %v, want beta (descending sort)", doc.Data[0].Attributes["name"])
 	}
-	if doc.Meta["totals"] != float64(2) {
-		t.Errorf("meta.totals = %v, want 2", doc.Meta["totals"])
+	if doc.Meta.Page.TotalRecords != 2 || doc.Meta.Page.TotalPages != 2 || doc.Meta.Page.Limit != 1 || doc.Meta.Page.Number != 1 {
+		t.Errorf("meta.page = %+v, want number 1, limit 1, totalPages 2, totalRecords 2", doc.Meta.Page)
 	}
 }
 
@@ -209,5 +216,38 @@ func TestCORSAllowsOnlyListedOrigins(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
 		t.Fatalf("unlisted origin was allowed: %q", got)
+	}
+}
+
+func TestPageNumberWithoutSizeUsesElideDefaultLimit(t *testing.T) {
+	q := &stubQuerier{orgs: []store.Organization{
+		{ID: "1", Name: "alpha"},
+		{ID: "2", Name: "beta"},
+	}}
+	handler := newTestAPI(t, q)
+
+	req := httptest.NewRequest(http.MethodGet, "/organization?page[number]=2", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	var doc struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+		Meta struct {
+			Page struct {
+				Number int `json:"number"`
+				Limit  int `json:"limit"`
+			} `json:"page"`
+		} `json:"meta"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if doc.Meta.Page.Number != 2 || doc.Meta.Page.Limit != 10000 {
+		t.Errorf("meta.page = %+v, want number 2, limit 10000", doc.Meta.Page)
+	}
+	if len(doc.Data) != 0 {
+		t.Errorf("data = %v, want empty second page at the default limit", doc.Data)
 	}
 }

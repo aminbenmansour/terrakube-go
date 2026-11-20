@@ -33,7 +33,7 @@ func (a *API) listOrganizations(w http.ResponseWriter, r *http.Request) {
 	for _, org := range page {
 		resources = append(resources, organizationResource(org))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, total, q.Totals)
+	jsonapi.WriteCollection(w, http.StatusOK, resources, total, q.page())
 }
 
 func (a *API) getOrganization(w http.ResponseWriter, r *http.Request) {
