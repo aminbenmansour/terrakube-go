@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
@@ -94,7 +95,28 @@ func New(deps Deps) http.Handler {
 		r.Delete("/", a.deleteVariable)
 	})
 
+	// Elide answers an unknown path with a JSON:API error rather than an empty
+	// 404, and the UI shows that detail to the user.
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		jsonapi.WriteError(w, http.StatusNotFound, "Not Found", "Unknown collection "+unknownCollection(r.URL.Path))
+	})
+
 	return r
+}
+
+// unknownCollection names the segment upstream blames: the collection after a
+// /{collection}/{id} prefix, otherwise the first path segment.
+func unknownCollection(path string) string {
+	segments := strings.Split(strings.Trim(path, "/"), "/")
+	if len(segments) > 2 {
+		if _, err := uuid.Parse(segments[1]); err == nil {
+			return segments[2]
+		}
+	}
+	if len(segments) > 0 && segments[0] != "" {
+		return segments[0]
+	}
+	return path
 }
 
 func corsMiddleware(origins []string) func(http.Handler) http.Handler {

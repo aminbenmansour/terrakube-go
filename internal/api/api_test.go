@@ -219,6 +219,33 @@ func TestCORSAllowsOnlyListedOrigins(t *testing.T) {
 	}
 }
 
+// Upstream rejects page parameters on organization (it cannot paginate that
+// collection) and answers an unknown path with a JSON:API document. Both were
+// captured from upstream 2.34.3; we are permissive about the first and match the
+// second, because a client that cannot parse a 404 body shows the wrong message.
+func TestUnknownCollectionIsJSONAPI(t *testing.T) {
+	handler := newTestAPI(t, &stubQuerier{})
+
+	req := httptest.NewRequest(http.MethodGet, "/nope", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", rec.Code)
+	}
+	var doc struct {
+		Errors []struct {
+			Detail string `json:"detail"`
+		} `json:"errors"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("decode: %v; body = %s", err, rec.Body.String())
+	}
+	if len(doc.Errors) != 1 || doc.Errors[0].Detail != "Unknown collection nope" {
+		t.Fatalf("errors = %+v, want one detail 'Unknown collection nope'", doc.Errors)
+	}
+}
+
 func TestPageNumberWithoutSizeUsesElideDefaultLimit(t *testing.T) {
 	q := &stubQuerier{orgs: []store.Organization{
 		{ID: "1", Name: "alpha"},
