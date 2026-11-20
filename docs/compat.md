@@ -486,12 +486,16 @@ Implemented so far (`internal/graphql`, backed by gqlgen):
   (`access`, `project_access`, `notification_configuration`,
   `notification_trigger`, `notification_configuration_template`).
 
+- **Contract tests.** `internal/graphql/contract_test.go` validates every
+  captured UI operation against the SDL and then executes it against Postgres,
+  so a field the UI reads and the SQL behind it are both pinned. CI runs it in
+  the `integration` job, since it skips without a database.
+
 Not implemented: GraphQL mutations and the rest of the 53 upstream entities.
 
 ## Open questions
 
-- GraphQL subscriptions for the operations in `docs/upstream/ui-operations.md`
-  (the query surface is implemented; mutations and subscriptions are not).
+- GraphQL mutations for the operations in `docs/upstream/ui-operations.md`.
 - Exact JSON:API error objects and RSQL edge cases (differential tests).
 - Terraform login/OAuth broker behaviour (M3/M5).
 - Kubernetes ephemeral executor contract (M6).

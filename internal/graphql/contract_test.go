@@ -48,3 +48,29 @@ func TestUpstreamUIDocumentsMatchTheSchema(t *testing.T) {
 		})
 	}
 }
+
+// TestUpstreamUIQueriesExecute runs every captured UI operation against the
+// real store. The fixtures are self-contained (ids are interpolated), so the
+// only variables are optional. This catches the class of break the schema check
+// cannot see: a field that exists but whose SQL does not run.
+func TestUpstreamUIQueriesExecute(t *testing.T) {
+	deps := testDeps(t)
+	handler := New(deps)
+
+	fixtures, err := filepath.Glob("../../docs/upstream/ui-operations/*.graphql")
+	if err != nil {
+		t.Fatalf("glob fixtures: %v", err)
+	}
+	for _, fixture := range fixtures {
+		t.Run(filepath.Base(fixture), func(t *testing.T) {
+			document, err := os.ReadFile(fixture)
+			if err != nil {
+				t.Fatalf("read fixture: %v", err)
+			}
+			normalized := fixtureValue.ReplaceAllString(string(document), "00000000-0000-0000-0000-000000000000")
+			if data := runQuery(t, handler, normalized, nil); data == nil {
+				t.Fatal("no data returned")
+			}
+		})
+	}
+}
