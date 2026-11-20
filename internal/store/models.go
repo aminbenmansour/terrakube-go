@@ -8,6 +8,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Access struct {
+	ID              string  `json:"id"`
+	Name            string  `json:"name"`
+	ManageWorkspace bool    `json:"manage_workspace"`
+	ManageState     bool    `json:"manage_state"`
+	ManageJob       bool    `json:"manage_job"`
+	PlanJob         bool    `json:"plan_job"`
+	ApproveJob      bool    `json:"approve_job"`
+	DestroyJob      bool    `json:"destroy_job"`
+	Role            *string `json:"role"`
+	WorkspaceID     string  `json:"workspace_id"`
+}
+
 type Content struct {
 	ID            string  `json:"id"`
 	AutoQueueRuns bool    `json:"auto_queue_runs"`
@@ -57,6 +70,38 @@ type Job struct {
 	OverrideBranch    *string            `json:"override_branch"`
 }
 
+type NotificationConfiguration struct {
+	ID             string             `json:"id"`
+	Name           string             `json:"name"`
+	Description    *string            `json:"description"`
+	OrganizationID string             `json:"organization_id"`
+	WorkspaceID    *string            `json:"workspace_id"`
+	ChannelType    string             `json:"channel_type"`
+	DestinationUrl string             `json:"destination_url"`
+	SigningSecret  *string            `json:"signing_secret"`
+	Active         bool               `json:"active"`
+	MessageStyle   string             `json:"message_style"`
+	CreatedDate    pgtype.Timestamptz `json:"created_date"`
+	CreatedBy      *string            `json:"created_by"`
+	UpdatedDate    pgtype.Timestamptz `json:"updated_date"`
+	UpdatedBy      *string            `json:"updated_by"`
+}
+
+type NotificationConfigurationTemplate struct {
+	ConfigurationID string `json:"configuration_id"`
+	TemplateID      string `json:"template_id"`
+}
+
+type NotificationTrigger struct {
+	ID              string             `json:"id"`
+	JobStatus       string             `json:"job_status"`
+	ConfigurationID string             `json:"configuration_id"`
+	CreatedDate     pgtype.Timestamptz `json:"created_date"`
+	CreatedBy       *string            `json:"created_by"`
+	UpdatedDate     pgtype.Timestamptz `json:"updated_date"`
+	UpdatedBy       *string            `json:"updated_by"`
+}
+
 type Organization struct {
 	ID            string  `json:"id"`
 	Name          string  `json:"name"`
@@ -71,6 +116,19 @@ type Project struct {
 	Name           string  `json:"name"`
 	Description    *string `json:"description"`
 	OrganizationID string  `json:"organization_id"`
+}
+
+type ProjectAccess struct {
+	ID              string  `json:"id"`
+	Name            *string `json:"name"`
+	ManageWorkspace bool    `json:"manage_workspace"`
+	ManageState     bool    `json:"manage_state"`
+	ManageJob       bool    `json:"manage_job"`
+	PlanJob         bool    `json:"plan_job"`
+	ApproveJob      bool    `json:"approve_job"`
+	DestroyJob      bool    `json:"destroy_job"`
+	Role            *string `json:"role"`
+	ProjectID       string  `json:"project_id"`
 }
 
 type Step struct {
