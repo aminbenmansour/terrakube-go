@@ -243,6 +243,11 @@ terminal. Requests are authorized with the user token or an internal executor
 JWT; both endpoints verify that the job belongs to the organization in the path
 and that the step belongs to the job.
 
+`internal/tfoutput/stream_integration_test.go` covers the live path end to
+end against Redis: a record reaches an open SSE client, a record for another
+step does not, and finishing the job emits `event: end` with
+`{"reason":"complete"}`.
+
 Live records use the Redis stream named after the job ID with the fields
 `stepId` and `output` (one log line per record), matching the upstream
 executor. Final step output is uploaded to

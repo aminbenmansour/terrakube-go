@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "docs/compat.md": {
-    "mtime": 1795204326.1419988,
-    "seen": 1795204353.0447233,
-    "ast_hash": "d9b8938bc620db5e2c78d6f7ee9541ee",
+    "mtime": 1795204406.1759703,
+    "seen": 1795204411.282947,
+    "ast_hash": "9ddae4052cd77cd538ec40554d37e742",
     "semantic_hash": ""
   },
   "internal/executor/executor.go": {
@@ -861,6 +861,12 @@
     "mtime": 1795168558.911706,
     "seen": 1795204353.0446987,
     "ast_hash": "017a870c02ab7cff06df0efb99464bae",
+    "semantic_hash": ""
+  },
+  "internal/tfoutput/stream_integration_test.go": {
+    "mtime": 1795204385.61484,
+    "seen": 1795204411.2828982,
+    "ast_hash": "3352fc62749fd7e60ef06202346598f9",
     "semantic_hash": ""
   }
 }
