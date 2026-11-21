@@ -314,8 +314,16 @@ Captured from `azbuilder/api-server:2.34.3`; the responses are in
 | --- | --- |
 | organization | `GET/POST /organization`, `GET/PATCH/DELETE /organization/{id}` |
 | project | `GET/POST /organization/{id}/project`, `GET/PATCH/DELETE /project/{id}`, `GET /project/{id}/workspace` |
-| workspace | `GET/POST /organization/{id}/workspace`, `GET/PATCH/DELETE /workspace/{id}` |
-| variable | `GET/POST /workspace/{id}/variable`, `GET/PATCH/DELETE /variable/{id}` |
+| workspace | `GET/POST /organization/{id}/workspace`, `GET/PATCH/DELETE /workspace/{id}`, and the same pair under `/organization/{id}/workspace/{id}` |
+| variable | `GET/POST /workspace/{id}/variable`, `GET/PATCH/DELETE /variable/{id}`, and the same under `/organization/{id}/workspace/{id}/variable[/{id}]` |
+
+The organization-scoped workspace and variable routes exist because the React UI
+uses them; a resource reached through the wrong organization answers 404, and a
+variable from a sibling workspace is not reachable through another workspace's
+path. `GET /workspace/{id}?include=variable,organization,project` returns those
+in `included`, and `relationships.variable` carries the identifiers. Other
+`include` names are ignored rather than failing the request, because the UI sends
+relationship names whose tables do not exist yet.
 
 Current M1 limitations (tracked for later milestones):
 
@@ -323,7 +331,8 @@ Current M1 limitations (tracked for later milestones):
   fine for smoke tests but must become SQL before production use.
 - Authentication is a single static bearer token (`TERRAKUBE_AUTH_TOKEN`).
   PATs, team tokens, executor tokens and Dex JWTs are not implemented yet.
-- `include=`, sparse fieldsets, relationship endpoints and RSQL beyond
+- `include=` is implemented only for the workspace's `variable`, `organization`
+  and `project`; sparse fieldsets, relationship endpoints and RSQL beyond
   `attr==value` / `attr==prefix*` are not implemented.
 - Variable values are stored in plaintext. Upstream encrypts them with
   `io.terrakube.encryption.*`; this must land before anything is exposed.
