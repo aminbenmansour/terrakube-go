@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 // MediaType is the JSON:API content type.
@@ -122,15 +123,92 @@ func (r *RequestRelationship) UnmarshalJSON(body []byte) error {
 }
 
 // Write encodes a document with the correct content type.
-func Write(w http.ResponseWriter, status int, doc Document) {
+func Write(w http.ResponseWriter, status int, doc Document, fields ...Fieldsets) {
+	if len(fields) > 0 {
+		doc = fields[0].Restrict(doc)
+	}
 	w.Header().Set("Content-Type", MediaType+"; charset=utf-8")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(doc)
 }
 
 // WriteResource writes a single resource document.
-func WriteResource(w http.ResponseWriter, status int, resource Resource) {
-	Write(w, status, Document{Data: resource})
+func WriteResource(w http.ResponseWriter, status int, resource Resource, fields ...Fieldsets) {
+	Write(w, status, Document{Data: resource}, fields...)
+}
+
+// Fieldsets holds the fields[type]=a,b constraints of a request. JSON:API
+// requires the server to omit every attribute a parameter does not name.
+type Fieldsets map[string]map[string]bool
+
+// ParseFieldsets reads fields[type] query parameters. An empty value is a
+// parameter that names no fields, which still counts as present.
+func ParseFieldsets(r *http.Request) Fieldsets {
+	var sets Fieldsets
+	for key, values := range r.URL.Query() {
+		if !strings.HasPrefix(key, "fields[") || !strings.HasSuffix(key, "]") {
+			continue
+		}
+		resourceType := key[len("fields[") : len(key)-1]
+		names := map[string]bool{}
+		for _, value := range values {
+			for _, name := range strings.Split(value, ",") {
+				if name != "" {
+					names[name] = true
+				}
+			}
+		}
+		if sets == nil {
+			sets = Fieldsets{}
+		}
+		sets[resourceType] = names
+	}
+	return sets
+}
+
+// Restrict applies the fieldsets to a document. A resource type with no
+// fields parameter loses its attributes entirely once any fields parameter is
+// present, which is what upstream's Elide does. Names the resource does not
+// carry are dropped: upstream answers 400 for those, but it knows attribute
+// sets we do not model yet, and refusing a field the UI asked for would break
+// a screen over an attribute we have not implemented.
+func (f Fieldsets) Restrict(doc Document) Document {
+	if len(f) == 0 {
+		return doc
+	}
+	switch data := doc.Data.(type) {
+	case Resource:
+		doc.Data = f.restrict(data)
+	case []Resource:
+		restricted := make([]Resource, len(data))
+		for i, resource := range data {
+			restricted[i] = f.restrict(resource)
+		}
+		doc.Data = restricted
+	}
+	for i, resource := range doc.Included {
+		doc.Included[i] = f.restrict(resource)
+	}
+	return doc
+}
+
+func (f Fieldsets) restrict(resource Resource) Resource {
+	wanted, ok := f[resource.Type]
+	if !ok {
+		resource.Attributes = nil
+		return resource
+	}
+	kept := make(map[string]any, len(wanted))
+	for name := range wanted {
+		if value, present := resource.Attributes[name]; present {
+			kept[name] = value
+		}
+	}
+	if len(kept) == 0 {
+		kept = nil
+	}
+	resource.Attributes = kept
+	return resource
 }
 
 // Page describes how a collection was cut. The zero value means no page
@@ -148,7 +226,7 @@ type Page struct {
 //
 // totalPages and totalRecords appear only for page[totals]. Verified against
 // upstream 2.34.3 (docs/upstream/rest/organization-list.json).
-func WriteCollection(w http.ResponseWriter, status int, resources []Resource, total int, page Page) {
+func WriteCollection(w http.ResponseWriter, status int, resources []Resource, total int, page Page, fields ...Fieldsets) {
 	if resources == nil {
 		resources = []Resource{}
 	}
@@ -163,7 +241,7 @@ func WriteCollection(w http.ResponseWriter, status int, resources []Resource, to
 		}
 		doc.Meta = map[string]any{"page": meta}
 	}
-	Write(w, status, doc)
+	Write(w, status, doc, fields...)
 }
 
 // WriteError writes a single JSON:API error document.
