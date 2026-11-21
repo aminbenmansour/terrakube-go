@@ -347,14 +347,37 @@ func (e *Executor) environment(ctx context.Context, job store.Job, ws store.Work
 	if err != nil {
 		return nil, nil, transient(fmt.Errorf("load workspace variables: %w", err))
 	}
+	// A workspace variable shadows an organization global with the same key in
+	// the same category; upstream's loadDefault uses putIfAbsent per category.
+	defined := map[string]bool{}
 	for _, variable := range variables {
 		if variable.Incomplete {
+			continue
+		}
+		defined[strings.ToUpper(variable.VariableCategory)+"\x00"+variable.VariableKey] = true
+		if variable.Sensitive && variable.VariableValue != "" {
+			secrets = append(secrets, variable.VariableValue)
+		}
+		switch strings.ToUpper(variable.VariableCategory) {
+		case "ENV":
+			env = append(env, variable.VariableKey+"="+variable.VariableValue)
+		default:
+			env = append(env, "TF_VAR_"+variable.VariableKey+"="+variable.VariableValue)
+		}
+	}
+
+	globals, err := e.deps.Store.ListGlobalVariablesByOrganization(ctx, job.OrganizationID)
+	if err != nil {
+		return nil, nil, transient(fmt.Errorf("load global variables: %w", err))
+	}
+	for _, variable := range globals {
+		if defined[variable.VariableCategory+"\x00"+variable.VariableKey] {
 			continue
 		}
 		if variable.Sensitive && variable.VariableValue != "" {
 			secrets = append(secrets, variable.VariableValue)
 		}
-		switch strings.ToUpper(variable.VariableCategory) {
+		switch variable.VariableCategory {
 		case "ENV":
 			env = append(env, variable.VariableKey+"="+variable.VariableValue)
 		default:
