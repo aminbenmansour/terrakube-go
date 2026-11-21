@@ -60,4 +60,37 @@ unauthenticated organization-no-token '/api/v1/organization'
 request delete-method-not-allowed    '/api/v1/organization' -X PATCH \
   -H 'Content-Type: application/vnd.api+json' --data '{}'
 
+# The demo seed has no runs and the run page is a real screen, so seed one job
+# and one step in the disposable upstream database. The ids are read back rather
+# than guessed.
+pg() { podman exec -i tk-upstream-postgres psql -p 5433 -U terrakube -d terrakubedb -tAq -c "$1"; }
+IFS='|' read -r job_org job_ws <<< "$(pg "select organization_id, id from workspace where deleted = false order by id limit 1")"
+# Repeatable: drop the row a previous run seeded, or its NULL booleans poison
+# every organization read (steps go with it via ON DELETE CASCADE).
+pg "delete from job where commit_id = 'deaDBEEF'" >/dev/null
+# Every primitive boolean must be set: the Java entity maps them to primitives,
+# so a NULL column turns the whole job list into a 500.
+job_id="$(pg "insert into job (status, organization_id, workspace_id, created_date, updated_date,
+                               created_by, commit_id, via, tcl, output, template_reference,
+                               refresh, refresh_only, auto_apply, plan_changes, pr_apply_enabled,
+                               variables_as_arguments, deleted, cascade_depth, dispatch_failure_count)
+              values ('completed', '${job_org}', '${job_ws}', now(), now(),
+                      'admin@example.com', 'deaDBEEF', 'UI', '{}', 'ok',
+                      (select id from template order by id limit 1),
+                      false, false, false, true, false,
+                      false, false, 0, 0)
+              returning id")"
+pg "insert into step (id, step_number, status, job_id, name, output)
+    values ('66666666-6666-4666-8666-666666666666', 1, 'completed', ${job_id}, 'Plan', 'ok')" >/dev/null
+
+request organization-job-list         "/api/v1/organization/${job_org}/job"
+request organization-job-get          "/api/v1/organization/${job_org}/job/${job_id}"
+request organization-job-include      "/api/v1/organization/${job_org}/job/${job_id}?include=step,workspace"
+request organization-job-patch        "/api/v1/organization/${job_org}/job/${job_id}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"job\",\"id\":\"${job_id}\",\"attributes\":{\"status\":\"cancelled\"}}}"
+request organization-job-patch-invalid "/api/v1/organization/${job_org}/job/${job_id}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"job\",\"id\":\"${job_id}\",\"attributes\":{\"status\":\"nonsense\"}}}"
+
 echo "wrote $(wc -l < "$out/index.tsv") captures to $out"
