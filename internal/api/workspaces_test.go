@@ -226,3 +226,96 @@ func TestPatchWorkspaceAnswersNoContent(t *testing.T) {
 		t.Errorf("body = %q, want empty", rec.Body.String())
 	}
 }
+
+// The UI's create form sends vcs, ssh and agent relationships through the
+// atomic endpoint; the same fields must survive a direct POST.
+func TestCreateWorkspaceStoresLinksAndSSHSettings(t *testing.T) {
+	s := newWorkspaceStub()
+	const vcs, ssh, agent = "70000000-0000-4000-8000-000000000031", "70000000-0000-4000-8000-000000000032", "70000000-0000-4000-8000-000000000033"
+	rec := serveWorkspace(t, s, http.MethodPost, "/organization/"+relOrgID+"/workspace",
+		`{"data":{"type":"workspace","attributes":{"name":"from-vcs","moduleSshKey":"`+ssh+`","sharedIds":"`+relWorkspace+`"},
+		  "relationships":{"vcs":{"data":{"type":"vcs","id":"`+vcs+`"}},
+		                   "ssh":{"data":{"type":"ssh","id":"`+ssh+`"}},
+		                   "agent":{"data":{"type":"agent","id":"`+agent+`"}}}}}`)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201; body = %s", rec.Code, rec.Body.String())
+	}
+	if s.created == nil {
+		t.Fatal("no create recorded")
+	}
+	if s.created.VcsID == nil || *s.created.VcsID != vcs || s.created.SshID == nil || *s.created.SshID != ssh ||
+		s.created.AgentID == nil || *s.created.AgentID != agent {
+		t.Errorf("links = %v/%v/%v, want %s/%s/%s", s.created.VcsID, s.created.SshID, s.created.AgentID, vcs, ssh, agent)
+	}
+	if s.created.ModuleSshKey == nil || *s.created.ModuleSshKey != ssh {
+		t.Errorf("moduleSshKey = %v, want %s", s.created.ModuleSshKey, ssh)
+	}
+	if s.created.SharedIds == nil || *s.created.SharedIds != relWorkspace {
+		t.Errorf("sharedIds = %v, want %s", s.created.SharedIds, relWorkspace)
+	}
+}
+
+func TestPatchWorkspaceRelationshipSetsAndClearsLinks(t *testing.T) {
+	const vcs = "70000000-0000-4000-8000-000000000031"
+
+	s := newWorkspaceStub()
+	rec := serveWorkspace(t, s, http.MethodPatch,
+		"/organization/"+relOrgID+"/workspace/"+relWorkspace+"/relationships/vcs",
+		`{"data":{"type":"vcs","id":"`+vcs+`"}}`)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204; body = %s", rec.Code, rec.Body.String())
+	}
+	if s.updated == nil || s.updated.VcsID == nil || *s.updated.VcsID != vcs {
+		t.Fatalf("updated vcs = %v, want %s", s.updated, vcs)
+	}
+
+	rec = serveWorkspace(t, s, http.MethodPatch,
+		"/organization/"+relOrgID+"/workspace/"+relWorkspace+"/relationships/vcs",
+		`{"data":null}`)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204; body = %s", rec.Code, rec.Body.String())
+	}
+	if s.updated.VcsID != nil {
+		t.Errorf("updated vcs = %v, want cleared", *s.updated.VcsID)
+	}
+}
+
+func TestPatchWorkspaceRelationshipValidatesProject(t *testing.T) {
+	s := newWorkspaceStub()
+	rec := serveWorkspace(t, s, http.MethodPatch,
+		"/organization/"+relOrgID+"/workspace/"+relWorkspace+"/relationships/project",
+		`{"data":{"type":"project","id":"`+foreignProj+`"}}`)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403; body = %s", rec.Code, rec.Body.String())
+	}
+
+	rec = serveWorkspace(t, s, http.MethodPatch,
+		"/organization/"+relOrgID+"/workspace/"+relWorkspace+"/relationships/project",
+		`{"data":{"type":"project","id":"`+unknownProj+`"}}`)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestPatchWorkspaceRelationshipRejectsUnknownAndMismatched(t *testing.T) {
+	rec := serveWorkspace(t, newWorkspaceStub(), http.MethodPatch,
+		"/organization/"+relOrgID+"/workspace/"+relWorkspace+"/relationships/nope",
+		`{"data":null}`)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404; body = %s", rec.Code, rec.Body.String())
+	}
+
+	rec = serveWorkspace(t, newWorkspaceStub(), http.MethodPatch,
+		"/organization/"+relOrgID+"/workspace/"+relWorkspace+"/relationships/vcs",
+		`{"data":{"type":"ssh","id":"`+relProjectA+`"}}`)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body = %s", rec.Code, rec.Body.String())
+	}
+}

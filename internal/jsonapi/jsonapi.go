@@ -287,6 +287,38 @@ func DecodeRequest(r *http.Request) (*RequestData, error) {
 	return &doc.Data, nil
 }
 
+// RelationshipIdentifier reads a relationship document, {"data":{...}} or
+// {"data":null}. id is empty when the document clears the relationship; sent is
+// false when the body has no data member at all.
+func RelationshipIdentifier(r *http.Request) (typ, id string, sent bool, err error) {
+	if r.Body == nil {
+		return "", "", false, errors.New("request body is empty")
+	}
+	defer r.Body.Close()
+
+	var doc struct {
+		Data json.RawMessage `json:"data"`
+	}
+	dec := json.NewDecoder(io.LimitReader(r.Body, maxBodyBytes))
+	if err := dec.Decode(&doc); err != nil {
+		return "", "", false, fmt.Errorf("invalid JSON: %w", err)
+	}
+	if len(doc.Data) == 0 {
+		return "", "", false, errors.New("data is required")
+	}
+	if string(doc.Data) == "null" {
+		return "", "", true, nil
+	}
+	var identifier ResourceIdentifier
+	if err := json.Unmarshal(doc.Data, &identifier); err != nil {
+		return "", "", true, errors.New("data must be a resource identifier")
+	}
+	if identifier.Type == "" || identifier.ID == "" {
+		return "", "", true, errors.New("data.type and data.id are required")
+	}
+	return identifier.Type, identifier.ID, true, nil
+}
+
 // DecodeAttributes unmarshals data.attributes into T.
 func DecodeAttributes[T any](data *RequestData) (T, error) {
 	var out T

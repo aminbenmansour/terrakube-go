@@ -25,6 +25,8 @@ type workspaceAttrs struct {
 	DefaultTemplate                 *string `json:"defaultTemplate"`
 	RestrictApplyToConfiguredBranch *bool   `json:"restrictApplyToConfiguredBranch"`
 	RequireApproveToApply           *bool   `json:"requireApproveToApply"`
+	ModuleSshKey                    *string `json:"moduleSshKey"`
+	SharedIds                       *string `json:"sharedIds"`
 }
 
 func (a *API) listWorkspaces(w http.ResponseWriter, r *http.Request) {
@@ -176,6 +178,11 @@ func (a *API) createWorkspace(w http.ResponseWriter, r *http.Request) {
 		projectID = ""
 	}
 
+	links, ok := workspaceLinks(w, data, nil)
+	if !ok {
+		return
+	}
+
 	iacType := "terraform"
 	if attrs.IacType != nil && *attrs.IacType != "" {
 		iacType = *attrs.IacType
@@ -199,6 +206,11 @@ func (a *API) createWorkspace(w http.ResponseWriter, r *http.Request) {
 		RestrictApplyToConfiguredBranch: boolValue(attrs.RestrictApplyToConfiguredBranch, false),
 		RequireApproveToApply:           boolValue(attrs.RequireApproveToApply, false),
 		CreatedBy:                       nil,
+		ModuleSshKey:                    attrs.ModuleSshKey,
+		SharedIds:                       attrs.SharedIds,
+		VcsID:                           links["vcs"],
+		SshID:                           links["ssh"],
+		AgentID:                         links["agent"],
 	})
 	if err != nil {
 		if !a.writeStoreError(w, "create workspace", err) {
@@ -243,38 +255,46 @@ func (a *API) updateWorkspace(w http.ResponseWriter, r *http.Request) {
 		name = *attrs.Name
 	}
 
-	projectID := ws.ProjectID
+	params := workspaceUpdateParams(ws)
+	params.Name = name
+	params.Description = pickString(data, "description", attrs.Description, ws.Description)
+	params.Source = pickString(data, "source", attrs.Source, ws.Source)
+	params.Branch = pickString(data, "branch", attrs.Branch, ws.Branch)
+	params.Folder = pickString(data, "folder", attrs.Folder, ws.Folder)
+	params.TerraformVersion = pickString(data, "terraformVersion", attrs.TerraformVersion, ws.TerraformVersion)
+	params.IacType = pickStringValue(data, "iacType", attrs.IacType, ws.IacType)
+	params.ExecutionMode = pickString(data, "executionMode", attrs.ExecutionMode, ws.ExecutionMode)
+	params.AllowRemoteApply = pickBool(data, "allowRemoteApply", attrs.AllowRemoteApply, ws.AllowRemoteApply)
+	params.GlobalRemoteState = pickBool(data, "globalRemoteState", attrs.GlobalRemoteState, ws.GlobalRemoteState)
+	params.DefaultTemplate = pickString(data, "defaultTemplate", attrs.DefaultTemplate, ws.DefaultTemplate)
+	params.RestrictApplyToConfiguredBranch = pickBool(data, "restrictApplyToConfiguredBranch", attrs.RestrictApplyToConfiguredBranch, ws.RestrictApplyToConfiguredBranch)
+	params.RequireApproveToApply = pickBool(data, "requireApproveToApply", attrs.RequireApproveToApply, ws.RequireApproveToApply)
+	params.ModuleSshKey = pickString(data, "moduleSshKey", attrs.ModuleSshKey, ws.ModuleSshKey)
+	params.SharedIds = pickString(data, "sharedIds", attrs.SharedIds, ws.SharedIds)
+
 	if relID, present, relErr := jsonapi.RelationshipID(data, "project"); relErr != nil {
 		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Relationship", relErr.Error())
 		return
 	} else if present {
 		if relID == "" {
-			projectID = nil
+			params.ProjectID = nil
 		} else {
 			if !a.checkProjectRelationship(w, r, relID, ws.OrganizationID) {
 				return
 			}
-			projectID = &relID
+			params.ProjectID = &relID
 		}
 	}
 
-	if _, err := a.deps.Store.UpdateWorkspace(r.Context(), store.UpdateWorkspaceParams{
-		ID:                              ws.ID,
-		Name:                            name,
-		Description:                     pickString(data, "description", attrs.Description, ws.Description),
-		Source:                          pickString(data, "source", attrs.Source, ws.Source),
-		Branch:                          pickString(data, "branch", attrs.Branch, ws.Branch),
-		Folder:                          pickString(data, "folder", attrs.Folder, ws.Folder),
-		TerraformVersion:                pickString(data, "terraformVersion", attrs.TerraformVersion, ws.TerraformVersion),
-		IacType:                         pickStringValue(data, "iacType", attrs.IacType, ws.IacType),
-		ExecutionMode:                   pickString(data, "executionMode", attrs.ExecutionMode, ws.ExecutionMode),
-		AllowRemoteApply:                pickBool(data, "allowRemoteApply", attrs.AllowRemoteApply, ws.AllowRemoteApply),
-		GlobalRemoteState:               pickBool(data, "globalRemoteState", attrs.GlobalRemoteState, ws.GlobalRemoteState),
-		DefaultTemplate:                 pickString(data, "defaultTemplate", attrs.DefaultTemplate, ws.DefaultTemplate),
-		RestrictApplyToConfiguredBranch: pickBool(data, "restrictApplyToConfiguredBranch", attrs.RestrictApplyToConfiguredBranch, ws.RestrictApplyToConfiguredBranch),
-		RequireApproveToApply:           pickBool(data, "requireApproveToApply", attrs.RequireApproveToApply, ws.RequireApproveToApply),
-		ProjectID:                       projectID,
-	}); err != nil {
+	links, ok := workspaceLinks(w, data, map[string]*string{
+		"vcs": ws.VcsID, "ssh": ws.SshID, "agent": ws.AgentID,
+	})
+	if !ok {
+		return
+	}
+	params.VcsID, params.SshID, params.AgentID = links["vcs"], links["ssh"], links["agent"]
+
+	if _, err := a.deps.Store.UpdateWorkspace(r.Context(), params); err != nil {
 		if !a.writeStoreError(w, "update workspace", err) {
 			a.internalError(w, "update workspace", err)
 		}
@@ -283,6 +303,128 @@ func (a *API) updateWorkspace(w http.ResponseWriter, r *http.Request) {
 
 	// Upstream answers a workspace PATCH with 204 and no body, for attributes
 	// and relationships alike; the UI refetches what it needs.
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// workspaceUpdateParams seeds an update with the stored row so an attribute the
+// request did not send keeps its value.
+func workspaceUpdateParams(ws store.Workspace) store.UpdateWorkspaceParams {
+	return store.UpdateWorkspaceParams{
+		ID:                              ws.ID,
+		Name:                            ws.Name,
+		Description:                     ws.Description,
+		Source:                          ws.Source,
+		Branch:                          ws.Branch,
+		Folder:                          ws.Folder,
+		TerraformVersion:                ws.TerraformVersion,
+		IacType:                         ws.IacType,
+		ExecutionMode:                   ws.ExecutionMode,
+		AllowRemoteApply:                ws.AllowRemoteApply,
+		GlobalRemoteState:               ws.GlobalRemoteState,
+		DefaultTemplate:                 ws.DefaultTemplate,
+		RestrictApplyToConfiguredBranch: ws.RestrictApplyToConfiguredBranch,
+		RequireApproveToApply:           ws.RequireApproveToApply,
+		ModuleSshKey:                    ws.ModuleSshKey,
+		SharedIds:                       ws.SharedIds,
+		ProjectID:                       ws.ProjectID,
+		VcsID:                           ws.VcsID,
+		SshID:                           ws.SshID,
+		AgentID:                         ws.AgentID,
+	}
+}
+
+// workspaceLinks reads the vcs, ssh and agent relationships: absent keeps the
+// current id, null clears it. Upstream resolves these ids against its tables;
+// those tables do not exist here yet (#48, #120), so an id is stored as sent.
+func workspaceLinks(w http.ResponseWriter, data *jsonapi.RequestData, current map[string]*string) (map[string]*string, bool) {
+	links := map[string]*string{"vcs": nil, "ssh": nil, "agent": nil}
+	for name, id := range current {
+		links[name] = id
+	}
+	for _, name := range []string{"vcs", "ssh", "agent"} {
+		id, present, err := jsonapi.RelationshipID(data, name)
+		if err != nil {
+			jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Relationship", err.Error())
+			return nil, false
+		}
+		if !present {
+			continue
+		}
+		if id == "" {
+			links[name] = nil
+			continue
+		}
+		value := id
+		links[name] = &value
+	}
+	return links, true
+}
+
+// updateWorkspaceRelationship is the PATCH .../relationships/{relation} route
+// the UI uses for the project, VCS, SSH and agent pickers.
+func (a *API) updateWorkspaceRelationship(w http.ResponseWriter, r *http.Request) {
+	relation := param(r, "relation")
+	switch relation {
+	case "project", "vcs", "ssh", "agent":
+	default:
+		jsonapi.WriteError(w, http.StatusNotFound, "Not Found", "Unknown collection "+relation)
+		return
+	}
+
+	ws, err := a.deps.Store.GetWorkspace(r.Context(), param(r, "workspaceID"))
+	if err != nil {
+		if !a.writeStoreError(w, "get workspace", err) {
+			a.internalError(w, "get workspace", err)
+		}
+		return
+	}
+
+	typ, id, sent, err := jsonapi.RelationshipIdentifier(r)
+	if err != nil {
+		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Relationship", err.Error())
+		return
+	}
+	if !sent {
+		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Relationship", "data is required")
+		return
+	}
+	if id != "" && typ != relation {
+		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Relationship", "data.type must be "+relation)
+		return
+	}
+
+	params := workspaceUpdateParams(ws)
+	switch relation {
+	case "project":
+		if id == "" {
+			params.ProjectID = nil
+		} else {
+			if !a.checkProjectRelationship(w, r, id, ws.OrganizationID) {
+				return
+			}
+			params.ProjectID = &id
+		}
+	case "vcs", "ssh", "agent":
+		var value *string
+		if id != "" {
+			value = &id
+		}
+		switch relation {
+		case "vcs":
+			params.VcsID = value
+		case "ssh":
+			params.SshID = value
+		case "agent":
+			params.AgentID = value
+		}
+	}
+
+	if _, err := a.deps.Store.UpdateWorkspace(r.Context(), params); err != nil {
+		if !a.writeStoreError(w, "update workspace", err) {
+			a.internalError(w, "update workspace", err)
+		}
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -353,6 +495,15 @@ func workspaceResource(ws store.Workspace) jsonapi.Resource {
 	if ws.ProjectID != nil && *ws.ProjectID != "" {
 		relationships["project"] = jsonapi.Link("project", *ws.ProjectID)
 	}
+	if ws.VcsID != nil && *ws.VcsID != "" {
+		relationships["vcs"] = jsonapi.Link("vcs", *ws.VcsID)
+	}
+	if ws.SshID != nil && *ws.SshID != "" {
+		relationships["ssh"] = jsonapi.Link("ssh", *ws.SshID)
+	}
+	if ws.AgentID != nil && *ws.AgentID != "" {
+		relationships["agent"] = jsonapi.Link("agent", *ws.AgentID)
+	}
 
 	return jsonapi.Resource{
 		Type: "workspace",
@@ -376,6 +527,8 @@ func workspaceResource(ws store.Workspace) jsonapi.Resource {
 			"lastJobStatus":                   ws.LastJobStatus,
 			"policyComplianceStatus":          ws.PolicyComplianceStatus,
 			"lockDescription":                 ws.LockDescription,
+			"moduleSshKey":                    strValue(ws.ModuleSshKey),
+			"sharedIds":                       strValue(ws.SharedIds),
 		},
 		Relationships: relationships,
 	}
