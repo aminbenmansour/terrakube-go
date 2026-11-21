@@ -26,6 +26,7 @@ type stubQuerier struct {
 	steps      []store.Step
 	workspaces []store.Workspace
 	projects   []store.Project
+	globals    []store.Globalvar
 	err        error
 	created    *store.CreateOrganizationParams
 }

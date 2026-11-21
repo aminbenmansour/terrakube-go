@@ -108,12 +108,21 @@ func TestCleanupStaleWorkspaces(t *testing.T) {
 }
 
 func TestEnvironmentSeparatesSecrets(t *testing.T) {
-	st := &variableStore{vars: []store.Variable{
-		{VariableKey: "FOO", VariableValue: "env-value", VariableCategory: "ENV"},
-		{VariableKey: "NAME", VariableValue: "var-value", VariableCategory: "TERRAFORM"},
-		{VariableKey: "TOKEN", VariableValue: "super-secret-value", VariableCategory: "ENV", Sensitive: true},
-		{VariableKey: "SKIP", VariableValue: "nope", VariableCategory: "ENV", Incomplete: true},
-	}}
+	st := &variableStore{
+		vars: []store.Variable{
+			{VariableKey: "FOO", VariableValue: "env-value", VariableCategory: "ENV"},
+			{VariableKey: "NAME", VariableValue: "var-value", VariableCategory: "TERRAFORM"},
+			{VariableKey: "TOKEN", VariableValue: "super-secret-value", VariableCategory: "ENV", Sensitive: true},
+			{VariableKey: "SKIP", VariableValue: "nope", VariableCategory: "ENV", Incomplete: true},
+		},
+		globals: []store.Globalvar{
+			// Same key and category as the workspace variable: the workspace wins.
+			{VariableKey: "FOO", VariableValue: "global-foo", VariableCategory: "ENV", OrganizationID: "org-1"},
+			{VariableKey: "ONLY", VariableValue: "global-value", VariableCategory: "ENV", OrganizationID: "org-1"},
+			{VariableKey: "REGION", VariableValue: "eu", VariableCategory: "TERRAFORM", OrganizationID: "org-1"},
+			{VariableKey: "SECRET", VariableValue: "global-secret", VariableCategory: "ENV", Sensitive: true, OrganizationID: "org-1"},
+		},
+	}
 	e := New(Deps{
 		Store:               st,
 		InternalTokenSecret: base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{0x42}, 32)),
@@ -129,7 +138,10 @@ func TestEnvironmentSeparatesSecrets(t *testing.T) {
 	}
 
 	joined := strings.Join(env, "\n")
-	for _, want := range []string{"FOO=env-value", "TF_VAR_NAME=var-value", "TOKEN=super-secret-value"} {
+	for _, want := range []string{
+		"FOO=env-value", "TF_VAR_NAME=var-value", "TOKEN=super-secret-value",
+		"ONLY=global-value", "TF_VAR_REGION=eu", "SECRET=global-secret",
+	} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("environment is missing %q:\n%s", want, joined)
 		}
@@ -137,8 +149,13 @@ func TestEnvironmentSeparatesSecrets(t *testing.T) {
 	if strings.Contains(joined, "SKIP=") {
 		t.Errorf("incomplete variable was injected:\n%s", joined)
 	}
-	if !contains(secrets, "super-secret-value") {
-		t.Errorf("sensitive variable value is not marked secret: %v", secrets)
+	for _, want := range []string{"super-secret-value", "global-secret"} {
+		if !contains(secrets, want) {
+			t.Errorf("secret %q is not marked secret: %v", want, secrets)
+		}
+	}
+	if n := strings.Count(joined, "FOO="); n != 1 {
+		t.Errorf("FOO was injected %d times, want the workspace value only:\n%s", n, joined)
 	}
 	password := envValue(env, "TF_HTTP_PASSWORD")
 	if password == "" {
@@ -255,11 +272,22 @@ func (p *captureLogPublisher) PublishCapped(_ context.Context, _ string, values 
 
 type variableStore struct {
 	store.Querier
-	vars []store.Variable
+	vars    []store.Variable
+	globals []store.Globalvar
 }
 
 func (s *variableStore) ListVariablesByWorkspace(context.Context, string) ([]store.Variable, error) {
 	return s.vars, nil
+}
+
+func (s *variableStore) ListGlobalVariablesByOrganization(_ context.Context, orgID string) ([]store.Globalvar, error) {
+	var out []store.Globalvar
+	for _, variable := range s.globals {
+		if variable.OrganizationID == orgID {
+			out = append(out, variable)
+		}
+	}
+	return out, nil
 }
 
 func contains(values []string, want string) bool {

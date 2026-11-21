@@ -415,6 +415,10 @@ func (s *cancelRunStore) ListVariablesByWorkspace(context.Context, string) ([]st
 	return nil, nil
 }
 
+func (s *cancelRunStore) ListGlobalVariablesByOrganization(context.Context, string) ([]store.Globalvar, error) {
+	return nil, nil
+}
+
 var (
 	_ JobQueue = (*fakeQueue)(nil)
 	_          = time.Second
