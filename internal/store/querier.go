@@ -47,6 +47,7 @@ type Querier interface {
 	ListActiveJobsByOrganization(ctx context.Context, name string) ([]Job, error)
 	ListActiveJobsByWorkspace(ctx context.Context, workspaceID string) ([]Job, error)
 	ListArchivesByHistory(ctx context.Context, historyID string) ([]TempArchive, error)
+	ListJobsByOrganization(ctx context.Context, organizationID string) ([]Job, error)
 	ListOrganizations(ctx context.Context) ([]Organization, error)
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
 	ListStepsByJob(ctx context.Context, jobID int64) ([]Step, error)
