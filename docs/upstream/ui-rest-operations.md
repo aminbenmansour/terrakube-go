@@ -29,7 +29,8 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `federated` (OIDC credentials) | 9 | **missing** |
 | registry `/registry/v1/providers` | 4 | separate service (`cmd/registry`, M6) |
 | `/remote/tfe/v2/runs/:id/policy-checks` | 1 | implemented |
-| `/organization/:id/globalvar`, `/operations`, `/doc`, `/action` | 4 | **missing** — helpers around the vocabulary endpoint |
+| `/organization/:id/globalvar` | 4 | implemented |
+| `/organization/:id/operations`, `/doc`, `/action` | 3 | **missing** — helpers around the vocabulary endpoint |
 
 Consequence: the UI can load and browse organizations, projects, workspaces and
 the workspace page's GraphQL data, but the variable editor, run details, VCS

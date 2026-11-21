@@ -333,6 +333,7 @@ Captured from `azbuilder/api-server:2.34.3`; the responses are in
 | workspace | `GET/POST /organization/{id}/workspace`, `GET/PATCH/DELETE /workspace/{id}`, and the same pair under `/organization/{id}/workspace/{id}` |
 | variable | `GET/POST /workspace/{id}/variable`, `GET/PATCH/DELETE /variable/{id}`, and the same under `/organization/{id}/workspace/{id}/variable[/{id}]` |
 | job | `GET /organization/{id}/job`, `GET/PATCH /organization/{id}/job/{id}` |
+| globalvar | `GET/POST /organization/{id}/globalvar`, `GET/PATCH/DELETE /organization/{id}/globalvar/{id}` |
 
 The organization-scoped workspace and variable routes exist because the React UI
 uses them; a resource reached through the wrong organization answers 404, and a
@@ -341,6 +342,13 @@ path. `GET /workspace/{id}?include=variable,organization,project` returns those
 in `included`, and `relationships.variable` carries the identifiers. Other
 `include` names are ignored rather than failing the request, because the UI sends
 relationship names whose tables do not exist yet.
+
+Organization `globalvar` rows are inherited by every executor run in the
+organization; a workspace variable with the same key in the same category wins,
+which is upstream's `putIfAbsent` order. A sensitive global's value is omitted
+from every response, including the create response, as upstream does. Duplicate
+keys are `409`; upstream's lifecycle hook throws and Spring answers `500`, a
+bug recorded in the captures rather than copied.
 
 Current M1 limitations (tracked for later milestones):
 

@@ -32,6 +32,7 @@ tools that produced them are in
 | Workspace PATCH | **204 with no body**, attributes or relationships | same (fixed 2026-11-21) |
 | `relationships.project` on workspace | stored; unknown id `404 Unknown identifier ...`, other organization `403 Project does not belong ...` | same |
 | `relationships.vcs`/`.agent` on workspace | stored | ignored — the tables do not exist yet (#48, #120) |
+| Duplicate `globalvar` key | **500** (a lifecycle hook throws) | **409** — the unique constraint, not upstream's bug |
 | `/relationships/{relation}` | resource identifiers | 404 — not implemented |
 | Resources | `type`, `id`, `attributes`, `relationships` | `type`, `id`, `attributes` only |
 | Error objects | `detail` only | `detail`, `status`, `title` |
@@ -39,7 +40,7 @@ tools that produced them are in
 The differences that matter are deliberate: we are a superset where upstream is
 stricter (paging on `organization`, extra error members), and omitting
 `relationships` is honest — the tables behind them (`vcs`, `team`, `policySet`,
-`ssh`, `agent`, `template`, `tag`, `collection`, `globalvar`, `provider`, …) do
+`ssh`, `agent`, `template`, `tag`, `collection`, `provider`, …) do
 not exist yet. See `docs/upstream/ui-rest-operations.md`.
 
 `fields` follows the same rule: JSON:API says a server "MUST NOT include
