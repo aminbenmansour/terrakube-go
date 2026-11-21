@@ -95,6 +95,23 @@ func New(deps Deps) http.Handler {
 		r.Post("/variable", a.createVariable)
 	})
 
+	// The React UI reaches workspaces and their variables through the
+	// organization: /organization/:org/workspace/:ws[/variable/:id].
+	r.Route("/organization/{organizationID}/workspace/{workspaceID}", func(r chi.Router) {
+		r.Use(a.workspaceInOrganization)
+		r.Get("/", a.getWorkspace)
+		r.Patch("/", a.updateWorkspace)
+		r.Delete("/", a.deleteWorkspace)
+		r.Get("/variable", a.listVariables)
+		r.Post("/variable", a.createVariable)
+		r.Route("/variable/{variableID}", func(r chi.Router) {
+			r.Use(a.variableInWorkspace)
+			r.Get("/", a.getVariable)
+			r.Patch("/", a.updateVariable)
+			r.Delete("/", a.deleteVariable)
+		})
+	})
+
 	// Variables
 	r.Route("/variable/{variableID}", func(r chi.Router) {
 		r.Get("/", a.getVariable)
@@ -223,6 +240,19 @@ func (q listQuery) page() jsonapi.Page {
 
 // parseList reads filter[type], sort and page[*] from the query string. Unknown
 // filters are ignored until they are explicitly implemented.
+// parseInclude turns a comma-separated include parameter into a set. Unknown
+// relationships are ignored: the UI sends every relationship it knows about,
+// including ones whose tables we do not have yet.
+func parseInclude(r *http.Request) map[string]bool {
+	want := map[string]bool{}
+	for _, name := range strings.Split(r.URL.Query().Get("include"), ",") {
+		if name = strings.TrimSpace(name); name != "" {
+			want[name] = true
+		}
+	}
+	return want
+}
+
 func parseList(r *http.Request, filterType string) listQuery {
 	values := r.URL.Query()
 

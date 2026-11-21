@@ -44,6 +44,26 @@ func (a *API) listVariables(w http.ResponseWriter, r *http.Request) {
 	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), jsonapi.Page{})
 }
 
+// variableInWorkspace guards the nested variable routes: the workspace is
+// already proven to belong to the organization by the outer guard, this stops a
+// variable id from a sibling workspace being read or written through it.
+func (a *API) variableInWorkspace(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		variable, err := a.deps.Store.GetVariable(r.Context(), param(r, "variableID"))
+		if err != nil {
+			if !a.writeStoreError(w, "get variable", err) {
+				a.internalError(w, "get variable", err)
+			}
+			return
+		}
+		if variable.WorkspaceID != param(r, "workspaceID") {
+			jsonapi.WriteError(w, http.StatusNotFound, "Not Found", "The requested resource does not exist.")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (a *API) getVariable(w http.ResponseWriter, r *http.Request) {
 	variable, err := a.deps.Store.GetVariable(r.Context(), param(r, "variableID"))
 	if err != nil {

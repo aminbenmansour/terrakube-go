@@ -84,7 +84,54 @@ func (a *API) getWorkspace(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	jsonapi.WriteResource(w, http.StatusOK, workspaceResource(ws))
+
+	// The UI loads every workspace tab from one request with include=job,
+	// variable,... and reads the list out of `included` (Details.tsx). We serve
+	// the relationships that have tables; the rest are ignored rather than
+	// failing the whole request.
+	resource := workspaceResource(ws)
+	var included []jsonapi.Resource
+	want := parseInclude(r)
+
+	if want["variable"] {
+		variables, err := a.deps.Store.ListVariablesByWorkspace(r.Context(), ws.ID)
+		if err != nil {
+			if !a.writeStoreError(w, "list variables", err) {
+				a.internalError(w, "list variables", err)
+			}
+			return
+		}
+		ids := make([]string, 0, len(variables))
+		for _, variable := range variables {
+			ids = append(ids, variable.ID)
+			included = append(included, variableResource(variable))
+		}
+		resource.Relationships["variable"] = jsonapi.LinkList("variable", ids...)
+	}
+
+	if want["organization"] {
+		org, err := a.deps.Store.GetOrganization(r.Context(), ws.OrganizationID)
+		if err != nil {
+			if !a.writeStoreError(w, "get organization", err) {
+				a.internalError(w, "get organization", err)
+			}
+			return
+		}
+		included = append(included, organizationResource(org))
+	}
+
+	if want["project"] && ws.ProjectID != nil && *ws.ProjectID != "" {
+		project, err := a.deps.Store.GetProject(r.Context(), *ws.ProjectID)
+		if err != nil {
+			if !a.writeStoreError(w, "get project", err) {
+				a.internalError(w, "get project", err)
+			}
+			return
+		}
+		included = append(included, projectResource(project))
+	}
+
+	jsonapi.Write(w, http.StatusOK, jsonapi.Document{Data: resource, Included: included})
 }
 
 func (a *API) createWorkspace(w http.ResponseWriter, r *http.Request) {
@@ -269,6 +316,26 @@ func (a *API) validateProjectInOrganization(ctx context.Context, projectID, orgI
 		return errProjectOutsideOrganization
 	}
 	return nil
+}
+
+// workspaceInOrganization guards the organization-scoped workspace routes. A
+// workspace of another organization is answered 404, not 403: upstream does not
+// confirm that an id exists outside the caller's scope.
+func (a *API) workspaceInOrganization(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ws, err := a.deps.Store.GetWorkspace(r.Context(), param(r, "workspaceID"))
+		if err != nil {
+			if !a.writeStoreError(w, "get workspace", err) {
+				a.internalError(w, "get workspace", err)
+			}
+			return
+		}
+		if ws.OrganizationID != param(r, "organizationID") {
+			jsonapi.WriteError(w, http.StatusNotFound, "Not Found", "The requested resource does not exist.")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func workspaceResource(ws store.Workspace) jsonapi.Resource {
