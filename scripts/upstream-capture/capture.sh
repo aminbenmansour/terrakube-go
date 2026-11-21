@@ -45,6 +45,8 @@ request organization-list-include    '/api/v1/organization?include=project'
 org="$(python3 -c "import json;print(json.load(open('$out/organization-list.json'))['data'][0]['id'])")"
 request organization-get             "/api/v1/organization/${org}"
 request organization-get-fields      "/api/v1/organization/${org}?fields[organization]=name,description"
+request organization-get-fields-empty "/api/v1/organization/${org}?fields[organization]="
+request organization-get-fields-other "/api/v1/organization/${org}?fields[job]=status"
 request organization-relationships   "/api/v1/organization/${org}/relationships/project"
 request organization-projects        "/api/v1/organization/${org}/project"
 
