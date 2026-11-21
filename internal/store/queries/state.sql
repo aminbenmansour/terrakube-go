@@ -1,6 +1,11 @@
 -- name: GetJob :one
 SELECT * FROM job WHERE id = $1;
 
+-- name: ListJobsByOrganization :many
+SELECT * FROM job
+WHERE organization_id = $1 AND deleted = false
+ORDER BY id DESC;
+
 -- name: GetStep :one
 SELECT * FROM step WHERE id = $1;
 
