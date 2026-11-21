@@ -40,8 +40,6 @@ type API struct {
 	deps Deps
 }
 
-var errProjectOutsideOrganization = errors.New("project does not belong to organization")
-
 // MountPrefix is where cmd/api mounts this router. The UUID check needs it
 // because chi leaves the mount prefix in URL.Path, and a r.Use middleware runs
 // before routing has resolved anything else.
