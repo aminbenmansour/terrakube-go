@@ -29,6 +29,9 @@ tools that produced them are in
 | No token | **401 with an empty body** | 401 with a JSON:API error |
 | `fields[type]` | only the requested attributes | ignored, every attribute returned — #121 |
 | `include=` | adds an `included` member | ignored — the UI sends none on `/api/v1` |
+| Workspace PATCH | **204 with no body**, attributes or relationships | same (fixed 2026-11-21) |
+| `relationships.project` on workspace | stored; unknown id `404 Unknown identifier ...`, other organization `403 Project does not belong ...` | same |
+| `relationships.vcs`/`.agent` on workspace | stored | ignored — the tables do not exist yet (#48, #120) |
 | `/relationships/{relation}` | resource identifiers | 404 — not implemented |
 | Resources | `type`, `id`, `attributes`, `relationships` | `type`, `id`, `attributes` only |
 | Error objects | `detail` only | `detail`, `status`, `title` |

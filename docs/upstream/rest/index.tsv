@@ -20,3 +20,10 @@ organization-job-get	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534
 organization-job-include	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7/job/2?include=step,workspace
 organization-job-patch	204	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7/job/2
 organization-job-patch-invalid	400	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7/job/2
+workspace-patch-attribute	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777
+workspace-patch-project	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777
+workspace-patch-project-moved	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777
+workspace-patch-project-foreign	403	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777
+workspace-patch-project-unknown	404	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777
+workspace-patch-project-clear	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777
+workspace-create-project-foreign	403	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace
