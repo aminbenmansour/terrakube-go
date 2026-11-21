@@ -31,17 +31,19 @@ tools that produced them are in
 | `include=` | adds an `included` member | ignored — the UI sends none on `/api/v1` |
 | Workspace PATCH | **204 with no body**, attributes or relationships | same (fixed 2026-11-21) |
 | `relationships.project` on workspace | stored; unknown id `404 Unknown identifier ...`, other organization `403 Project does not belong ...` | same |
-| `relationships.vcs`/`.agent` on workspace | stored | ignored — the tables do not exist yet (#48, #120) |
+| `relationships.vcs`/`.ssh`/`.agent` on workspace | stored, validated against their tables | ids stored; the tables do not exist yet (#48, #120), so an id is not validated |
+| `PATCH /relationships/{relation}` | `204`, project validated; vcs/ssh/agent must exist | workspace project/vcs/ssh/agent only; project validated, the others not |
 | Duplicate `globalvar` key | **500** (a lifecycle hook throws) | **409** — the unique constraint, not upstream's bug |
-| `/relationships/{relation}` | resource identifiers | 404 — not implemented |
-| Resources | `type`, `id`, `attributes`, `relationships` | `type`, `id`, `attributes` only |
+| Resources | `type`, `id`, `attributes`, `relationships` | `type`, `id`, `attributes`, and `relationships` for the links that exist |
 | Error objects | `detail` only | `detail`, `status`, `title` |
 
 The differences that matter are deliberate: we are a superset where upstream is
-stricter (paging on `organization`, extra error members), and omitting
-`relationships` is honest — the tables behind them (`vcs`, `team`, `policySet`,
-`ssh`, `agent`, `template`, `tag`, `collection`, `provider`, …) do
-not exist yet. See `docs/upstream/ui-rest-operations.md`.
+stricter (paging on `organization`, extra error members), and leaving a
+relationship out is honest — the tables behind most of them (`team`,
+`policySet`, `template`, `tag`, `collection`, `provider`, …) do not exist yet.
+Workspace `vcs`, `ssh` and `agent` ids are stored without their tables, so they
+round-trip but an unknown id is not refused. See
+`docs/upstream/ui-rest-operations.md`.
 
 `fields` follows the same rule: JSON:API says a server "MUST NOT include
 additional fields" when `fields` is sent, and the UI uses it on every
