@@ -8,6 +8,13 @@ spec: where the two disagree, these win.
 `index.tsv` is `name<TAB>status<TAB>path`. An empty file (`organization-no-token.json`)
 is an empty body, not a missing capture.
 
+They are not just reference material: `internal/api/upstream_contract_test.go`
+replays every capture against the handlers and compares the shape (status,
+top-level members, resource type, attribute key set). A capture that is
+neither replayed nor explicitly deferred with a reason fails the build. The
+tools that produced them are in
+[`scripts/upstream-capture/`](../../../scripts/upstream-capture/README.md).
+
 ## What a live upstream actually does
 
 | Behaviour | Upstream | This API |
@@ -17,16 +24,25 @@ is an empty body, not a missing capture.
 | `page[totals]` | adds `totalPages`, `totalRecords` to `meta.page` | same |
 | `page[size]`/`page[totals]` on **organization** | **400** `Cannot paginate organization` | 200, paginated |
 | Unknown path | 404 `{"errors":[{"detail":"Unknown collection nope"}]}` | same |
-| Invalid id | 400 `{"errors":[{"detail":"Invalid value: not-a-uuid"}]}` | same shape |
+| Invalid id | 400 `{"errors":[{"detail":"Invalid value: not-a-uuid"}]}` | same |
+| Missing id | 404 `Unknown identifier <id> for organization` | 404, different detail text |
 | No token | **401 with an empty body** | 401 with a JSON:API error |
+| `fields[type]` | only the requested attributes | ignored, every attribute returned — #121 |
+| `include=` | adds an `included` member | ignored — the UI sends none on `/api/v1` |
+| `/relationships/{relation}` | resource identifiers | 404 — not implemented |
 | Resources | `type`, `id`, `attributes`, `relationships` | `type`, `id`, `attributes` only |
 | Error objects | `detail` only | `detail`, `status`, `title` |
 
-The three remaining differences are additive except the last one in each row,
-which is deliberate: we are a superset where upstream is stricter, and omitting
+The differences that matter are deliberate: we are a superset where upstream is
+stricter (paging on `organization`, extra error members), and omitting
 `relationships` is honest — the tables behind them (`vcs`, `team`, `policySet`,
 `ssh`, `agent`, `template`, `tag`, `collection`, `globalvar`, `provider`, …) do
 not exist yet. See `docs/upstream/ui-rest-operations.md`.
+
+`fields` is the one that is a spec violation rather than a superset: JSON:API
+says a server "MUST NOT include additional fields" when `fields` is sent, and
+the UI uses it on every breadcrumb. Extra attributes are ignored by the UI's
+mappers, which is why it is #121 and not a blocker.
 
 Note the empty 401 body: a client that tries to parse it as JSON will fail. Use
 the status code, as the React UI does.
@@ -44,11 +60,17 @@ references:
 - Relationship values are `{"data":[...], "links":{...}}` or `{"data":null}` for
   to-one, never omitted.
 
+`workspace-list-paged.json` and `workspace-list-totals.json` are the reference
+for `meta.page` with and without `page[totals]`. They document a global
+`/workspace` collection this API does not serve; the UI does not use it, so the
+answers live in `deferredCaptures` rather than behind a route.
+
 ## How these were captured
 
 A disposable upstream stack (Postgres, Redis, Dex and the released API image on
 the host network, ports 5433/6380/5556/18080) with its `demo` profile, which
 seeds six organizations. Requests were authenticated with a hand-minted PAT:
 upstream accepts `iss=Terrakube`, HS256 over the base64url-decoded `PatSecret`,
-with `jti` present in the `pat` table and the owner group in `groups`. The
-capture is reproducible from that stack; the stack itself is not vendored.
+with `jti` present in the `pat` table and the owner group in `groups`. It is
+reproducible with `scripts/upstream-capture/start.sh`, `pat.py` and
+`capture.sh`; the stack itself is not vendored.

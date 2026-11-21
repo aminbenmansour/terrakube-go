@@ -108,7 +108,7 @@ func run() error {
 		Redis:   q,
 		Storage: storeBackend,
 	})
-	handler.Mount("/api/v1", api.New(api.Deps{
+	handler.Mount(api.MountPrefix, api.New(api.Deps{
 		Store:       querier,
 		Logger:      logger,
 		PublicURL:   cfg.PublicURL,

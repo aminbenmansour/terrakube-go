@@ -291,14 +291,22 @@ Captured from `azbuilder/api-server:2.34.3`; the responses are in
   `executionMode`, `icon`, which is all the UI's organization list reads
   (`listOrganizations` in `organizationService.ts`).
 - Unknown paths answer `404 {"errors":[{"detail":"Unknown collection <name>"}]}`;
-  ours matches. An invalid id is `400 {"errors":[{"detail":"Invalid value: ..."}]}`.
+  ours matches. A malformed id is `400 {"errors":[{"detail":"Invalid value: ..."}]}`;
+  a well-formed id that does not exist is a 404 whose detail text differs from
+  upstream's `Unknown identifier <id> for organization`.
 - We are a superset in two places: `organization` accepts page parameters
   (upstream answers 400 `Cannot paginate organization`) and our error objects
   carry `status` and `title` as well as `detail`.
-- We are behind in one: resources have no `relationships` member, because the
-  tables behind them do not exist yet.
+- We are behind in three: no `relationships` member on any resource (the tables
+  behind them do not exist yet), no `/relationships/{relation}` routes, and
+  `fields[type]` is ignored so every attribute is returned (#121).
+  `include=` is ignored too, but the UI sends none on `/api/v1`.
 - Upstream answers an unauthenticated request with **401 and an empty body**. A
   client must use the status code, not the body.
+- The recordings are replayed by `internal/api/upstream_contract_test.go`, so an
+  attribute rename fails `make check`. They are regenerated with
+  `scripts/upstream-capture/` against a new upstream tag; a capture that is
+  neither replayed nor deferred with a reason fails the build.
 
 ### Implemented in M1
 
