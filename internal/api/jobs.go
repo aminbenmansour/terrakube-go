@@ -36,7 +36,7 @@ func (a *API) listJobs(w http.ResponseWriter, r *http.Request) {
 	for _, job := range jobs {
 		resources = append(resources, jobResource(job))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), jsonapi.Page{})
+	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), jsonapi.Page{}, jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) getJob(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +76,7 @@ func (a *API) getJob(w http.ResponseWriter, r *http.Request) {
 		included = append(included, workspaceResource(ws))
 	}
 
-	jsonapi.Write(w, http.StatusOK, jsonapi.Document{Data: resource, Included: included})
+	jsonapi.Write(w, http.StatusOK, jsonapi.Document{Data: resource, Included: included}, jsonapi.ParseFieldsets(r))
 }
 
 // updateJob serves the run page's cancel, approve and reject buttons. Upstream

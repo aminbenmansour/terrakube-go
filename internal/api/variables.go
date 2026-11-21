@@ -41,7 +41,7 @@ func (a *API) listVariables(w http.ResponseWriter, r *http.Request) {
 	for _, variable := range items {
 		resources = append(resources, variableResource(variable))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), jsonapi.Page{})
+	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), jsonapi.Page{}, jsonapi.ParseFieldsets(r))
 }
 
 // variableInWorkspace guards the nested variable routes: the workspace is
@@ -72,7 +72,7 @@ func (a *API) getVariable(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	jsonapi.WriteResource(w, http.StatusOK, variableResource(variable))
+	jsonapi.WriteResource(w, http.StatusOK, variableResource(variable), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) createVariable(w http.ResponseWriter, r *http.Request) {
@@ -127,7 +127,7 @@ func (a *API) createVariable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonapi.WriteResource(w, http.StatusCreated, variableResource(variable))
+	jsonapi.WriteResource(w, http.StatusCreated, variableResource(variable), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) updateVariable(w http.ResponseWriter, r *http.Request) {
@@ -195,7 +195,7 @@ func (a *API) updateVariable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonapi.WriteResource(w, http.StatusOK, variableResource(updated))
+	jsonapi.WriteResource(w, http.StatusOK, variableResource(updated), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) deleteVariable(w http.ResponseWriter, r *http.Request) {

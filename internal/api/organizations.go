@@ -33,7 +33,7 @@ func (a *API) listOrganizations(w http.ResponseWriter, r *http.Request) {
 	for _, org := range page {
 		resources = append(resources, organizationResource(org))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, total, q.page())
+	jsonapi.WriteCollection(w, http.StatusOK, resources, total, q.page(), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) getOrganization(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +44,7 @@ func (a *API) getOrganization(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	jsonapi.WriteResource(w, http.StatusOK, organizationResource(org))
+	jsonapi.WriteResource(w, http.StatusOK, organizationResource(org), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) createOrganization(w http.ResponseWriter, r *http.Request) {
@@ -87,7 +87,7 @@ func (a *API) createOrganization(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonapi.WriteResource(w, http.StatusCreated, organizationResource(org))
+	jsonapi.WriteResource(w, http.StatusCreated, organizationResource(org), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) updateOrganization(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +154,7 @@ func (a *API) updateOrganization(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonapi.WriteResource(w, http.StatusOK, organizationResource(updated))
+	jsonapi.WriteResource(w, http.StatusOK, organizationResource(updated), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) deleteOrganization(w http.ResponseWriter, r *http.Request) {
