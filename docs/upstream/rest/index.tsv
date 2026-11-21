@@ -29,3 +29,12 @@ workspace-patch-project-clear	204	/api/v1/organization/70000000-0000-0000-0000-0
 workspace-create-project-foreign	403	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace
 organization-get-fields-empty	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7?fields[organization]=
 organization-get-fields-other	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7?fields[job]=status
+organization-globalvar-list	200	/api/v1/organization/70000000-0000-0000-0000-000000000001/globalvar
+organization-globalvar-get	200	/api/v1/organization/70000000-0000-0000-0000-000000000001/globalvar/99999999-9999-4999-8999-999999999990
+organization-globalvar-get-sensitive	200	/api/v1/organization/70000000-0000-0000-0000-000000000001/globalvar/99999999-9999-4999-8999-999999999993
+organization-globalvar-create	201	/api/v1/organization/70000000-0000-0000-0000-000000000001/globalvar
+organization-globalvar-patch	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/globalvar/99999999-9999-4999-8999-999999999990
+organization-globalvar-delete	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/globalvar/99999999-9999-4999-8999-999999999993
+organization-globalvar-invalid-category	400	/api/v1/organization/70000000-0000-0000-0000-000000000001/globalvar
+organization-globalvar-missing-key	409	/api/v1/organization/70000000-0000-0000-0000-000000000001/globalvar
+organization-globalvar-duplicate	500	/api/v1/organization/70000000-0000-0000-0000-000000000001/globalvar

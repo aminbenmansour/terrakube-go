@@ -210,19 +210,61 @@ var replayedCaptures = map[string]replay{
 		body:    `{"data":{"type":"workspace","attributes":{"name":"from-vcs","source":"https://github.com/terrakube-io/terrakube.git","branch":"main","terraformVersion":"1.9.0"},"relationships":{"project":{"data":{"type":"project","id":"` + capturedRelForeign + `"}}}}}`,
 		querier: captureWorkspaceStore(),
 	},
+	"organization-globalvar-list": {
+		target:  "globalvar-collection",
+		querier: captureGlobalVarStore(),
+	},
+	"organization-globalvar-get": {
+		target:  "globalvar-item",
+		querier: captureGlobalVarStore(),
+	},
+	"organization-globalvar-get-sensitive": {
+		target:  "globalvar-secret",
+		querier: captureGlobalVarStore(),
+	},
+	"organization-globalvar-create": {
+		target:  "globalvar-collection",
+		method:  http.MethodPost,
+		body:    `{"data":{"type":"globalvar","attributes":{"key":"CAPTURE_NEW","value":"new","description":"capture","sensitive":false,"hcl":false,"category":"ENV"}}}`,
+		querier: captureGlobalVarStore(),
+	},
+	"organization-globalvar-patch": {
+		target:  "globalvar-item",
+		method:  http.MethodPatch,
+		body:    `{"data":{"type":"globalvar","id":"` + capturedGvID + `","attributes":{"key":"CAPTURE_ONE","value":"after","description":"after","hcl":true,"category":"TERRAFORM"}}}`,
+		querier: captureGlobalVarStore(),
+	},
+	"organization-globalvar-delete": {
+		target:  "globalvar-secret",
+		method:  http.MethodDelete,
+		querier: captureGlobalVarStore(),
+	},
+	"organization-globalvar-invalid-category": {
+		target:  "globalvar-collection",
+		method:  http.MethodPost,
+		body:    `{"data":{"type":"globalvar","attributes":{"key":"CAPTURE_BAD","value":"x","description":"d","sensitive":false,"hcl":false,"category":"env"}}}`,
+		querier: captureGlobalVarStore(),
+	},
+	"organization-globalvar-missing-key": {
+		target:  "globalvar-collection",
+		method:  http.MethodPost,
+		body:    `{"data":{"type":"globalvar","attributes":{"value":"x","description":"d","sensitive":false,"hcl":false,"category":"ENV"}}}`,
+		querier: captureGlobalVarStore(),
+	},
 }
 
 // deferredCaptures are recorded but cannot be asserted yet. Each needs a reason,
 // and the test below fails when a capture is added without one, so a new
 // recording cannot be silently ignored.
 var deferredCaptures = map[string]string{
-	"organization-list-totals":   "we accept paging on organization, upstream answers 400; deliberate superset (docs/upstream/rest/README.md)",
-	"organization-list-paged":    "same as organization-list-totals",
-	"organization-list-include":  "we ignore include= and emit no `included` member; the UI sends no include on /api/v1",
-	"organization-relationships": "no /relationships/{relation} routes; the UI patches relationships on workspace only (#116)",
-	"workspace-list-paged":       "no global /workspace collection; the capture documents meta.page, not a route we serve",
-	"workspace-list-totals":      "same as workspace-list-paged",
-	"delete-method-not-allowed":  "upstream answers 500 with a servlet error page, which is not a contract worth copying",
+	"organization-list-totals":         "we accept paging on organization, upstream answers 400; deliberate superset (docs/upstream/rest/README.md)",
+	"organization-list-paged":          "same as organization-list-totals",
+	"organization-list-include":        "we ignore include= and emit no `included` member; the UI sends no include on /api/v1",
+	"organization-relationships":       "no /relationships/{relation} routes; the UI patches relationships on workspace only (#116)",
+	"workspace-list-paged":             "no global /workspace collection; the capture documents meta.page, not a route we serve",
+	"workspace-list-totals":            "same as workspace-list-paged",
+	"delete-method-not-allowed":        "upstream answers 500 with a servlet error page, which is not a contract worth copying",
+	"organization-globalvar-duplicate": "upstream's duplicate-key lifecycle hook throws and Spring answers 500; our unique constraint answers 409",
 }
 
 // The ids upstream's demo seed gave the captures; the job captures were taken
@@ -239,6 +281,8 @@ const (
 	capturedRelForeign = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 	capturedRelUnknown = "00000000-0000-0000-0000-000000000000"
 	capturedForeignOrg = "d9b58bd3-f3fc-4056-a026-1163297e80a8"
+	capturedGvID       = "99999999-9999-4999-8999-999999999990"
+	capturedGvSecret   = "99999999-9999-4999-8999-999999999993"
 	capturedStepID     = "66666666-6666-4666-8666-666666666666"
 )
 
@@ -257,6 +301,16 @@ func captureWorkspaceStore() *stubQuerier {
 			{ID: capturedRelP1, Name: "governance-terraform", OrganizationID: capturedRelOrg},
 			{ID: capturedRelP2, Name: "governance-tofu", OrganizationID: capturedRelOrg},
 			{ID: capturedRelForeign, Name: "demo-project", OrganizationID: capturedForeignOrg},
+		},
+	}
+}
+
+func captureGlobalVarStore() *stubQuerier {
+	return &stubQuerier{
+		globals: []store.Globalvar{
+			{ID: capturedGvID, VariableKey: "CAPTURE_ONE", VariableValue: "one", VariableDescription: "capture", VariableCategory: "ENV", OrganizationID: capturedRelOrg},
+			{ID: capturedGvSecret, VariableKey: "CAPTURE_SECRET", VariableValue: "hidden", VariableDescription: "capture", VariableCategory: "ENV", Sensitive: true, OrganizationID: capturedRelOrg},
+			{ID: "99999999-9999-4999-8999-999999999992", VariableKey: "CAPTURE_TWO", VariableValue: "two", VariableDescription: "capture", VariableCategory: "TERRAFORM", Hcl: true, OrganizationID: capturedRelOrg},
 		},
 	}
 }
@@ -320,6 +374,45 @@ func (s *stubQuerier) UpdateJobStatus(_ context.Context, arg store.UpdateJobStat
 }
 
 func (s *stubQuerier) SetWorkspaceLastJob(context.Context, store.SetWorkspaceLastJobParams) error {
+	return s.err
+}
+
+func (s *stubQuerier) ListGlobalVariablesByOrganization(_ context.Context, orgID string) ([]store.Globalvar, error) {
+	var out []store.Globalvar
+	for _, variable := range s.globals {
+		if variable.OrganizationID == orgID {
+			out = append(out, variable)
+		}
+	}
+	return out, s.err
+}
+
+func (s *stubQuerier) GetGlobalVariable(_ context.Context, id string) (store.Globalvar, error) {
+	for _, variable := range s.globals {
+		if variable.ID == id {
+			return variable, nil
+		}
+	}
+	return store.Globalvar{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateGlobalVariable(_ context.Context, arg store.CreateGlobalVariableParams) (store.Globalvar, error) {
+	return store.Globalvar{
+		ID: arg.ID, VariableKey: arg.VariableKey, VariableValue: arg.VariableValue,
+		VariableDescription: arg.VariableDescription, VariableCategory: arg.VariableCategory,
+		Sensitive: arg.Sensitive, Hcl: arg.Hcl, OrganizationID: arg.OrganizationID,
+	}, s.err
+}
+
+func (s *stubQuerier) UpdateGlobalVariable(_ context.Context, arg store.UpdateGlobalVariableParams) (store.Globalvar, error) {
+	return store.Globalvar{
+		ID: arg.ID, VariableKey: arg.VariableKey, VariableValue: arg.VariableValue,
+		VariableDescription: arg.VariableDescription, VariableCategory: arg.VariableCategory,
+		Sensitive: arg.Sensitive, Hcl: arg.Hcl, OrganizationID: capturedRelOrg,
+	}, s.err
+}
+
+func (s *stubQuerier) DeleteGlobalVariable(context.Context, string) error {
 	return s.err
 }
 
@@ -417,6 +510,12 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 				target = "/organization/" + capturedRelOrg + "/workspace/" + capturedRelWS
 			case "workspace-collection":
 				target = "/organization/" + capturedRelOrg + "/workspace"
+			case "globalvar-collection":
+				target = "/organization/" + capturedRelOrg + "/globalvar"
+			case "globalvar-item":
+				target = "/organization/" + capturedRelOrg + "/globalvar/" + capturedGvID
+			case "globalvar-secret":
+				target = "/organization/" + capturedRelOrg + "/globalvar/" + capturedGvSecret
 			}
 			if querier == nil {
 				querier = &stubQuerier{}
