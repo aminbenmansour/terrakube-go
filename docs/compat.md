@@ -303,6 +303,12 @@ Captured from `azbuilder/api-server:2.34.3`; the responses are in
   `include=` is ignored too, but the UI sends none on `/api/v1`.
 - Upstream answers an unauthenticated request with **401 and an empty body**. A
   client must use the status code, not the body.
+- Runs: `job` is read and PATCHed with the upstream attribute set (35 keys,
+  including the dispatch and PR columns we do not have yet, as null). PATCH
+  answers **204 with no body** like upstream, accepts its status enum, rejects
+  anything else with `400 Invalid value: ...`, and refuses `approved` unless the
+  job is `waitingApproval` (409). It calls the same `UpdateJobStatus` path as the
+  TFE discard action, so `jobstatus.Wrap` still publishes to subscriptions.
 - The recordings are replayed by `internal/api/upstream_contract_test.go`, so an
   attribute rename fails `make check`. They are regenerated with
   `scripts/upstream-capture/` against a new upstream tag; a capture that is
@@ -316,6 +322,7 @@ Captured from `azbuilder/api-server:2.34.3`; the responses are in
 | project | `GET/POST /organization/{id}/project`, `GET/PATCH/DELETE /project/{id}`, `GET /project/{id}/workspace` |
 | workspace | `GET/POST /organization/{id}/workspace`, `GET/PATCH/DELETE /workspace/{id}`, and the same pair under `/organization/{id}/workspace/{id}` |
 | variable | `GET/POST /workspace/{id}/variable`, `GET/PATCH/DELETE /variable/{id}`, and the same under `/organization/{id}/workspace/{id}/variable[/{id}]` |
+| job | `GET /organization/{id}/job`, `GET/PATCH /organization/{id}/job/{id}` |
 
 The organization-scoped workspace and variable routes exist because the React UI
 uses them; a resource reached through the wrong organization answers 404, and a
