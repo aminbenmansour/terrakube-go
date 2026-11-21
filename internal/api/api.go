@@ -76,6 +76,13 @@ func New(deps Deps) http.Handler {
 		r.Post("/project", a.createProject)
 		r.Get("/workspace", a.listWorkspaces)
 		r.Post("/workspace", a.createWorkspace)
+
+		// Runs.
+		r.Get("/job", a.listJobs)
+		r.Route("/job/{jobID}", func(r chi.Router) {
+			r.Get("/", a.getJob)
+			r.Patch("/", a.updateJob)
+		})
 	})
 
 	// Projects

@@ -86,6 +86,10 @@ type replay struct {
 	// idFrom names another capture that carries the resource id, for paths
 	// built against an organization described by a different request.
 	idFrom string
+	// method defaults to GET; body is a template in which {id} is replaced with
+	// the captured resource id (PATCH cases).
+	method string
+	body   string
 }
 
 var replayedCaptures = map[string]replay{
@@ -120,6 +124,32 @@ var replayedCaptures = map[string]replay{
 		target:    "/organization",
 		authToken: "secret",
 	},
+	"organization-job-list": {
+		target:  "/organization/" + capturedOrgID + "/job",
+		querier: &stubQuerier{jobs: captureJobs()},
+	},
+	"organization-job-get": {
+		target:  "job",
+		querier: &stubQuerier{jobs: captureJobs()},
+	},
+	"organization-job-include": {
+		target:  "job-include",
+		querier: &stubQuerier{jobs: captureJobs(), steps: captureSteps(), workspaces: captureWorkspaces()},
+	},
+	"organization-job-patch": {
+		target:  "job",
+		idFrom:  "organization-job-get",
+		method:  http.MethodPatch,
+		body:    `{"data":{"type":"job","id":"{id}","attributes":{"status":"cancelled"}}}`,
+		querier: &stubQuerier{jobs: captureJobs()},
+	},
+	"organization-job-patch-invalid": {
+		target:  "job",
+		idFrom:  "organization-job-get",
+		method:  http.MethodPatch,
+		body:    `{"data":{"type":"job","id":"{id}","attributes":{"status":"nonsense"}}}`,
+		querier: &stubQuerier{jobs: captureJobs()},
+	},
 }
 
 // deferredCaptures are recorded but cannot be asserted yet. Each needs a reason,
@@ -135,6 +165,85 @@ var deferredCaptures = map[string]string{
 	"workspace-list-paged":       "no global /workspace collection; the capture documents meta.page, not a route we serve",
 	"workspace-list-totals":      "same as workspace-list-paged",
 	"delete-method-not-allowed":  "upstream answers 500 with a servlet error page, which is not a contract worth copying",
+}
+
+// The ids upstream's demo seed gave the captures; the job captures were taken
+// against these rows, so the replay uses the same ids.
+const (
+	capturedOrgID  = "1c839e0a-ca5d-49a9-9c78-7a569df534b7"
+	capturedWSID   = "0beb7db4-b073-4bd4-9a98-94fe7e2d9939"
+	capturedStepID = "66666666-6666-4666-8666-666666666666"
+)
+
+func captureJobs() []store.Job {
+	return []store.Job{{
+		ID:             2,
+		OrganizationID: capturedOrgID,
+		WorkspaceID:    capturedWSID,
+		Status:         "completed",
+		Via:            "UI",
+	}}
+}
+
+func captureSteps() []store.Step {
+	return []store.Step{{
+		ID:         capturedStepID,
+		JobID:      2,
+		StepNumber: 1,
+		Name:       strPtr("Plan"),
+		Status:     strPtr("completed"),
+		Output:     strPtr("ok"),
+	}}
+}
+
+func captureWorkspaces() []store.Workspace {
+	return []store.Workspace{{ID: capturedWSID, OrganizationID: capturedOrgID, Name: "sample_cosmosdb"}}
+}
+
+func (s *stubQuerier) ListJobsByOrganization(context.Context, string) ([]store.Job, error) {
+	return s.jobs, s.err
+}
+
+func (s *stubQuerier) GetJob(_ context.Context, id int64) (store.Job, error) {
+	for _, job := range s.jobs {
+		if job.ID == id {
+			return job, nil
+		}
+	}
+	return store.Job{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) ListStepsByJob(_ context.Context, jobID int64) ([]store.Step, error) {
+	var out []store.Step
+	for _, step := range s.steps {
+		if step.JobID == jobID {
+			out = append(out, step)
+		}
+	}
+	return out, nil
+}
+
+func (s *stubQuerier) UpdateJobStatus(_ context.Context, arg store.UpdateJobStatusParams) (store.Job, error) {
+	for i, job := range s.jobs {
+		if job.ID == arg.ID {
+			s.jobs[i].Status = arg.Status
+			return s.jobs[i], nil
+		}
+	}
+	return store.Job{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) SetWorkspaceLastJob(context.Context, store.SetWorkspaceLastJobParams) error {
+	return s.err
+}
+
+func (s *stubQuerier) GetWorkspace(_ context.Context, id string) (store.Workspace, error) {
+	for _, ws := range s.workspaces {
+		if ws.ID == id {
+			return ws, nil
+		}
+	}
+	return store.Workspace{}, pgx.ErrNoRows
 }
 
 // ListProjectsByOrganization is stubbed here because only the capture replay
@@ -187,6 +296,10 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 				querier = &stubQuerier{org: store.Organization{ID: id, Name: "azure", ExecutionMode: "remote"}}
 			case "resource-projects":
 				target = "/organization/" + idCapture.resourceID(t) + "/project"
+			case "job":
+				target = "/organization/" + capturedOrgID + "/job/" + idCapture.resourceID(t)
+			case "job-include":
+				target = "/organization/" + capturedOrgID + "/job/" + idCapture.resourceID(t) + "?include=step,workspace"
 			}
 			if querier == nil {
 				querier = &stubQuerier{}
@@ -197,7 +310,18 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 				Logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
 				AuthToken: plan.authToken,
 			})
-			req := httptest.NewRequest(http.MethodGet, target, nil)
+			method := plan.method
+			if method == "" {
+				method = http.MethodGet
+			}
+			body := plan.body
+			if strings.Contains(body, "{id}") {
+				body = strings.ReplaceAll(body, "{id}", idCapture.resourceID(t))
+			}
+			req := httptest.NewRequest(method, target, strings.NewReader(body))
+			if body != "" {
+				req.Header.Set("Content-Type", "application/vnd.api+json")
+			}
 			rec := httptest.NewRecorder()
 			handler.ServeHTTP(rec, req)
 

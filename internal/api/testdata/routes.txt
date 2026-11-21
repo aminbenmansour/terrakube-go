@@ -6,6 +6,8 @@ DELETE /variable/{variableID}/
 DELETE /workspace/{workspaceID}/
 GET /organization
 GET /organization/{organizationID}/
+GET /organization/{organizationID}/job
+GET /organization/{organizationID}/job/{jobID}/
 GET /organization/{organizationID}/project
 GET /organization/{organizationID}/workspace
 GET /organization/{organizationID}/workspace/{workspaceID}/
@@ -17,6 +19,7 @@ GET /variable/{variableID}/
 GET /workspace/{workspaceID}/
 GET /workspace/{workspaceID}/variable
 PATCH /organization/{organizationID}/
+PATCH /organization/{organizationID}/job/{jobID}/
 PATCH /organization/{organizationID}/workspace/{workspaceID}/
 PATCH /organization/{organizationID}/workspace/{workspaceID}/variable/{variableID}/
 PATCH /project/{projectID}/

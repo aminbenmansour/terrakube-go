@@ -15,3 +15,8 @@ organization-missing	404	/api/v1/organization/00000000-0000-0000-0000-0000000000
 organization-bad-id	400	/api/v1/organization/not-a-uuid
 organization-no-token	401	/api/v1/organization
 delete-method-not-allowed	500	/api/v1/organization
+organization-job-list	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7/job
+organization-job-get	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7/job/2
+organization-job-include	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7/job/2?include=step,workspace
+organization-job-patch	204	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7/job/2
+organization-job-patch-invalid	400	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7/job/2
