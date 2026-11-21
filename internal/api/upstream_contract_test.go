@@ -108,6 +108,22 @@ var replayedCaptures = map[string]replay{
 	"organization-get": {
 		target: "resource",
 	},
+	"organization-get-fields": {
+		target:  "resource-query",
+		querier: &stubQuerier{org: store.Organization{ID: capturedOrgID, Name: "azure", Description: strPtr("azure sample organization")}},
+	},
+	"organization-get-fields-empty": {
+		target:  "resource-query",
+		querier: &stubQuerier{org: store.Organization{ID: capturedOrgID, Name: "azure"}},
+	},
+	"organization-get-fields-other": {
+		target:  "resource-query",
+		querier: &stubQuerier{org: store.Organization{ID: capturedOrgID, Name: "azure"}},
+	},
+	"organization-list-fields": {
+		target:  "/organization?fields[organization]=name",
+		querier: &stubQuerier{orgs: demoOrganizations()},
+	},
 	"organization-projects": {
 		target:  "resource-projects",
 		idFrom:  "organization-get",
@@ -202,8 +218,6 @@ var replayedCaptures = map[string]replay{
 var deferredCaptures = map[string]string{
 	"organization-list-totals":   "we accept paging on organization, upstream answers 400; deliberate superset (docs/upstream/rest/README.md)",
 	"organization-list-paged":    "same as organization-list-totals",
-	"organization-list-fields":   "sparse fieldsets are not implemented, so we return every attribute (JSON:API says MUST NOT); see #121",
-	"organization-get-fields":    "same as organization-list-fields",
 	"organization-list-include":  "we ignore include= and emit no `included` member; the UI sends no include on /api/v1",
 	"organization-relationships": "no /relationships/{relation} routes; the UI patches relationships on workspace only (#116)",
 	"workspace-list-paged":       "no global /workspace collection; the capture documents meta.page, not a route we serve",
@@ -391,6 +405,8 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 				id := idCapture.resourceID(t)
 				target = "/organization/" + id
 				querier = &stubQuerier{org: store.Organization{ID: id, Name: "azure", ExecutionMode: "remote"}}
+			case "resource-query":
+				target = strings.TrimPrefix(capture.path, "/api/v1")
 			case "resource-projects":
 				target = "/organization/" + idCapture.resourceID(t) + "/project"
 			case "job":

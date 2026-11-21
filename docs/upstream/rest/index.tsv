@@ -27,3 +27,5 @@ workspace-patch-project-foreign	403	/api/v1/organization/70000000-0000-0000-0000
 workspace-patch-project-unknown	404	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777
 workspace-patch-project-clear	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777
 workspace-create-project-foreign	403	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace
+organization-get-fields-empty	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7?fields[organization]=
+organization-get-fields-other	200	/api/v1/organization/1c839e0a-ca5d-49a9-9c78-7a569df534b7?fields[job]=status
