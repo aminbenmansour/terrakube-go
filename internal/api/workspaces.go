@@ -50,7 +50,7 @@ func (a *API) listWorkspaces(w http.ResponseWriter, r *http.Request) {
 	for _, ws := range page {
 		resources = append(resources, workspaceResource(ws))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, total, q.page())
+	jsonapi.WriteCollection(w, http.StatusOK, resources, total, q.page(), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) listProjectWorkspaces(w http.ResponseWriter, r *http.Request) {
@@ -74,7 +74,7 @@ func (a *API) listProjectWorkspaces(w http.ResponseWriter, r *http.Request) {
 	for _, ws := range items {
 		resources = append(resources, workspaceResource(ws))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), jsonapi.Page{})
+	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), jsonapi.Page{}, jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) getWorkspace(w http.ResponseWriter, r *http.Request) {
@@ -132,7 +132,7 @@ func (a *API) getWorkspace(w http.ResponseWriter, r *http.Request) {
 		included = append(included, projectResource(project))
 	}
 
-	jsonapi.Write(w, http.StatusOK, jsonapi.Document{Data: resource, Included: included})
+	jsonapi.Write(w, http.StatusOK, jsonapi.Document{Data: resource, Included: included}, jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) createWorkspace(w http.ResponseWriter, r *http.Request) {
@@ -207,7 +207,7 @@ func (a *API) createWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonapi.WriteResource(w, http.StatusCreated, workspaceResource(ws))
+	jsonapi.WriteResource(w, http.StatusCreated, workspaceResource(ws), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) updateWorkspace(w http.ResponseWriter, r *http.Request) {

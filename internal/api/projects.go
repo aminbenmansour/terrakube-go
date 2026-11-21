@@ -37,7 +37,7 @@ func (a *API) listProjects(w http.ResponseWriter, r *http.Request) {
 	for _, project := range page {
 		resources = append(resources, projectResource(project))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, total, q.page())
+	jsonapi.WriteCollection(w, http.StatusOK, resources, total, q.page(), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) getProject(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +48,7 @@ func (a *API) getProject(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	jsonapi.WriteResource(w, http.StatusOK, projectResource(project))
+	jsonapi.WriteResource(w, http.StatusOK, projectResource(project), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) createProject(w http.ResponseWriter, r *http.Request) {
@@ -92,7 +92,7 @@ func (a *API) createProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonapi.WriteResource(w, http.StatusCreated, projectResource(project))
+	jsonapi.WriteResource(w, http.StatusCreated, projectResource(project), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) updateProject(w http.ResponseWriter, r *http.Request) {
@@ -144,7 +144,7 @@ func (a *API) updateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonapi.WriteResource(w, http.StatusOK, projectResource(updated))
+	jsonapi.WriteResource(w, http.StatusOK, projectResource(updated), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) deleteProject(w http.ResponseWriter, r *http.Request) {
