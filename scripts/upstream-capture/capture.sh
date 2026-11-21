@@ -108,6 +108,18 @@ pg "insert into workspace (id, name, source, branch, terraform_version, organiza
     values ('${rel_ws}', 'capture-rel-workspace',
             'https://github.com/terrakube-io/terrakube.git', 'main', '1.9.0', '${rel_org}')" >/dev/null
 
+# VCS, SSH and agent rows with fixed ids so the relationship routes can point at
+# something that exists; the workspace links have no foreign key on our side yet.
+rel_vcs='aaaaaaaa-0000-4000-8000-000000000001'
+rel_ssh='aaaaaaaa-0000-4000-8000-000000000002'
+rel_agent='aaaaaaaa-0000-4000-8000-000000000003'
+pg "insert into vcs (id, name, description, vcs_type, organization_id, status)
+    values ('${rel_vcs}', 'capture-vcs', 'capture', 'GITHUB', '${rel_org}', 'COMPLETED') on conflict (id) do nothing" >/dev/null
+pg "insert into ssh (id, name, description, organization_id)
+    values ('${rel_ssh}', 'capture-ssh', 'capture', '${rel_org}') on conflict (id) do nothing" >/dev/null
+pg "insert into agent (id, name, description, url, organization_id)
+    values ('${rel_agent}', 'capture-agent', 'capture', 'http://agent:8090', '${rel_org}') on conflict (id) do nothing" >/dev/null
+
 request workspace-patch-attribute "/api/v1/organization/${rel_org}/workspace/${rel_ws}" -X PATCH \
   -H 'Content-Type: application/vnd.api+json' \
   --data "{\"data\":{\"type\":\"workspace\",\"id\":\"${rel_ws}\",\"attributes\":{\"description\":\"captured\"}}}"
@@ -129,6 +141,37 @@ request workspace-patch-project-clear "/api/v1/organization/${rel_org}/workspace
 request workspace-create-project-foreign "/api/v1/organization/${rel_org}/workspace" -X POST \
   -H 'Content-Type: application/vnd.api+json' \
   --data "{\"data\":{\"type\":\"workspace\",\"attributes\":{\"name\":\"capture-rel-rejected\",\"source\":\"https://github.com/terrakube-io/terrakube.git\",\"branch\":\"main\",\"terraformVersion\":\"1.9.0\"},\"relationships\":{\"project\":{\"data\":{\"type\":\"project\",\"id\":\"${rel_foreign}\"}}}}}"
+
+# Relationship PATCH routes the UI's settings screens call. VCS, SSH and agent
+# rows were seeded above; clearing sends data:null.
+request workspace-relationship-project-set "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/project" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"project\",\"id\":\"${rel_p1}\"}}"
+request workspace-relationship-project-clear "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/project" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' --data '{"data":null}'
+request workspace-relationship-project-foreign "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/project" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"project\",\"id\":\"${rel_foreign}\"}}"
+request workspace-relationship-project-unknown "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/project" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"project","id":"00000000-0000-0000-0000-000000000000"}}'
+request workspace-relationship-vcs-set "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/vcs" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"vcs\",\"id\":\"${rel_vcs}\"}}"
+request workspace-relationship-vcs-clear "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/vcs" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' --data '{"data":null}'
+request workspace-relationship-ssh-set "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/ssh" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"ssh\",\"id\":\"${rel_ssh}\"}}"
+request workspace-relationship-ssh-clear "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/ssh" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' --data '{"data":null}'
+request workspace-relationship-agent-set "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/agent" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"agent\",\"id\":\"${rel_agent}\"}}"
+request workspace-relationship-agent-clear "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/agent" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' --data '{"data":null}'
+request workspace-relationship-unknown "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/nope" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' --data '{"data":null}'
 
 # Global variables: seeded with fixed ids so the item routes can be replayed.
 # Two visible rows keep the list shape identical whichever order upstream picks;
@@ -162,5 +205,6 @@ request organization-globalvar-duplicate "/api/v1/organization/${gv_org}/globalv
   -H 'Content-Type: application/vnd.api+json' \
   --data '{"data":{"type":"globalvar","attributes":{"key":"CAPTURE_ONE","value":"dup","description":"d","sensitive":false,"hcl":false,"category":"ENV"}}}'
 pg "delete from globalvar where variable_key like 'CAPTURE\_%'" >/dev/null
+pg "delete from vcs where id = '${rel_vcs}'; delete from ssh where id = '${rel_ssh}'; delete from agent where id = '${rel_agent}'" >/dev/null
 
 echo "wrote $(wc -l < "$out/index.tsv") captures to $out"

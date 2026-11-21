@@ -38,3 +38,14 @@ organization-globalvar-delete	204	/api/v1/organization/70000000-0000-0000-0000-0
 organization-globalvar-invalid-category	400	/api/v1/organization/70000000-0000-0000-0000-000000000001/globalvar
 organization-globalvar-missing-key	409	/api/v1/organization/70000000-0000-0000-0000-000000000001/globalvar
 organization-globalvar-duplicate	500	/api/v1/organization/70000000-0000-0000-0000-000000000001/globalvar
+workspace-relationship-project-set	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777/relationships/project
+workspace-relationship-project-clear	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777/relationships/project
+workspace-relationship-project-foreign	403	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777/relationships/project
+workspace-relationship-project-unknown	404	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777/relationships/project
+workspace-relationship-vcs-set	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777/relationships/vcs
+workspace-relationship-vcs-clear	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777/relationships/vcs
+workspace-relationship-ssh-set	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777/relationships/ssh
+workspace-relationship-ssh-clear	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777/relationships/ssh
+workspace-relationship-agent-set	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777/relationships/agent
+workspace-relationship-agent-clear	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777/relationships/agent
+workspace-relationship-unknown	404	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777/relationships/nope

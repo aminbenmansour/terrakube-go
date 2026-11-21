@@ -14,15 +14,17 @@ INSERT INTO workspace (
     id, name, description, source, branch, folder, terraform_version, iac_type,
     execution_mode, organization_id, project_id, allow_remote_apply,
     global_remote_state, default_template, restrict_apply_to_configured_branch,
-    require_approve_to_apply, created_by
+    require_approve_to_apply, created_by, module_ssh_key, shared_ids,
+    vcs_id, ssh_id, agent_id
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8,
     $9, $10, $11, $12,
     $13, $14, $15,
-    $16, $17
+    $16, $17, $18, $19,
+    $20, $21, $22
 )
-RETURNING id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by
+RETURNING id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by, vcs_id, ssh_id, agent_id
 `
 
 type CreateWorkspaceParams struct {
@@ -43,6 +45,11 @@ type CreateWorkspaceParams struct {
 	RestrictApplyToConfiguredBranch bool    `json:"restrict_apply_to_configured_branch"`
 	RequireApproveToApply           bool    `json:"require_approve_to_apply"`
 	CreatedBy                       *string `json:"created_by"`
+	ModuleSshKey                    *string `json:"module_ssh_key"`
+	SharedIds                       *string `json:"shared_ids"`
+	VcsID                           *string `json:"vcs_id"`
+	SshID                           *string `json:"ssh_id"`
+	AgentID                         *string `json:"agent_id"`
 }
 
 func (q *Queries) CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (Workspace, error) {
@@ -64,6 +71,11 @@ func (q *Queries) CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams
 		arg.RestrictApplyToConfiguredBranch,
 		arg.RequireApproveToApply,
 		arg.CreatedBy,
+		arg.ModuleSshKey,
+		arg.SharedIds,
+		arg.VcsID,
+		arg.SshID,
+		arg.AgentID,
 	)
 	var i Workspace
 	err := row.Scan(
@@ -95,12 +107,15 @@ func (q *Queries) CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams
 		&i.CreatedBy,
 		&i.UpdatedDate,
 		&i.UpdatedBy,
+		&i.VcsID,
+		&i.SshID,
+		&i.AgentID,
 	)
 	return i, err
 }
 
 const getWorkspace = `-- name: GetWorkspace :one
-SELECT id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by FROM workspace WHERE id = $1 AND deleted = false
+SELECT id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by, vcs_id, ssh_id, agent_id FROM workspace WHERE id = $1 AND deleted = false
 `
 
 func (q *Queries) GetWorkspace(ctx context.Context, id string) (Workspace, error) {
@@ -135,12 +150,15 @@ func (q *Queries) GetWorkspace(ctx context.Context, id string) (Workspace, error
 		&i.CreatedBy,
 		&i.UpdatedDate,
 		&i.UpdatedBy,
+		&i.VcsID,
+		&i.SshID,
+		&i.AgentID,
 	)
 	return i, err
 }
 
 const getWorkspaceByName = `-- name: GetWorkspaceByName :one
-SELECT id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by FROM workspace
+SELECT id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by, vcs_id, ssh_id, agent_id FROM workspace
 WHERE organization_id = $1 AND name = $2 AND deleted = false
 `
 
@@ -181,6 +199,9 @@ func (q *Queries) GetWorkspaceByName(ctx context.Context, arg GetWorkspaceByName
 		&i.CreatedBy,
 		&i.UpdatedDate,
 		&i.UpdatedBy,
+		&i.VcsID,
+		&i.SshID,
+		&i.AgentID,
 	)
 	return i, err
 }
@@ -251,7 +272,7 @@ func (q *Queries) ListWorkspaceTagsByWorkspace(ctx context.Context, workspaceID 
 }
 
 const listWorkspacesByOrganization = `-- name: ListWorkspacesByOrganization :many
-SELECT id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by FROM workspace
+SELECT id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by, vcs_id, ssh_id, agent_id FROM workspace
 WHERE organization_id = $1 AND deleted = false
 ORDER BY name
 `
@@ -294,6 +315,9 @@ func (q *Queries) ListWorkspacesByOrganization(ctx context.Context, organization
 			&i.CreatedBy,
 			&i.UpdatedDate,
 			&i.UpdatedBy,
+			&i.VcsID,
+			&i.SshID,
+			&i.AgentID,
 		); err != nil {
 			return nil, err
 		}
@@ -306,7 +330,7 @@ func (q *Queries) ListWorkspacesByOrganization(ctx context.Context, organization
 }
 
 const listWorkspacesByProject = `-- name: ListWorkspacesByProject :many
-SELECT id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by FROM workspace
+SELECT id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by, vcs_id, ssh_id, agent_id FROM workspace
 WHERE project_id = $1 AND deleted = false
 ORDER BY name
 `
@@ -349,6 +373,9 @@ func (q *Queries) ListWorkspacesByProject(ctx context.Context, projectID *string
 			&i.CreatedBy,
 			&i.UpdatedDate,
 			&i.UpdatedBy,
+			&i.VcsID,
+			&i.SshID,
+			&i.AgentID,
 		); err != nil {
 			return nil, err
 		}
@@ -366,7 +393,7 @@ SET locked = $2,
     lock_description = $3,
     updated_date = now()
 WHERE id = $1 AND deleted = false
-RETURNING id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by
+RETURNING id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by, vcs_id, ssh_id, agent_id
 `
 
 type SetWorkspaceLockParams struct {
@@ -407,6 +434,9 @@ func (q *Queries) SetWorkspaceLock(ctx context.Context, arg SetWorkspaceLockPara
 		&i.CreatedBy,
 		&i.UpdatedDate,
 		&i.UpdatedBy,
+		&i.VcsID,
+		&i.SshID,
+		&i.AgentID,
 	)
 	return i, err
 }
@@ -436,9 +466,14 @@ SET name = $2,
     restrict_apply_to_configured_branch = $13,
     require_approve_to_apply = $14,
     project_id = $15,
+    module_ssh_key = $16,
+    shared_ids = $17,
+    vcs_id = $18,
+    ssh_id = $19,
+    agent_id = $20,
     updated_date = now()
 WHERE id = $1 AND deleted = false
-RETURNING id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by
+RETURNING id, name, description, source, branch, folder, last_job_status, last_job_date, locked, deleted, allow_remote_apply, global_remote_state, shared_ids, default_template, restrict_apply_to_configured_branch, require_approve_to_apply, lock_description, iac_type, module_ssh_key, terraform_version, execution_mode, policy_compliance_status, organization_id, project_id, created_date, created_by, updated_date, updated_by, vcs_id, ssh_id, agent_id
 `
 
 type UpdateWorkspaceParams struct {
@@ -457,6 +492,11 @@ type UpdateWorkspaceParams struct {
 	RestrictApplyToConfiguredBranch bool    `json:"restrict_apply_to_configured_branch"`
 	RequireApproveToApply           bool    `json:"require_approve_to_apply"`
 	ProjectID                       *string `json:"project_id"`
+	ModuleSshKey                    *string `json:"module_ssh_key"`
+	SharedIds                       *string `json:"shared_ids"`
+	VcsID                           *string `json:"vcs_id"`
+	SshID                           *string `json:"ssh_id"`
+	AgentID                         *string `json:"agent_id"`
 }
 
 func (q *Queries) UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams) (Workspace, error) {
@@ -476,6 +516,11 @@ func (q *Queries) UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams
 		arg.RestrictApplyToConfiguredBranch,
 		arg.RequireApproveToApply,
 		arg.ProjectID,
+		arg.ModuleSshKey,
+		arg.SharedIds,
+		arg.VcsID,
+		arg.SshID,
+		arg.AgentID,
 	)
 	var i Workspace
 	err := row.Scan(
@@ -507,6 +552,9 @@ func (q *Queries) UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams
 		&i.CreatedBy,
 		&i.UpdatedDate,
 		&i.UpdatedBy,
+		&i.VcsID,
+		&i.SshID,
+		&i.AgentID,
 	)
 	return i, err
 }

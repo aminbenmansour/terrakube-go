@@ -25,6 +25,7 @@ PATCH /organization/{organizationID}/
 PATCH /organization/{organizationID}/globalvar/{globalVarID}/
 PATCH /organization/{organizationID}/job/{jobID}/
 PATCH /organization/{organizationID}/workspace/{workspaceID}/
+PATCH /organization/{organizationID}/workspace/{workspaceID}/relationships/{relation}
 PATCH /organization/{organizationID}/workspace/{workspaceID}/variable/{variableID}/
 PATCH /project/{projectID}/
 PATCH /variable/{variableID}/

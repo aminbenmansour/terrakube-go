@@ -218,6 +218,9 @@ type Workspace struct {
 	CreatedBy                       *string            `json:"created_by"`
 	UpdatedDate                     pgtype.Timestamptz `json:"updated_date"`
 	UpdatedBy                       *string            `json:"updated_by"`
+	VcsID                           *string            `json:"vcs_id"`
+	SshID                           *string            `json:"ssh_id"`
+	AgentID                         *string            `json:"agent_id"`
 }
 
 type Workspacetag struct {
