@@ -26,13 +26,15 @@ INSERT INTO workspace (
     id, name, description, source, branch, folder, terraform_version, iac_type,
     execution_mode, organization_id, project_id, allow_remote_apply,
     global_remote_state, default_template, restrict_apply_to_configured_branch,
-    require_approve_to_apply, created_by
+    require_approve_to_apply, created_by, module_ssh_key, shared_ids,
+    vcs_id, ssh_id, agent_id
 )
 VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8,
     $9, $10, $11, $12,
     $13, $14, $15,
-    $16, $17
+    $16, $17, $18, $19,
+    $20, $21, $22
 )
 RETURNING *;
 
@@ -52,6 +54,11 @@ SET name = $2,
     restrict_apply_to_configured_branch = $13,
     require_approve_to_apply = $14,
     project_id = $15,
+    module_ssh_key = $16,
+    shared_ids = $17,
+    vcs_id = $18,
+    ssh_id = $19,
+    agent_id = $20,
     updated_date = now()
 WHERE id = $1 AND deleted = false
 RETURNING *;
