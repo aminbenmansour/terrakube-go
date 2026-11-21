@@ -130,4 +130,37 @@ request workspace-create-project-foreign "/api/v1/organization/${rel_org}/worksp
   -H 'Content-Type: application/vnd.api+json' \
   --data "{\"data\":{\"type\":\"workspace\",\"attributes\":{\"name\":\"capture-rel-rejected\",\"source\":\"https://github.com/terrakube-io/terrakube.git\",\"branch\":\"main\",\"terraformVersion\":\"1.9.0\"},\"relationships\":{\"project\":{\"data\":{\"type\":\"project\",\"id\":\"${rel_foreign}\"}}}}}"
 
+# Global variables: seeded with fixed ids so the item routes can be replayed.
+# Two visible rows keep the list shape identical whichever order upstream picks;
+# the sensitive row is fetched on its own because its value is omitted.
+gv_org="${rel_org}"
+pg "delete from globalvar where variable_key like 'CAPTURE\_%'" >/dev/null
+pg "insert into globalvar (id, variable_key, variable_value, variable_description, sensitive, hcl, variable_category, organization_id)
+    values ('99999999-9999-4999-8999-999999999990', 'CAPTURE_ONE', 'one', 'capture', false, false, 'ENV', '${gv_org}'),
+           ('99999999-9999-4999-8999-999999999992', 'CAPTURE_TWO', 'two', 'capture', false, true, 'TERRAFORM', '${gv_org}'),
+           ('99999999-9999-4999-8999-999999999993', 'CAPTURE_SECRET', 'hidden', 'capture', true, false, 'ENV', '${gv_org}')" >/dev/null
+
+request organization-globalvar-list      "/api/v1/organization/${gv_org}/globalvar"
+request organization-globalvar-get       "/api/v1/organization/${gv_org}/globalvar/99999999-9999-4999-8999-999999999990"
+request organization-globalvar-get-sensitive "/api/v1/organization/${gv_org}/globalvar/99999999-9999-4999-8999-999999999993"
+request organization-globalvar-create    "/api/v1/organization/${gv_org}/globalvar" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"globalvar","attributes":{"key":"CAPTURE_NEW","value":"new","description":"capture","sensitive":false,"hcl":false,"category":"ENV"}}}'
+request organization-globalvar-patch     "/api/v1/organization/${gv_org}/globalvar/99999999-9999-4999-8999-999999999990" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"globalvar","id":"99999999-9999-4999-8999-999999999990","attributes":{"key":"CAPTURE_ONE","value":"after","description":"after","hcl":true,"category":"TERRAFORM"}}}'
+request organization-globalvar-delete    "/api/v1/organization/${gv_org}/globalvar/99999999-9999-4999-8999-999999999993" -X DELETE
+request organization-globalvar-invalid-category "/api/v1/organization/${gv_org}/globalvar" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"globalvar","attributes":{"key":"CAPTURE_BAD","value":"x","description":"d","sensitive":false,"hcl":false,"category":"env"}}}'
+request organization-globalvar-missing-key "/api/v1/organization/${gv_org}/globalvar" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"globalvar","attributes":{"value":"x","description":"d","sensitive":false,"hcl":false,"category":"ENV"}}}'
+# Upstream's duplicate-key hook throws and Spring answers a 500; the recording
+# documents the bug rather than a contract to copy.
+request organization-globalvar-duplicate "/api/v1/organization/${gv_org}/globalvar" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"globalvar","attributes":{"key":"CAPTURE_ONE","value":"dup","description":"d","sensitive":false,"hcl":false,"category":"ENV"}}}'
+pg "delete from globalvar where variable_key like 'CAPTURE\_%'" >/dev/null
+
 echo "wrote $(wc -l < "$out/index.tsv") captures to $out"
