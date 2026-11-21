@@ -12,6 +12,7 @@ type Querier interface {
 	ApproveJob(ctx context.Context, arg ApproveJobParams) (Job, error)
 	CreateArchive(ctx context.Context, arg CreateArchiveParams) (TempArchive, error)
 	CreateContent(ctx context.Context, arg CreateContentParams) (Content, error)
+	CreateGlobalVariable(ctx context.Context, arg CreateGlobalVariableParams) (Globalvar, error)
 	CreateHistory(ctx context.Context, arg CreateHistoryParams) (History, error)
 	CreateJob(ctx context.Context, arg CreateJobParams) (Job, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
@@ -22,11 +23,13 @@ type Querier interface {
 	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (Workspace, error)
 	CreateWorkspaceTag(ctx context.Context, arg CreateWorkspaceTagParams) (Workspacetag, error)
 	DeleteArchive(ctx context.Context, id string) error
+	DeleteGlobalVariable(ctx context.Context, id string) error
 	DeleteOrganization(ctx context.Context, id string) error
 	DeleteProject(ctx context.Context, id string) error
 	DeleteVariable(ctx context.Context, id string) error
 	GetArchive(ctx context.Context, id string) (GetArchiveRow, error)
 	GetContent(ctx context.Context, id string) (Content, error)
+	GetGlobalVariable(ctx context.Context, id string) (Globalvar, error)
 	GetHistory(ctx context.Context, id string) (History, error)
 	GetHistoryByJobReference(ctx context.Context, arg GetHistoryByJobReferenceParams) (History, error)
 	GetJob(ctx context.Context, id int64) (Job, error)
@@ -47,6 +50,7 @@ type Querier interface {
 	ListActiveJobsByOrganization(ctx context.Context, name string) ([]Job, error)
 	ListActiveJobsByWorkspace(ctx context.Context, workspaceID string) ([]Job, error)
 	ListArchivesByHistory(ctx context.Context, historyID string) ([]TempArchive, error)
+	ListGlobalVariablesByOrganization(ctx context.Context, organizationID string) ([]Globalvar, error)
 	ListJobsByOrganization(ctx context.Context, organizationID string) ([]Job, error)
 	ListOrganizations(ctx context.Context) ([]Organization, error)
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
@@ -61,6 +65,7 @@ type Querier interface {
 	SetWorkspaceLock(ctx context.Context, arg SetWorkspaceLockParams) (Workspace, error)
 	SoftDeleteWorkspace(ctx context.Context, id string) error
 	UpdateContentStatus(ctx context.Context, arg UpdateContentStatusParams) (Content, error)
+	UpdateGlobalVariable(ctx context.Context, arg UpdateGlobalVariableParams) (Globalvar, error)
 	UpdateHistoryOutput(ctx context.Context, arg UpdateHistoryOutputParams) error
 	UpdateJobOutput(ctx context.Context, arg UpdateJobOutputParams) error
 	UpdateJobPlanChanges(ctx context.Context, arg UpdateJobPlanChangesParams) (Job, error)

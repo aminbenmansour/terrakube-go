@@ -30,6 +30,17 @@ type Content struct {
 	WorkspaceID   *string `json:"workspace_id"`
 }
 
+type Globalvar struct {
+	ID                  string `json:"id"`
+	VariableKey         string `json:"variable_key"`
+	VariableValue       string `json:"variable_value"`
+	VariableDescription string `json:"variable_description"`
+	Sensitive           bool   `json:"sensitive"`
+	Hcl                 bool   `json:"hcl"`
+	VariableCategory    string `json:"variable_category"`
+	OrganizationID      string `json:"organization_id"`
+}
+
 type History struct {
 	ID           string             `json:"id"`
 	WorkspaceID  string             `json:"workspace_id"`
