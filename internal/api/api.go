@@ -81,6 +81,15 @@ func New(deps Deps) http.Handler {
 			r.Get("/", a.getJob)
 			r.Patch("/", a.updateJob)
 		})
+
+		// Organization-level variables inherited by every workspace.
+		r.Get("/globalvar", a.listGlobalVariables)
+		r.Post("/globalvar", a.createGlobalVariable)
+		r.Route("/globalvar/{globalVarID}", func(r chi.Router) {
+			r.Get("/", a.getGlobalVariable)
+			r.Patch("/", a.updateGlobalVariable)
+			r.Delete("/", a.deleteGlobalVariable)
+		})
 	})
 
 	// Projects
