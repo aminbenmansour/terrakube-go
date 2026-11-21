@@ -93,4 +93,39 @@ request organization-job-patch-invalid "/api/v1/organization/${job_org}/job/${jo
   -H 'Content-Type: application/vnd.api+json' \
   --data "{\"data\":{\"type\":\"job\",\"id\":\"${job_id}\",\"attributes\":{\"status\":\"nonsense\"}}}"
 
+# Workspace relationship cases need one organization with two projects and a
+# project from a different organization. The workspace is seeded with a fixed id
+# so the recordings stay stable; upstream requires source, branch and a
+# terraform version on the row.
+IFS='|' read -r rel_org rel_p1 rel_p2 <<< "$(pg "select organization_id, min(id), max(id) from project
+  group by organization_id having count(*) > 1 order by organization_id limit 1")"
+rel_foreign="$(pg "select id from project where organization_id <> '${rel_org}' order by id limit 1")"
+rel_ws='77777777-7777-4777-8777-777777777777'
+pg "delete from workspace where id = '${rel_ws}' or name = 'capture-rel-workspace'" >/dev/null
+pg "insert into workspace (id, name, source, branch, terraform_version, organization_id)
+    values ('${rel_ws}', 'capture-rel-workspace',
+            'https://github.com/terrakube-io/terrakube.git', 'main', '1.9.0', '${rel_org}')" >/dev/null
+
+request workspace-patch-attribute "/api/v1/organization/${rel_org}/workspace/${rel_ws}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"workspace\",\"id\":\"${rel_ws}\",\"attributes\":{\"description\":\"captured\"}}}"
+request workspace-patch-project "/api/v1/organization/${rel_org}/workspace/${rel_ws}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"workspace\",\"id\":\"${rel_ws}\",\"relationships\":{\"project\":{\"data\":{\"type\":\"project\",\"id\":\"${rel_p1}\"}}}}}"
+request workspace-patch-project-moved "/api/v1/organization/${rel_org}/workspace/${rel_ws}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"workspace\",\"id\":\"${rel_ws}\",\"relationships\":{\"project\":{\"data\":{\"type\":\"project\",\"id\":\"${rel_p2}\"}}}}}"
+request workspace-patch-project-foreign "/api/v1/organization/${rel_org}/workspace/${rel_ws}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"workspace\",\"id\":\"${rel_ws}\",\"relationships\":{\"project\":{\"data\":{\"type\":\"project\",\"id\":\"${rel_foreign}\"}}}}}"
+request workspace-patch-project-unknown "/api/v1/organization/${rel_org}/workspace/${rel_ws}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"workspace\",\"id\":\"${rel_ws}\",\"relationships\":{\"project\":{\"data\":{\"type\":\"project\",\"id\":\"00000000-0000-0000-0000-000000000000\"}}}}}"
+request workspace-patch-project-clear "/api/v1/organization/${rel_org}/workspace/${rel_ws}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"workspace\",\"id\":\"${rel_ws}\",\"relationships\":{\"project\":{\"data\":null}}}}"
+request workspace-create-project-foreign "/api/v1/organization/${rel_org}/workspace" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"workspace\",\"attributes\":{\"name\":\"capture-rel-rejected\",\"source\":\"https://github.com/terrakube-io/terrakube.git\",\"branch\":\"main\",\"terraformVersion\":\"1.9.0\"},\"relationships\":{\"project\":{\"data\":{\"type\":\"project\",\"id\":\"${rel_foreign}\"}}}}}"
+
 echo "wrote $(wc -l < "$out/index.tsv") captures to $out"

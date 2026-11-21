@@ -25,6 +25,7 @@ type stubQuerier struct {
 	jobs       []store.Job
 	steps      []store.Step
 	workspaces []store.Workspace
+	projects   []store.Project
 	err        error
 	created    *store.CreateOrganizationParams
 }

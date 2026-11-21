@@ -1,10 +1,11 @@
 package api
 
 import (
-	"context"
+	"errors"
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
@@ -168,10 +169,7 @@ func (a *API) createWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if present && projectID != "" {
-		if err := a.validateProjectInOrganization(r.Context(), projectID, orgID); err != nil {
-			if !a.writeStoreError(w, "validate project", err) {
-				jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Relationship", "The project does not belong to this organization.")
-			}
+		if !a.checkProjectRelationship(w, r, projectID, orgID) {
 			return
 		}
 	} else {
@@ -253,17 +251,14 @@ func (a *API) updateWorkspace(w http.ResponseWriter, r *http.Request) {
 		if relID == "" {
 			projectID = nil
 		} else {
-			if err := a.validateProjectInOrganization(r.Context(), relID, ws.OrganizationID); err != nil {
-				if !a.writeStoreError(w, "validate project", err) {
-					jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Relationship", "The project does not belong to this organization.")
-				}
+			if !a.checkProjectRelationship(w, r, relID, ws.OrganizationID) {
 				return
 			}
 			projectID = &relID
 		}
 	}
 
-	updated, err := a.deps.Store.UpdateWorkspace(r.Context(), store.UpdateWorkspaceParams{
+	if _, err := a.deps.Store.UpdateWorkspace(r.Context(), store.UpdateWorkspaceParams{
 		ID:                              ws.ID,
 		Name:                            name,
 		Description:                     pickString(data, "description", attrs.Description, ws.Description),
@@ -279,15 +274,16 @@ func (a *API) updateWorkspace(w http.ResponseWriter, r *http.Request) {
 		RestrictApplyToConfiguredBranch: pickBool(data, "restrictApplyToConfiguredBranch", attrs.RestrictApplyToConfiguredBranch, ws.RestrictApplyToConfiguredBranch),
 		RequireApproveToApply:           pickBool(data, "requireApproveToApply", attrs.RequireApproveToApply, ws.RequireApproveToApply),
 		ProjectID:                       projectID,
-	})
-	if err != nil {
+	}); err != nil {
 		if !a.writeStoreError(w, "update workspace", err) {
 			a.internalError(w, "update workspace", err)
 		}
 		return
 	}
 
-	jsonapi.WriteResource(w, http.StatusOK, workspaceResource(updated))
+	// Upstream answers a workspace PATCH with 204 and no body, for attributes
+	// and relationships alike; the UI refetches what it needs.
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (a *API) deleteWorkspace(w http.ResponseWriter, r *http.Request) {
@@ -307,15 +303,27 @@ func (a *API) deleteWorkspace(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (a *API) validateProjectInOrganization(ctx context.Context, projectID, orgID string) error {
-	project, err := a.deps.Store.GetProject(ctx, projectID)
+// checkProjectRelationship resolves the project an incoming workspace names.
+// Upstream distinguishes an id that does not exist (404) from a project in
+// another organization (403); both were a 400 here, and a client cannot tell
+// which mistake it made from that.
+func (a *API) checkProjectRelationship(w http.ResponseWriter, r *http.Request, projectID, orgID string) bool {
+	project, err := a.deps.Store.GetProject(r.Context(), projectID)
 	if err != nil {
-		return err
+		if errors.Is(err, pgx.ErrNoRows) {
+			jsonapi.WriteError(w, http.StatusNotFound, "Not Found", "Unknown identifier "+projectID+" for project")
+			return false
+		}
+		if !a.writeStoreError(w, "get project", err) {
+			a.internalError(w, "get project", err)
+		}
+		return false
 	}
 	if project.OrganizationID != orgID {
-		return errProjectOutsideOrganization
+		jsonapi.WriteError(w, http.StatusForbidden, "Forbidden", "Project does not belong to the workspace organization")
+		return false
 	}
-	return nil
+	return true
 }
 
 // workspaceInOrganization guards the organization-scoped workspace routes. A

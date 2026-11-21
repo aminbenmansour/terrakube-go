@@ -309,6 +309,12 @@ Captured from `azbuilder/api-server:2.34.3`; the responses are in
   anything else with `400 Invalid value: ...`, and refuses `approved` unless the
   job is `waitingApproval` (409). It calls the same `UpdateJobStatus` path as the
   TFE discard action, so `jobstatus.Wrap` still publishes to subscriptions.
+- Workspace PATCH answers **204 with no body**, for attributes and relationships
+  alike, as upstream does. `relationships.project` is stored on create and
+  update; an id that does not exist is `404 Unknown identifier <id> for project`
+  and a project from another organization is `403 Project does not belong to the
+  workspace organization`. `relationships.vcs` and `.agent` are still ignored:
+  neither table nor resource exists yet (#48, #120).
 - The recordings are replayed by `internal/api/upstream_contract_test.go`, so an
   attribute rename fails `make check`. They are regenerated with
   `scripts/upstream-capture/` against a new upstream tag; a capture that is

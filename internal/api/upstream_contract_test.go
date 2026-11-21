@@ -150,6 +150,50 @@ var replayedCaptures = map[string]replay{
 		body:    `{"data":{"type":"job","id":"{id}","attributes":{"status":"nonsense"}}}`,
 		querier: &stubQuerier{jobs: captureJobs()},
 	},
+	"workspace-patch-attribute": {
+		target:  "workspace",
+		method:  http.MethodPatch,
+		body:    `{"data":{"type":"workspace","id":"` + capturedRelWS + `","attributes":{"description":"captured"}}}`,
+		querier: captureWorkspaceStore(),
+	},
+	"workspace-patch-project": {
+		target:  "workspace",
+		method:  http.MethodPatch,
+		body:    workspaceProjectBody(capturedRelP1),
+		querier: captureWorkspaceStore(),
+	},
+	"workspace-patch-project-moved": {
+		target:  "workspace",
+		method:  http.MethodPatch,
+		body:    workspaceProjectBody(capturedRelP2),
+		querier: captureWorkspaceStore(),
+	},
+	"workspace-patch-project-foreign": {
+		target:  "workspace",
+		method:  http.MethodPatch,
+		body:    workspaceProjectBody(capturedRelForeign),
+		querier: captureWorkspaceStore(),
+	},
+	"workspace-patch-project-unknown": {
+		target:  "workspace",
+		method:  http.MethodPatch,
+		body:    workspaceProjectBody(capturedRelUnknown),
+		querier: captureWorkspaceStore(),
+	},
+	"workspace-patch-project-clear": {
+		target:  "workspace",
+		method:  http.MethodPatch,
+		body:    `{"data":{"type":"workspace","id":"` + capturedRelWS + `","relationships":{"project":{"data":null}}}}`,
+		querier: captureWorkspaceStore(),
+	},
+	// The recording was made against a project of another organization; which
+	// id it was is not part of the contract, so the replay names its own.
+	"workspace-create-project-foreign": {
+		target:  "workspace-collection",
+		method:  http.MethodPost,
+		body:    `{"data":{"type":"workspace","attributes":{"name":"from-vcs","source":"https://github.com/terrakube-io/terrakube.git","branch":"main","terraformVersion":"1.9.0"},"relationships":{"project":{"data":{"type":"project","id":"` + capturedRelForeign + `"}}}}}`,
+		querier: captureWorkspaceStore(),
+	},
 }
 
 // deferredCaptures are recorded but cannot be asserted yet. Each needs a reason,
@@ -170,10 +214,38 @@ var deferredCaptures = map[string]string{
 // The ids upstream's demo seed gave the captures; the job captures were taken
 // against these rows, so the replay uses the same ids.
 const (
-	capturedOrgID  = "1c839e0a-ca5d-49a9-9c78-7a569df534b7"
-	capturedWSID   = "0beb7db4-b073-4bd4-9a98-94fe7e2d9939"
-	capturedStepID = "66666666-6666-4666-8666-666666666666"
+	capturedOrgID = "1c839e0a-ca5d-49a9-9c78-7a569df534b7"
+	capturedWSID  = "0beb7db4-b073-4bd4-9a98-94fe7e2d9939"
+	// The workspace relationship captures were seeded against this org, which
+	// the upstream demo gives two projects.
+	capturedRelOrg     = "70000000-0000-0000-0000-000000000001"
+	capturedRelWS      = "77777777-7777-4777-8777-777777777777"
+	capturedRelP1      = "70000000-0000-0000-0000-000000000010"
+	capturedRelP2      = "70000000-0000-0000-0000-000000000020"
+	capturedRelForeign = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+	capturedRelUnknown = "00000000-0000-0000-0000-000000000000"
+	capturedForeignOrg = "d9b58bd3-f3fc-4056-a026-1163297e80a8"
+	capturedStepID     = "66666666-6666-4666-8666-666666666666"
 )
+
+func workspaceProjectBody(projectID string) string {
+	return `{"data":{"type":"workspace","id":"` + capturedRelWS +
+		`","relationships":{"project":{"data":{"type":"project","id":"` + projectID + `"}}}}}`
+}
+
+func captureWorkspaceStore() *stubQuerier {
+	return &stubQuerier{
+		workspaces: []store.Workspace{{
+			ID: capturedRelWS, OrganizationID: capturedRelOrg, Name: "capture-rel-workspace",
+			ProjectID: strPtr(capturedRelP1),
+		}},
+		projects: []store.Project{
+			{ID: capturedRelP1, Name: "governance-terraform", OrganizationID: capturedRelOrg},
+			{ID: capturedRelP2, Name: "governance-tofu", OrganizationID: capturedRelOrg},
+			{ID: capturedRelForeign, Name: "demo-project", OrganizationID: capturedForeignOrg},
+		},
+	}
+}
 
 func captureJobs() []store.Job {
 	return []store.Job{{
@@ -235,6 +307,31 @@ func (s *stubQuerier) UpdateJobStatus(_ context.Context, arg store.UpdateJobStat
 
 func (s *stubQuerier) SetWorkspaceLastJob(context.Context, store.SetWorkspaceLastJobParams) error {
 	return s.err
+}
+
+func (s *stubQuerier) GetProject(_ context.Context, id string) (store.Project, error) {
+	for _, project := range s.projects {
+		if project.ID == id {
+			return project, nil
+		}
+	}
+	return store.Project{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateWorkspace(_ context.Context, arg store.CreateWorkspaceParams) (store.Workspace, error) {
+	return store.Workspace{
+		ID: arg.ID, Name: arg.Name, OrganizationID: arg.OrganizationID, ProjectID: arg.ProjectID,
+	}, s.err
+}
+
+func (s *stubQuerier) UpdateWorkspace(_ context.Context, arg store.UpdateWorkspaceParams) (store.Workspace, error) {
+	for _, ws := range s.workspaces {
+		if ws.ID == arg.ID {
+			ws.ProjectID = arg.ProjectID
+			return ws, nil
+		}
+	}
+	return store.Workspace{}, pgx.ErrNoRows
 }
 
 func (s *stubQuerier) GetWorkspace(_ context.Context, id string) (store.Workspace, error) {
@@ -300,6 +397,10 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 				target = "/organization/" + capturedOrgID + "/job/" + idCapture.resourceID(t)
 			case "job-include":
 				target = "/organization/" + capturedOrgID + "/job/" + idCapture.resourceID(t) + "?include=step,workspace"
+			case "workspace":
+				target = "/organization/" + capturedRelOrg + "/workspace/" + capturedRelWS
+			case "workspace-collection":
+				target = "/organization/" + capturedRelOrg + "/workspace"
 			}
 			if querier == nil {
 				querier = &stubQuerier{}
