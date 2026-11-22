@@ -10,6 +10,7 @@ import (
 
 type Querier interface {
 	ApproveJob(ctx context.Context, arg ApproveJobParams) (Job, error)
+	CreateAction(ctx context.Context, arg CreateActionParams) (Action, error)
 	CreateArchive(ctx context.Context, arg CreateArchiveParams) (TempArchive, error)
 	CreateContent(ctx context.Context, arg CreateContentParams) (Content, error)
 	CreateGlobalVariable(ctx context.Context, arg CreateGlobalVariableParams) (Globalvar, error)
@@ -22,11 +23,13 @@ type Querier interface {
 	CreateVariable(ctx context.Context, arg CreateVariableParams) (Variable, error)
 	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (Workspace, error)
 	CreateWorkspaceTag(ctx context.Context, arg CreateWorkspaceTagParams) (Workspacetag, error)
+	DeleteAction(ctx context.Context, id string) error
 	DeleteArchive(ctx context.Context, id string) error
 	DeleteGlobalVariable(ctx context.Context, id string) error
 	DeleteOrganization(ctx context.Context, id string) error
 	DeleteProject(ctx context.Context, id string) error
 	DeleteVariable(ctx context.Context, id string) error
+	GetAction(ctx context.Context, id string) (Action, error)
 	GetArchive(ctx context.Context, id string) (GetArchiveRow, error)
 	GetContent(ctx context.Context, id string) (Content, error)
 	GetGlobalVariable(ctx context.Context, id string) (Globalvar, error)
@@ -47,6 +50,7 @@ type Querier interface {
 	GetVariable(ctx context.Context, id string) (Variable, error)
 	GetWorkspace(ctx context.Context, id string) (Workspace, error)
 	GetWorkspaceByName(ctx context.Context, arg GetWorkspaceByNameParams) (Workspace, error)
+	ListActions(ctx context.Context) ([]Action, error)
 	ListActiveJobsByOrganization(ctx context.Context, name string) ([]Job, error)
 	ListActiveJobsByWorkspace(ctx context.Context, workspaceID string) ([]Job, error)
 	ListArchivesByHistory(ctx context.Context, historyID string) ([]TempArchive, error)
@@ -64,6 +68,7 @@ type Querier interface {
 	SetWorkspaceLastJob(ctx context.Context, arg SetWorkspaceLastJobParams) error
 	SetWorkspaceLock(ctx context.Context, arg SetWorkspaceLockParams) (Workspace, error)
 	SoftDeleteWorkspace(ctx context.Context, id string) error
+	UpdateAction(ctx context.Context, arg UpdateActionParams) (Action, error)
 	UpdateContentStatus(ctx context.Context, arg UpdateContentStatusParams) (Content, error)
 	UpdateGlobalVariable(ctx context.Context, arg UpdateGlobalVariableParams) (Globalvar, error)
 	UpdateHistoryOutput(ctx context.Context, arg UpdateHistoryOutputParams) error
