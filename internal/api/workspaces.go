@@ -134,6 +134,24 @@ func (a *API) getWorkspace(w http.ResponseWriter, r *http.Request) {
 		included = append(included, projectResource(project))
 	}
 
+	// The workspace page reads its collection references and then asks each
+	// one for its collection items (workspaceDataUtils.ts, include.REFERENCE).
+	if want["reference"] {
+		references, err := a.deps.Store.ListReferencesByWorkspace(r.Context(), ws.ID)
+		if err != nil {
+			if !a.writeStoreError(w, "list references", err) {
+				a.internalError(w, "list references", err)
+			}
+			return
+		}
+		ids := make([]string, 0, len(references))
+		for _, reference := range references {
+			ids = append(ids, reference.ID)
+			included = append(included, referenceResource(reference))
+		}
+		resource.Relationships["reference"] = jsonapi.LinkList("reference", ids...)
+	}
+
 	jsonapi.Write(w, http.StatusOK, jsonapi.Document{Data: resource, Included: included}, jsonapi.ParseFieldsets(r))
 }
 
@@ -547,6 +565,11 @@ func workspaceResource(ws store.Workspace) jsonapi.Resource {
 			"lockDescription":                 ws.LockDescription,
 			"moduleSshKey":                    strValue(ws.ModuleSshKey),
 			"sharedIds":                       strValue(ws.SharedIds),
+			"lastJobDate":                     timestamp(ws.LastJobDate),
+			"createdBy":                       ws.CreatedBy,
+			"createdDate":                     timestamp(ws.CreatedDate),
+			"updatedBy":                       ws.UpdatedBy,
+			"updatedDate":                     timestamp(ws.UpdatedDate),
 		},
 		Relationships: relationships,
 	}

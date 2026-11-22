@@ -113,6 +113,28 @@ func New(deps Deps) http.Handler {
 		r.Get("/workspace", a.listProjectWorkspaces)
 	})
 
+	// Variable collections: Settings > Collections, and the read-only
+	// "Collection Variables" table on the workspace page.
+	r.Route("/organization/{organizationID}/collection", func(r chi.Router) {
+		r.Get("/", a.listCollections)
+		r.Post("/", a.createCollection)
+		r.Route("/{collectionID}", func(r chi.Router) {
+			r.Get("/", a.getCollection)
+			r.Patch("/", a.updateCollection)
+			r.Delete("/", a.deleteCollection)
+			r.Get("/item", a.listCollectionItems)
+			r.Post("/item", a.createCollectionItem)
+			r.Route("/item/{itemID}", func(r chi.Router) {
+				r.Patch("/", a.updateCollectionItem)
+				r.Delete("/", a.deleteCollectionItem)
+			})
+			r.Get("/reference", a.listCollectionReferences)
+			r.Post("/reference", a.createCollectionReference)
+			r.Delete("/reference/{referenceID}", a.deleteCollectionReference)
+		})
+	})
+	r.Get("/reference/{referenceID}/collection", a.getReferenceCollection)
+
 	// Workspaces
 	r.Route("/workspace/{workspaceID}", func(r chi.Router) {
 		r.Get("/", a.getWorkspace)
