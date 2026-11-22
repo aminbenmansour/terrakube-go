@@ -259,9 +259,9 @@ object key.
 
 ## Management API — `/api/v1`
 
-Elide-generated JSON:API. This API implements 65 routes (organization, project,
+Elide-generated JSON:API. This API implements 74 routes (organization, project,
 workspace, variable, globalvar, job, action, collection/item/reference,
-ssh, agent and the atomic extension); the 106
+ssh, agent, tag/workspacetag and the atomic extension); the 106
 REST operations the UI actually sends are listed in
 `docs/upstream/ui-rest-operations.md`, with what is missing. Reference
 specification (upstream, v2.27.0) is at
