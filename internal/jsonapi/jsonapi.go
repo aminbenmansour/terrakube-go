@@ -87,6 +87,7 @@ type ErrorSource struct {
 type RequestData struct {
 	Type          string                         `json:"type"`
 	ID            string                         `json:"id,omitempty"`
+	LID           string                         `json:"lid,omitempty"`
 	Attributes    map[string]json.RawMessage     `json:"attributes,omitempty"`
 	Relationships map[string]RequestRelationship `json:"relationships,omitempty"`
 }
