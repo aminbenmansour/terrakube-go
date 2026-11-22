@@ -138,14 +138,6 @@ func (a *API) getWorkspace(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) createWorkspace(w http.ResponseWriter, r *http.Request) {
-	orgID := param(r, "organizationID")
-	if _, err := a.deps.Store.GetOrganization(r.Context(), orgID); err != nil {
-		if !a.writeStoreError(w, "get organization", err) {
-			a.internalError(w, "get organization", err)
-		}
-		return
-	}
-
 	data, err := jsonapi.DecodeRequest(r)
 	if err != nil {
 		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Request", err.Error())
@@ -155,24 +147,42 @@ func (a *API) createWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ws, ok := a.createWorkspaceFromData(w, r, param(r, "organizationID"), data)
+	if !ok {
+		return
+	}
+	jsonapi.WriteResource(w, http.StatusCreated, workspaceResource(ws), jsonapi.ParseFieldsets(r))
+}
+
+// createWorkspaceFromData is shared by POST /workspace and the atomic
+// operations endpoint, which receives the same resource object without a
+// wrapping request body.
+func (a *API) createWorkspaceFromData(w http.ResponseWriter, r *http.Request, orgID string, data *jsonapi.RequestData) (store.Workspace, bool) {
+	if _, err := a.deps.Store.GetOrganization(r.Context(), orgID); err != nil {
+		if !a.writeStoreError(w, "get organization", err) {
+			a.internalError(w, "get organization", err)
+		}
+		return store.Workspace{}, false
+	}
+
 	attrs, err := jsonapi.DecodeAttributes[workspaceAttrs](data)
 	if err != nil {
 		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Attributes", err.Error())
-		return
+		return store.Workspace{}, false
 	}
 	if attrs.Name == nil || *attrs.Name == "" {
 		jsonapi.WriteUnprocessable(w, http.StatusUnprocessableEntity, "Missing Attribute", "name is required.", "name")
-		return
+		return store.Workspace{}, false
 	}
 
 	projectID, present, err := jsonapi.RelationshipID(data, "project")
 	if err != nil {
 		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Relationship", err.Error())
-		return
+		return store.Workspace{}, false
 	}
 	if present && projectID != "" {
 		if !a.checkProjectRelationship(w, r, projectID, orgID) {
-			return
+			return store.Workspace{}, false
 		}
 	} else {
 		projectID = ""
@@ -180,7 +190,7 @@ func (a *API) createWorkspace(w http.ResponseWriter, r *http.Request) {
 
 	links, ok := workspaceLinks(w, data, nil)
 	if !ok {
-		return
+		return store.Workspace{}, false
 	}
 
 	iacType := "terraform"
@@ -216,10 +226,9 @@ func (a *API) createWorkspace(w http.ResponseWriter, r *http.Request) {
 		if !a.writeStoreError(w, "create workspace", err) {
 			a.internalError(w, "create workspace", err)
 		}
-		return
+		return store.Workspace{}, false
 	}
-
-	jsonapi.WriteResource(w, http.StatusCreated, workspaceResource(ws), jsonapi.ParseFieldsets(r))
+	return ws, true
 }
 
 func (a *API) updateWorkspace(w http.ResponseWriter, r *http.Request) {
@@ -240,17 +249,29 @@ func (a *API) updateWorkspace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !a.applyWorkspaceUpdate(w, r, ws, data) {
+		return
+	}
+
+	// Upstream answers a workspace PATCH with 204 and no body, for attributes
+	// and relationships alike; the UI refetches what it needs.
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// applyWorkspaceUpdate is shared by PATCH and the atomic operations endpoint;
+// it writes the error itself and reports whether the row was updated.
+func (a *API) applyWorkspaceUpdate(w http.ResponseWriter, r *http.Request, ws store.Workspace, data *jsonapi.RequestData) bool {
 	attrs, err := jsonapi.DecodeAttributes[workspaceAttrs](data)
 	if err != nil {
 		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Attributes", err.Error())
-		return
+		return false
 	}
 
 	name := ws.Name
 	if jsonapi.HasAttribute(data, "name") {
 		if attrs.Name == nil || *attrs.Name == "" {
 			jsonapi.WriteUnprocessable(w, http.StatusUnprocessableEntity, "Invalid Attribute", "name must not be empty.", "name")
-			return
+			return false
 		}
 		name = *attrs.Name
 	}
@@ -274,13 +295,13 @@ func (a *API) updateWorkspace(w http.ResponseWriter, r *http.Request) {
 
 	if relID, present, relErr := jsonapi.RelationshipID(data, "project"); relErr != nil {
 		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Relationship", relErr.Error())
-		return
+		return false
 	} else if present {
 		if relID == "" {
 			params.ProjectID = nil
 		} else {
 			if !a.checkProjectRelationship(w, r, relID, ws.OrganizationID) {
-				return
+				return false
 			}
 			params.ProjectID = &relID
 		}
@@ -290,7 +311,7 @@ func (a *API) updateWorkspace(w http.ResponseWriter, r *http.Request) {
 		"vcs": ws.VcsID, "ssh": ws.SshID, "agent": ws.AgentID,
 	})
 	if !ok {
-		return
+		return false
 	}
 	params.VcsID, params.SshID, params.AgentID = links["vcs"], links["ssh"], links["agent"]
 
@@ -298,12 +319,9 @@ func (a *API) updateWorkspace(w http.ResponseWriter, r *http.Request) {
 		if !a.writeStoreError(w, "update workspace", err) {
 			a.internalError(w, "update workspace", err)
 		}
-		return
+		return false
 	}
-
-	// Upstream answers a workspace PATCH with 204 and no body, for attributes
-	// and relationships alike; the UI refetches what it needs.
-	w.WriteHeader(http.StatusNoContent)
+	return true
 }
 
 // workspaceUpdateParams seeds an update with the stored row so an attribute the
