@@ -245,12 +245,16 @@ type TempArchive struct {
 }
 
 type Template struct {
-	ID             string  `json:"id"`
-	Name           string  `json:"name"`
-	Description    *string `json:"description"`
-	Version        *string `json:"version"`
-	Tcl            *string `json:"tcl"`
-	OrganizationID string  `json:"organization_id"`
+	ID             string             `json:"id"`
+	Name           *string            `json:"name"`
+	Description    *string            `json:"description"`
+	Version        *string            `json:"version"`
+	Tcl            *string            `json:"tcl"`
+	OrganizationID string             `json:"organization_id"`
+	CreatedDate    pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate    pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy      *string            `json:"created_by"`
+	UpdatedBy      *string            `json:"updated_by"`
 }
 
 type Variable struct {
