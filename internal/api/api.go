@@ -95,6 +95,15 @@ func New(deps Deps) http.Handler {
 			r.Patch("/", a.updateJob)
 		})
 
+		// Tags: Settings > Tags and the workspace tag editor.
+		r.Get("/tag", a.listTags)
+		r.Post("/tag", a.createTag)
+		r.Route("/tag/{tagID}", func(r chi.Router) {
+			r.Get("/", a.getTag)
+			r.Patch("/", a.updateTag)
+			r.Delete("/", a.deleteTag)
+		})
+
 		// SSH keys and self-hosted agent pools for workspace connections.
 		r.Get("/ssh", a.listSSHKeys)
 		r.Post("/ssh", a.createSSHKey)
@@ -166,6 +175,12 @@ func New(deps Deps) http.Handler {
 		r.Get("/variable", a.listVariables)
 		r.Post("/variable", a.createVariable)
 		r.Patch("/relationships/{relation}", a.updateWorkspaceRelationship)
+		r.Get("/workspaceTag", a.listWorkspaceTags)
+		r.Post("/workspaceTag", a.createWorkspaceTag)
+		r.Route("/workspaceTag/{workspaceTagID}", func(r chi.Router) {
+			r.Patch("/", a.updateWorkspaceTag)
+			r.Delete("/", a.deleteWorkspaceTag)
+		})
 		r.Route("/variable/{variableID}", func(r chi.Router) {
 			r.Use(a.variableInWorkspace)
 			r.Get("/", a.getVariable)
