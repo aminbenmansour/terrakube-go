@@ -30,6 +30,7 @@ PATCH /organization/{organizationID}/workspace/{workspaceID}/variable/{variableI
 PATCH /project/{projectID}/
 PATCH /variable/{variableID}/
 PATCH /workspace/{workspaceID}/
+POST /operations
 POST /organization
 POST /organization/{organizationID}/globalvar
 POST /organization/{organizationID}/project

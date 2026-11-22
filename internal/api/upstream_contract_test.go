@@ -90,6 +90,8 @@ type replay struct {
 	// the captured resource id (PATCH cases).
 	method string
 	body   string
+	// accept overrides both media-type headers, for the atomic extension.
+	accept string
 }
 
 var replayedCaptures = map[string]replay{
@@ -276,6 +278,20 @@ var replayedCaptures = map[string]replay{
 		body:    `{"data":null}`,
 		querier: captureWorkspaceStore(),
 	},
+	"organization-atomic-create": {
+		target:  "resource-query",
+		method:  http.MethodPost,
+		body:    `{"atomic:operations":[{"op":"add","href":"/organization/` + capturedRelOrg + `/workspace","data":{"type":"workspace","lid":"11111111-1111-4111-8111-111111111111","attributes":{"source":"https://github.com/terrakube-io/terrakube.git","folder":"/","name":"capture-atomic","terraformVersion":"1.9.0","branch":"main","iacType":"terraform","executionMode":"remote"}}}]}`,
+		accept:  atomicMedia,
+		querier: captureWorkspaceStore(),
+	},
+	"organization-atomic-update": {
+		target:  "resource-query",
+		method:  http.MethodPost,
+		body:    `{"atomic:operations":[{"op":"update","href":"/organization/` + capturedRelOrg + `/workspace/` + capturedRelWS + `","data":{"type":"workspace","id":"` + capturedRelWS + `","attributes":{"description":"atomic-after"}}}]}`,
+		accept:  atomicMedia,
+		querier: captureWorkspaceStore(),
+	},
 	"organization-globalvar-list": {
 		target:  "globalvar-collection",
 		querier: captureGlobalVarStore(),
@@ -331,6 +347,7 @@ var deferredCaptures = map[string]string{
 	"workspace-list-totals":            "same as workspace-list-paged",
 	"delete-method-not-allowed":        "upstream answers 500 with a servlet error page, which is not a contract worth copying",
 	"organization-globalvar-duplicate": "upstream's duplicate-key lifecycle hook throws and Spring answers 500; our unique constraint answers 409",
+	"organization-atomic-unknown":      "upstream answers 400 with an array of per-operation results; we answer one JSON:API error object",
 }
 
 // The ids upstream's demo seed gave the captures; the job captures were taken
@@ -603,6 +620,10 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 			req := httptest.NewRequest(method, target, strings.NewReader(body))
 			if body != "" {
 				req.Header.Set("Content-Type", "application/vnd.api+json")
+			}
+			if plan.accept != "" {
+				req.Header.Set("Content-Type", plan.accept)
+				req.Header.Set("Accept", plan.accept)
 			}
 			rec := httptest.NewRecorder()
 			handler.ServeHTTP(rec, req)

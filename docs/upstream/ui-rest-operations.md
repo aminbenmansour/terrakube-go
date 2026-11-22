@@ -30,6 +30,7 @@ returns 404, and the page that calls it shows an error or an empty state.
 | registry `/registry/v1/providers` | 4 | separate service (`cmd/registry`, M6) |
 | `/remote/tfe/v2/runs/:id/policy-checks` | 1 | implemented |
 | `/organization/:id/globalvar` | 4 | implemented |
+| `POST /operations` (atomic extension) | 2 (`add`, `update` workspace) | implemented |
 | `/organization/:id/operations`, `/doc`, `/action` | 3 | **missing** — helpers around the vocabulary endpoint |
 
 Consequence: the UI can load and browse organizations, projects, workspaces and

@@ -61,6 +61,9 @@ func New(deps Deps) http.Handler {
 	r.Use(a.authenticate)
 	r.Use(requireUUIDParams)
 
+	// JSON:API atomic operations; the UI creates and updates workspaces here.
+	r.Post("/operations", a.atomicOperations)
+
 	// Organizations
 	r.Get("/organization", a.listOrganizations)
 	r.Post("/organization", a.createOrganization)

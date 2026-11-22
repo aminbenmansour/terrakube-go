@@ -173,6 +173,20 @@ request workspace-relationship-agent-clear "/api/v1/organization/${rel_org}/work
 request workspace-relationship-unknown "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/nope" -X PATCH \
   -H 'Content-Type: application/vnd.api+json' --data '{"data":null}'
 
+# Atomic operations are how the UI creates and updates workspaces. The media
+# type must match on Accept as well, or upstream answers 415.
+atomic_ct='application/vnd.api+json;ext="https://jsonapi.org/ext/atomic"'
+pg "delete from workspace where name = 'capture-atomic'" >/dev/null
+request organization-atomic-create "/api/v1/operations" -X POST \
+  -H "Content-Type: ${atomic_ct}" -H "Accept: ${atomic_ct}" \
+  --data "{\"atomic:operations\":[{\"op\":\"add\",\"href\":\"/organization/${rel_org}/workspace\",\"data\":{\"type\":\"workspace\",\"lid\":\"11111111-1111-4111-8111-111111111111\",\"attributes\":{\"source\":\"https://github.com/terrakube-io/terrakube.git\",\"folder\":\"/\",\"name\":\"capture-atomic\",\"terraformVersion\":\"1.9.0\",\"branch\":\"main\",\"iacType\":\"terraform\",\"executionMode\":\"remote\"}}}]}"
+request organization-atomic-update "/api/v1/operations" -X POST \
+  -H "Content-Type: ${atomic_ct}" -H "Accept: ${atomic_ct}" \
+  --data "{\"atomic:operations\":[{\"op\":\"update\",\"href\":\"/organization/${rel_org}/workspace/${rel_ws}\",\"data\":{\"type\":\"workspace\",\"id\":\"${rel_ws}\",\"attributes\":{\"description\":\"atomic-after\"}}}]}"
+request organization-atomic-unknown "/api/v1/operations" -X POST \
+  -H "Content-Type: ${atomic_ct}" -H "Accept: ${atomic_ct}" \
+  --data "{\"atomic:operations\":[{\"op\":\"update\",\"href\":\"/organization/${rel_org}/workspace/00000000-0000-0000-0000-000000000000\",\"data\":{\"type\":\"workspace\",\"id\":\"00000000-0000-0000-0000-000000000000\",\"attributes\":{\"description\":\"x\"}}}]}"
+
 # Global variables: seeded with fixed ids so the item routes can be replayed.
 # Two visible rows keep the list shape identical whichever order upstream picks;
 # the sensitive row is fetched on its own because its value is omitted.
