@@ -38,6 +38,14 @@ type Action struct {
 	UpdatedBy       *string            `json:"updated_by"`
 }
 
+type Agent struct {
+	ID             string  `json:"id"`
+	Name           *string `json:"name"`
+	Url            *string `json:"url"`
+	Description    *string `json:"description"`
+	OrganizationID string  `json:"organization_id"`
+}
+
 type Collection struct {
 	ID             string             `json:"id"`
 	Name           string             `json:"name"`
@@ -195,6 +203,19 @@ type Reference struct {
 	Description  *string            `json:"description"`
 	WorkspaceID  string             `json:"workspace_id"`
 	CollectionID string             `json:"collection_id"`
+}
+
+type Ssh struct {
+	ID             string             `json:"id"`
+	Name           *string            `json:"name"`
+	Description    *string            `json:"description"`
+	PrivateKey     *string            `json:"private_key"`
+	SshType        *string            `json:"ssh_type"`
+	CreatedDate    pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate    pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy      *string            `json:"created_by"`
+	UpdatedBy      *string            `json:"updated_by"`
+	OrganizationID string             `json:"organization_id"`
 }
 
 type Step struct {
