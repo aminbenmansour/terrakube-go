@@ -259,9 +259,9 @@ object key.
 
 ## Management API — `/api/v1`
 
-Elide-generated JSON:API. This API implements 79 routes (organization, project,
+Elide-generated JSON:API. This API implements 84 routes (organization, project,
 workspace, variable, globalvar, job, action, collection/item/reference,
-ssh, agent, vcs, tag/workspacetag and the atomic extension); the 106
+ssh, agent, vcs, template, tag/workspacetag and the atomic extension); the 106
 REST operations the UI actually sends are listed in
 `docs/upstream/ui-rest-operations.md`, with what is missing. Reference
 specification (upstream, v2.27.0) is at
@@ -393,6 +393,16 @@ on superuser and ssh writes on a team permission, while this API has no RBAC yet
 a key or pool a workspace still points at answers upstream's data-integrity
 `409` rather than leaving a dangling id. The ssh private key is stored
 plaintext, like variable values, until #54 lands.
+
+`template` is the Settings > Templates screen and the source of the workspace's
+`defaultTemplate`: list, get, create, patch and delete under
+`/organization/:id/template`. Upstream requires no attribute beyond the
+JSON:API `type`, so an empty `attributes` object answers `201` with nulls; an
+unknown id is `404` and a malformed one `400 Invalid value: x`. Deleting a
+template leaves `workspace.default_template` alone, as upstream does (no foreign
+key). Upstream gates writes on a team's manage-template permission; this API has
+no RBAC yet (#44). One divergence: an unknown attribute in a PATCH is ignored
+here, while upstream answers `404 Unknown attribute`.
 
 `POST /operations` implements the JSON:API atomic operations extension the UI
 uses to create and update workspaces. It supports `op: add` (with `data.lid`,

@@ -9,7 +9,7 @@ from `ui/src` and regenerated with `scripts/ui-rest-inventory.sh`.
 
 ## Where we stand
 
-`internal/api` currently answers 79 routes. Everything marked *missing* below
+`internal/api` currently answers 84 routes. Everything marked *missing* below
 returns 404, and the page that calls it shows an error or an empty state.
 
 | Resource | Operations | Status |
@@ -21,7 +21,7 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `collection`, `item`, `reference` | 12 (collections, items, workspace references, `/reference/:id/collection`) | implemented |
 | `job` | get, patch | implemented |
 | `tag`, `workspaceTag` | 10 (tag CRUD, workspace bindings list/create/patch/delete) | implemented |
-| `template` | list | **missing** |
+| `template` | 5 (list, get, create, patch, delete) | implemented |
 | `ssh`, `agent` | 5 | implemented |
 | `vcs` | 5 (list, get, create, patch, delete) | implemented |
 | `team` | 6 | **missing** |
@@ -43,11 +43,10 @@ the registry and policy screens do not work against this API yet. That is the bu
 ## Order that unblocks the most UI
 
 1. `job` get/patch and the workspace relationship patches (lock, project, VCS).
-2. `team`; the vcs picker, ssh and agent are done.
-3. `template` (the workspace list filters).
-4. `provider`, `module` and the registry service.
-5. `policy_set`, `policy_exemption`, `federated`, `notificationConfiguration`.
-6. The legacy `/workspace/:id/variable` editor routes are served; the collection
+2. `team`; templates, the vcs picker, ssh and agent are done.
+3. `provider`, `module` and the registry service.
+4. `policy_set`, `policy_exemption`, `federated`, `notificationConfiguration`.
+5. The legacy `/workspace/:id/variable` editor routes are served; the collection
    screens are done.
 
 ## Measured route surface
