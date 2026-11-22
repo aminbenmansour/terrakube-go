@@ -38,6 +38,18 @@ type Action struct {
 	UpdatedBy       *string            `json:"updated_by"`
 }
 
+type Collection struct {
+	ID             string             `json:"id"`
+	Name           string             `json:"name"`
+	Description    *string            `json:"description"`
+	Priority       int32              `json:"priority"`
+	CreatedDate    pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate    pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy      *string            `json:"created_by"`
+	UpdatedBy      *string            `json:"updated_by"`
+	OrganizationID string             `json:"organization_id"`
+}
+
 type Content struct {
 	ID            string  `json:"id"`
 	AutoQueueRuns bool    `json:"auto_queue_runs"`
@@ -70,6 +82,21 @@ type History struct {
 	CreatedBy    *string            `json:"created_by"`
 	UpdatedDate  pgtype.Timestamptz `json:"updated_date"`
 	UpdatedBy    *string            `json:"updated_by"`
+}
+
+type Item struct {
+	ID              string             `json:"id"`
+	ItemDescription *string            `json:"item_description"`
+	ItemKey         string             `json:"item_key"`
+	ItemValue       string             `json:"item_value"`
+	Sensitive       bool               `json:"sensitive"`
+	Hcl             bool               `json:"hcl"`
+	ItemCategory    string             `json:"item_category"`
+	CreatedDate     pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate     pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy       *string            `json:"created_by"`
+	UpdatedBy       *string            `json:"updated_by"`
+	CollectionID    string             `json:"collection_id"`
 }
 
 type Job struct {
@@ -157,6 +184,17 @@ type ProjectAccess struct {
 	DestroyJob      bool    `json:"destroy_job"`
 	Role            *string `json:"role"`
 	ProjectID       string  `json:"project_id"`
+}
+
+type Reference struct {
+	ID           string             `json:"id"`
+	CreatedDate  pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate  pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy    *string            `json:"created_by"`
+	UpdatedBy    *string            `json:"updated_by"`
+	Description  *string            `json:"description"`
+	WorkspaceID  string             `json:"workspace_id"`
+	CollectionID string             `json:"collection_id"`
 }
 
 type Step struct {
