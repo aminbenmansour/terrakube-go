@@ -34,12 +34,20 @@ type Resource struct {
 type Relationship struct {
 	Data     *ResourceIdentifier  `json:"data,omitempty"`
 	DataList []ResourceIdentifier `json:"-"`
+	Null     bool                 `json:"-"`
 	Links    map[string]any       `json:"links,omitempty"`
 	Meta     map[string]any       `json:"meta,omitempty"`
 }
 
 // MarshalJSON emits either a to-one data object or a to-many data array.
 func (r Relationship) MarshalJSON() ([]byte, error) {
+	if r.Null && r.Data == nil {
+		return json.Marshal(struct {
+			Data  any            `json:"data"`
+			Links map[string]any `json:"links,omitempty"`
+			Meta  map[string]any `json:"meta,omitempty"`
+		}{Data: nil, Links: r.Links, Meta: r.Meta})
+	}
 	if r.DataList != nil {
 		return json.Marshal(struct {
 			Data  []ResourceIdentifier `json:"data"`
@@ -382,6 +390,39 @@ func RelationshipIdentifiers(data *RequestData, name string) (ids []ResourceIden
 // Link builds a to-one relationship.
 func Link(resourceType, id string) Relationship {
 	return Relationship{Data: &ResourceIdentifier{Type: resourceType, ID: id}}
+}
+
+// NullLink builds a to-one relationship whose data is explicitly null, which
+// is how Elide renders an unset optional relationship.
+func NullLink() Relationship {
+	return Relationship{Null: true}
+}
+
+// RelationshipList reads a to-many relationship document, {"data":[...]}.
+func RelationshipList(r *http.Request) ([]ResourceIdentifier, error) {
+	if r.Body == nil {
+		return nil, errors.New("request body is empty")
+	}
+	defer r.Body.Close()
+
+	var doc struct {
+		Data json.RawMessage `json:"data"`
+	}
+	dec := json.NewDecoder(io.LimitReader(r.Body, maxBodyBytes))
+	if err := dec.Decode(&doc); err != nil {
+		return nil, fmt.Errorf("invalid JSON: %w", err)
+	}
+	if len(doc.Data) == 0 {
+		return nil, errors.New("data is required")
+	}
+	if string(doc.Data) == "null" {
+		return nil, nil
+	}
+	var ids []ResourceIdentifier
+	if err := json.Unmarshal(doc.Data, &ids); err != nil {
+		return nil, errors.New("data must be an array of resource identifiers")
+	}
+	return ids, nil
 }
 
 // LinkList builds a to-many relationship. An empty ids slice is preserved as an
