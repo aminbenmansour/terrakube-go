@@ -389,8 +389,10 @@ agent pool the Agents screen and the workspace picker use: list, create and
 delete. Upstream requires no attribute beyond the JSON:API `type` on either, so
 a key without a name is accepted with `name: null`; upstream gates agent writes
 on superuser and ssh writes on a team permission, while this API has no RBAC yet
-(#44). `GET /workspace/:id?include=ssh,agent` now emits both `included` rows. The ssh
-private key is stored plaintext, like variable values, until #54 lands.
+(#44). `GET /workspace/:id?include=ssh,agent` now emits both `included` rows. Deleting
+a key or pool a workspace still points at answers upstream's data-integrity
+`409` rather than leaving a dangling id. The ssh private key is stored
+plaintext, like variable values, until #54 lands.
 
 `POST /operations` implements the JSON:API atomic operations extension the UI
 uses to create and update workspaces. It supports `op: add` (with `data.lid`,
