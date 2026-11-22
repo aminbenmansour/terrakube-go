@@ -28,15 +28,17 @@ tools that produced them are in
 | Missing id | 404 `Unknown identifier <id> for organization` | 404, different detail text |
 | No token | **401 with an empty body** | 401 with a JSON:API error |
 | `fields[type]` | only the requested attributes; a parameter for another type removes attributes; an empty list removes the member; an unknown name is **400** | same, except an unknown name is dropped (we do not model every upstream attribute) |
-| `include=` | adds an `included` member | ignored — the UI sends none on `/api/v1` |
+| `include=` | adds an `included` member | same for the workspace's `variable`, `organization`, `project`, `reference`, `ssh` and `agent`; other names are ignored |
 | Workspace PATCH | **204 with no body**, attributes or relationships | same (fixed 2026-11-21) |
 | `relationships.project` on workspace | stored; unknown id `404 Unknown identifier ...`, other organization `403 Project does not belong ...` | same |
-| `relationships.vcs`/`.ssh`/`.agent` on workspace | stored, validated against their tables | ids stored; the tables do not exist yet (#48, #120), so an id is not validated |
-| `PATCH /relationships/{relation}` | `204`, project validated; vcs/ssh/agent must exist | workspace project/vcs/ssh/agent only; project validated, the others not |
+| `relationships.vcs`/`.ssh`/`.agent` on workspace | stored, validated against their tables | same for ssh and agent; a vcs id is stored unvalidated until the provider table lands (#48) |
+| `PATCH /relationships/{relation}` | `204`, project validated; vcs/ssh/agent must exist | same for project, ssh and agent; vcs unvalidated |
 | Duplicate `globalvar` key | **500** (a lifecycle hook throws) | **409** — the unique constraint, not upstream's bug |
 | `action` ids | editor slugs (`terrakube.open-ai`), not UUIDs | same |
 | `action` list filter | `filter[action]=active==true;type=in=('A','B')` | same |
 | `action` create / patch / delete | **201** with the resource / **204** / **204**; audit fields set from the PAT's user | same statuses; `createdBy`/`updatedBy` are null (no user in the token) |
+| `ssh` | organization-scoped CRUD; `privateKey` is never returned; delete in use **409** | same; no team permission check yet (#44) |
+| `agent` | list, create, delete; delete in use **409**; superuser-only writes | same routes and 409; writes open (no RBAC yet) |
 | `collection` / `item` / `reference` | organization-scoped CRUD, `GET /reference/:id/collection?include=item`; writes gated on a team permission; missing required attribute **409**; no `priority` means **0** | same routes and statuses; writes are open (no RBAC yet) |
 | `POST /operations` (atomic) | `add`/`update`; `Content-Type` **and** `Accept` must be the atomic media type or **415**; an unsupported op is a no-op 200 | same shape and 415; an unsupported op is **400** and a failure is one error object, not an array of per-op results |
 | Resources | `type`, `id`, `attributes`, `relationships` | `type`, `id`, `attributes`, and `relationships` for the links that exist |
@@ -46,9 +48,9 @@ The differences that matter are deliberate: we are a superset where upstream is
 stricter (paging on `organization`, extra error members), and leaving a
 relationship out is honest — the tables behind most of them (`team`,
 `policySet`, `template`, `tag`, `provider`, …) do not exist yet.
-Workspace `vcs`, `ssh` and `agent` ids are stored without their tables, so they
-round-trip but an unknown id is not refused. See
-`docs/upstream/ui-rest-operations.md`.
+Workspace `ssh` and `agent` ids are validated against their tables now; a `vcs`
+id is still stored without its table, so it round-trips but an unknown id is not
+refused (#48). See `docs/upstream/ui-rest-operations.md`.
 
 `fields` follows the same rule: JSON:API says a server "MUST NOT include
 additional fields" when `fields` is sent, and the UI uses it on every

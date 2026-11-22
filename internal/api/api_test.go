@@ -31,6 +31,10 @@ type stubQuerier struct {
 	collections     []store.Collection
 	collectionItems []store.Item
 	collectionRefs  []store.Reference
+	sshKeys         []store.Ssh
+	agents          []store.Agent
+	sshKeyUses      map[string]int64
+	agentUses       map[string]int64
 	err             error
 	created         *store.CreateOrganizationParams
 	createdAction   *store.CreateActionParams

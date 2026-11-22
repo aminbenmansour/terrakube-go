@@ -10,7 +10,10 @@ import (
 
 type Querier interface {
 	ApproveJob(ctx context.Context, arg ApproveJobParams) (Job, error)
+	CountWorkspacesWithAgent(ctx context.Context, agentID *string) (int64, error)
+	CountWorkspacesWithSSHKey(ctx context.Context, sshID *string) (int64, error)
 	CreateAction(ctx context.Context, arg CreateActionParams) (Action, error)
+	CreateAgent(ctx context.Context, arg CreateAgentParams) (Agent, error)
 	CreateArchive(ctx context.Context, arg CreateArchiveParams) (TempArchive, error)
 	CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error)
 	CreateContent(ctx context.Context, arg CreateContentParams) (Content, error)
@@ -21,12 +24,14 @@ type Querier interface {
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateReference(ctx context.Context, arg CreateReferenceParams) (Reference, error)
+	CreateSSHKey(ctx context.Context, arg CreateSSHKeyParams) (Ssh, error)
 	CreateStep(ctx context.Context, arg CreateStepParams) (Step, error)
 	CreateTag(ctx context.Context, arg CreateTagParams) (Tag, error)
 	CreateVariable(ctx context.Context, arg CreateVariableParams) (Variable, error)
 	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (Workspace, error)
 	CreateWorkspaceTag(ctx context.Context, arg CreateWorkspaceTagParams) (Workspacetag, error)
 	DeleteAction(ctx context.Context, id string) error
+	DeleteAgent(ctx context.Context, id string) error
 	DeleteArchive(ctx context.Context, id string) error
 	DeleteCollection(ctx context.Context, id string) error
 	DeleteGlobalVariable(ctx context.Context, id string) error
@@ -34,8 +39,10 @@ type Querier interface {
 	DeleteOrganization(ctx context.Context, id string) error
 	DeleteProject(ctx context.Context, id string) error
 	DeleteReference(ctx context.Context, id string) error
+	DeleteSSHKey(ctx context.Context, id string) error
 	DeleteVariable(ctx context.Context, id string) error
 	GetAction(ctx context.Context, id string) (Action, error)
+	GetAgent(ctx context.Context, id string) (Agent, error)
 	GetArchive(ctx context.Context, id string) (GetArchiveRow, error)
 	GetCollection(ctx context.Context, id string) (Collection, error)
 	GetContent(ctx context.Context, id string) (Content, error)
@@ -53,6 +60,7 @@ type Querier interface {
 	GetProject(ctx context.Context, id string) (Project, error)
 	GetProjectByName(ctx context.Context, arg GetProjectByNameParams) (Project, error)
 	GetReference(ctx context.Context, id string) (Reference, error)
+	GetSSHKey(ctx context.Context, id string) (Ssh, error)
 	GetStep(ctx context.Context, id string) (Step, error)
 	GetStepByJobAndNumber(ctx context.Context, arg GetStepByJobAndNumberParams) (Step, error)
 	GetTagByName(ctx context.Context, arg GetTagByNameParams) (Tag, error)
@@ -62,6 +70,7 @@ type Querier interface {
 	ListActions(ctx context.Context) ([]Action, error)
 	ListActiveJobsByOrganization(ctx context.Context, name string) ([]Job, error)
 	ListActiveJobsByWorkspace(ctx context.Context, workspaceID string) ([]Job, error)
+	ListAgentsByOrganization(ctx context.Context, organizationID string) ([]Agent, error)
 	ListArchivesByHistory(ctx context.Context, historyID string) ([]TempArchive, error)
 	ListCollectionsByOrganization(ctx context.Context, organizationID string) ([]Collection, error)
 	ListGlobalVariablesByOrganization(ctx context.Context, organizationID string) ([]Globalvar, error)
@@ -71,6 +80,7 @@ type Querier interface {
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
 	ListReferencesByCollection(ctx context.Context, collectionID string) ([]Reference, error)
 	ListReferencesByWorkspace(ctx context.Context, workspaceID string) ([]Reference, error)
+	ListSSHKeysByOrganization(ctx context.Context, organizationID string) ([]Ssh, error)
 	ListStepsByJob(ctx context.Context, jobID int64) ([]Step, error)
 	ListTagsByOrganization(ctx context.Context, organizationID string) ([]Tag, error)
 	ListVariablesByWorkspace(ctx context.Context, workspaceID string) ([]Variable, error)
@@ -92,6 +102,7 @@ type Querier interface {
 	UpdateJobStatus(ctx context.Context, arg UpdateJobStatusParams) (Job, error)
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) (Organization, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
+	UpdateSSHKey(ctx context.Context, arg UpdateSSHKeyParams) (Ssh, error)
 	UpdateStepOutput(ctx context.Context, arg UpdateStepOutputParams) error
 	UpdateStepStatus(ctx context.Context, arg UpdateStepStatusParams) (Step, error)
 	UpdateVariable(ctx context.Context, arg UpdateVariableParams) (Variable, error)

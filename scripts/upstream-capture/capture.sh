@@ -220,7 +220,6 @@ request organization-globalvar-duplicate "/api/v1/organization/${gv_org}/globalv
   -H 'Content-Type: application/vnd.api+json' \
   --data '{"data":{"type":"globalvar","attributes":{"key":"CAPTURE_ONE","value":"dup","description":"d","sensitive":false,"hcl":false,"category":"ENV"}}}'
 pg "delete from globalvar where variable_key like 'CAPTURE\_%'" >/dev/null
-pg "delete from vcs where id = '${rel_vcs}'; delete from ssh where id = '${rel_ssh}'; delete from agent where id = '${rel_agent}'" >/dev/null
 
 # The action catalog. Ids are the editor's slugs, not UUIDs, and only a
 # superuser may write; the demo PAT is one. The temp row is removed at the end.
@@ -285,7 +284,50 @@ request organization-collection-item-delete "/api/v1/organization/${coll_org}/co
 request organization-collection-reference-delete "/api/v1/organization/${coll_org}/collection/${coll_id}/reference/${coll_ref_id}" -X DELETE
 request organization-collection-delete "/api/v1/organization/${coll_org}/collection/${coll_id}" -X DELETE
 
+# SSH keys and agent pools: Settings > SSH Keys / Agents and the workspace
+# pickers. Upstream requires no attribute beyond the type, so the missing-name
+# create is recorded to keep that permissiveness honest.
+request organization-ssh-list   "/api/v1/organization/${rel_org}/ssh"
+request organization-ssh-get    "/api/v1/organization/${rel_org}/ssh/${rel_ssh}"
+request organization-ssh-create "/api/v1/organization/${rel_org}/ssh" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"ssh","attributes":{"name":"capture-ssh-created","description":"capture","sshType":"rsa","privateKey":"-----BEGIN PRIVATE KEY-----\ncapture\n-----END PRIVATE KEY-----"}}}'
+ssh_new="$(python3 -c "import json;print(json.load(open('$out/organization-ssh-create.json'))['data']['id'])")"
+request organization-ssh-patch  "/api/v1/organization/${rel_org}/ssh/${ssh_new}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"ssh\",\"id\":\"${ssh_new}\",\"attributes\":{\"description\":\"after\"}}}"
+request organization-ssh-create-missing-name "/api/v1/organization/${rel_org}/ssh" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"ssh","attributes":{"sshType":"rsa"}}}'
+ssh_unnamed="$(python3 -c "import json;print(json.load(open('$out/organization-ssh-create-missing-name.json'))['data']['id'])")"
+request organization-ssh-missing "/api/v1/organization/${rel_org}/ssh/00000000-0000-4000-8000-000000000099"
+request organization-ssh-delete "/api/v1/organization/${rel_org}/ssh/${ssh_new}" -X DELETE
+request organization-ssh-delete-unnamed "/api/v1/organization/${rel_org}/ssh/${ssh_unnamed}" -X DELETE
+
+request organization-agent-list   "/api/v1/organization/${rel_org}/agent"
+request organization-agent-create "/api/v1/organization/${rel_org}/agent" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"agent","attributes":{"name":"capture-agent-created","description":"capture","url":"http://capture:8090"}}}'
+agent_new="$(python3 -c "import json;print(json.load(open('$out/organization-agent-create.json'))['data']['id'])")"
+request organization-agent-delete "/api/v1/organization/${rel_org}/agent/${agent_new}" -X DELETE
+
+# A key or pool that a workspace still points at is refused with Elide's
+# data-integrity 409, so the link is recorded too and cleared afterwards.
+request organization-ssh-link-in-use "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/ssh" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"ssh\",\"id\":\"${rel_ssh}\"}}"
+request organization-ssh-delete-in-use "/api/v1/organization/${rel_org}/ssh/${rel_ssh}" -X DELETE
+request organization-ssh-unlink-in-use "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/ssh" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' --data '{"data":null}'
+request organization-agent-link-in-use "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/agent" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"agent\",\"id\":\"${rel_agent}\"}}"
+request organization-agent-delete-in-use "/api/v1/organization/${rel_org}/agent/${rel_agent}" -X DELETE
+request organization-agent-unlink-in-use "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/agent" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' --data '{"data":null}'
+
 # Leave the disposable database as it was: these rows exist only for captures.
+pg "delete from vcs where id = '${rel_vcs}'; delete from ssh where id = '${rel_ssh}'; delete from agent where id = '${rel_agent}'" >/dev/null
 pg "delete from workspace where name in ('capture-atomic', 'capture-rel-workspace')" >/dev/null
 pg "delete from job where commit_id = 'deaDBEEF'" >/dev/null
 

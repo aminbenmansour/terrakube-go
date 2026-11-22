@@ -20,6 +20,8 @@ type workspaceStub struct {
 	orgs       []store.Organization
 	workspaces []store.Workspace
 	projects   []store.Project
+	sshKeys    []store.Ssh
+	agents     []store.Agent
 	created    *store.CreateWorkspaceParams
 	updated    *store.UpdateWorkspaceParams
 }
@@ -94,7 +96,31 @@ func newWorkspaceStub() *workspaceStub {
 			{ID: relProjectB, Name: "governance-tofu", OrganizationID: relOrgID},
 			{ID: foreignProj, Name: "demo-project", OrganizationID: foreignOrg},
 		},
+		sshKeys: []store.Ssh{
+			{ID: "70000000-0000-4000-8000-000000000032", OrganizationID: relOrgID},
+		},
+		agents: []store.Agent{
+			{ID: "70000000-0000-4000-8000-000000000033", OrganizationID: relOrgID},
+		},
 	}
+}
+
+func (s *workspaceStub) GetSSHKey(_ context.Context, id string) (store.Ssh, error) {
+	for _, key := range s.sshKeys {
+		if key.ID == id {
+			return key, nil
+		}
+	}
+	return store.Ssh{}, pgx.ErrNoRows
+}
+
+func (s *workspaceStub) GetAgent(_ context.Context, id string) (store.Agent, error) {
+	for _, agent := range s.agents {
+		if agent.ID == id {
+			return agent, nil
+		}
+	}
+	return store.Agent{}, pgx.ErrNoRows
 }
 
 func serveWorkspace(t *testing.T, s *workspaceStub, method, path, body string) *httptest.ResponseRecorder {

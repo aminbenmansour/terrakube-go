@@ -9,7 +9,7 @@ from `ui/src` and regenerated with `scripts/ui-rest-inventory.sh`.
 
 ## Where we stand
 
-`internal/api` currently answers 57 routes. Everything marked *missing* below
+`internal/api` currently answers 65 routes. Everything marked *missing* below
 returns 404, and the page that calls it shows an error or an empty state.
 
 | Resource | Operations | Status |
@@ -22,7 +22,8 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `job` | get, patch | implemented |
 | `tag`, `workspaceTag` | list, create, list workspace tags | **missing** |
 | `template` | list | **missing** |
-| `team`, `ssh`, `agent`, `vcs` | 16 | **missing** |
+| `ssh`, `agent` | 5 | implemented |
+| `team`, `vcs` | 11 | **missing** |
 | `provider`, `module` | 19 (versions, implementations, module versions) | **missing** |
 | `policy_set`, `policy_exemption` | 19 (attachments, parameters, parameters CRUD) | **missing** |
 | `notificationConfiguration` | 5 (triggers, templates relationship) | **missing** — the GraphQL reads exist, the writes do not |
@@ -42,7 +43,7 @@ API yet. That is the bulk of M5 and it is REST work, not GraphQL work.
 ## Order that unblocks the most UI
 
 1. `job` get/patch and the workspace relationship patches (lock, project, VCS).
-2. `vcs`, `ssh`, `agent` (creating a workspace from a repository).
+2. `vcs` (creating a workspace from a repository); `ssh` and `agent` are done.
 3. `tag`, `workspaceTag`, `template` (the workspace list filters).
 4. `provider`, `module` and the registry service.
 5. `policy_set`, `policy_exemption`, `federated`, `notificationConfiguration`.

@@ -1,0 +1,1 @@
+{"data":[{"type":"ssh","id":"aaaaaaaa-0000-4000-8000-000000000002","attributes":{"createdBy":null,"createdDate":null,"description":"capture","name":"capture-ssh","sshType":null,"updatedBy":null,"updatedDate":null},"relationships":{"organization":{"data":{"type":"organization","id":"70000000-0000-0000-0000-000000000001"}}}}]}
