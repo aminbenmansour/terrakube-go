@@ -326,6 +326,49 @@ request organization-agent-delete-in-use "/api/v1/organization/${rel_org}/agent/
 request organization-agent-unlink-in-use "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/agent" -X PATCH \
   -H 'Content-Type: application/vnd.api+json' --data '{"data":null}'
 
+# Tags: Settings > Tags and the workspace tag editor. The tag delete cascades
+# its bindings, so the workspace rows go with it.
+pg "delete from workspacetag where tag_id in (select id from tag where name like 'capture-tag%');
+    delete from tag where name like 'capture-tag%' and organization_id = '${rel_org}'" >/dev/null
+request organization-tag-list "/api/v1/organization/${rel_org}/tag"
+request organization-tag-create "/api/v1/organization/${rel_org}/tag" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"tag","attributes":{"name":"capture-tag"}}}'
+tag_new="$(python3 -c "import json;print(json.load(open('$out/organization-tag-create.json'))['data']['id'])")"
+request organization-tag-get "/api/v1/organization/${rel_org}/tag/${tag_new}"
+request organization-tag-patch "/api/v1/organization/${rel_org}/tag/${tag_new}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"tag\",\"id\":\"${tag_new}\",\"attributes\":{\"name\":\"capture-tag-after\"}}}"
+request organization-tag-filter "/api/v1/organization/${rel_org}/tag?filter[tag]=name==capture-tag-after"
+request organization-tag-create-missing-name "/api/v1/organization/${rel_org}/tag" -X POST \
+  -H 'Content-Type: application/vnd.api+json' --data '{"data":{"type":"tag","attributes":{}}}'
+tag_unnamed="$(python3 -c "import json;print(json.load(open('$out/organization-tag-create-missing-name.json'))['data']['id'])")"
+request organization-tag-missing "/api/v1/organization/${rel_org}/tag/00000000-0000-4000-8000-000000000097"
+request workspace-tag-list "/api/v1/organization/${rel_org}/workspace/${rel_ws}/workspaceTag"
+request workspace-tag-create "/api/v1/organization/${rel_org}/workspace/${rel_ws}/workspaceTag" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"workspacetag\",\"attributes\":{\"tagId\":\"${tag_new}\",\"value\":\"prod\"}}}"
+workspace_tag="$(python3 -c "import json;print(json.load(open('$out/workspace-tag-create.json'))['data']['id'])")"
+request workspace-tag-list-after "/api/v1/organization/${rel_org}/workspace/${rel_ws}/workspaceTag"
+request workspace-tag-patch "/api/v1/organization/${rel_org}/workspace/${rel_ws}/workspaceTag/${workspace_tag}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"workspacetag\",\"id\":\"${workspace_tag}\",\"attributes\":{\"value\":null}}}"
+request workspace-tag-missing-tag "/api/v1/organization/${rel_org}/workspace/${rel_ws}/workspaceTag" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"workspacetag","attributes":{"value":"x"}}}'
+request workspace-tag-unknown-tag "/api/v1/organization/${rel_org}/workspace/${rel_ws}/workspaceTag" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"workspacetag","attributes":{"tagId":"00000000-0000-4000-8000-000000000099","value":"x"}}}'
+request workspace-tag-duplicate "/api/v1/organization/${rel_org}/workspace/${rel_ws}/workspaceTag" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"workspacetag\",\"attributes\":{\"tagId\":\"${tag_new}\",\"value\":\"again\"}}}"
+request workspace-tag-delete "/api/v1/organization/${rel_org}/workspace/${rel_ws}/workspaceTag/${workspace_tag}" -X DELETE
+request organization-tag-duplicate "/api/v1/organization/${rel_org}/tag" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"tag","attributes":{"name":"capture-tag-after"}}}'
+request organization-tag-delete "/api/v1/organization/${rel_org}/tag/${tag_new}" -X DELETE
+request organization-tag-delete-unnamed "/api/v1/organization/${rel_org}/tag/${tag_unnamed}" -X DELETE
+
 # Leave the disposable database as it was: these rows exist only for captures.
 pg "delete from vcs where id = '${rel_vcs}'; delete from ssh where id = '${rel_ssh}'; delete from agent where id = '${rel_agent}'" >/dev/null
 pg "delete from workspace where name in ('capture-atomic', 'capture-rel-workspace')" >/dev/null

@@ -40,7 +40,9 @@ type Querier interface {
 	DeleteProject(ctx context.Context, id string) error
 	DeleteReference(ctx context.Context, id string) error
 	DeleteSSHKey(ctx context.Context, id string) error
+	DeleteTag(ctx context.Context, id string) error
 	DeleteVariable(ctx context.Context, id string) error
+	DeleteWorkspaceTag(ctx context.Context, id string) error
 	GetAction(ctx context.Context, id string) (Action, error)
 	GetAgent(ctx context.Context, id string) (Agent, error)
 	GetArchive(ctx context.Context, id string) (GetArchiveRow, error)
@@ -63,10 +65,12 @@ type Querier interface {
 	GetSSHKey(ctx context.Context, id string) (Ssh, error)
 	GetStep(ctx context.Context, id string) (Step, error)
 	GetStepByJobAndNumber(ctx context.Context, arg GetStepByJobAndNumberParams) (Step, error)
+	GetTag(ctx context.Context, id string) (Tag, error)
 	GetTagByName(ctx context.Context, arg GetTagByNameParams) (Tag, error)
 	GetVariable(ctx context.Context, id string) (Variable, error)
 	GetWorkspace(ctx context.Context, id string) (Workspace, error)
 	GetWorkspaceByName(ctx context.Context, arg GetWorkspaceByNameParams) (Workspace, error)
+	GetWorkspaceTag(ctx context.Context, id string) (Workspacetag, error)
 	ListActions(ctx context.Context) ([]Action, error)
 	ListActiveJobsByOrganization(ctx context.Context, name string) ([]Job, error)
 	ListActiveJobsByWorkspace(ctx context.Context, workspaceID string) ([]Job, error)
@@ -105,6 +109,7 @@ type Querier interface {
 	UpdateSSHKey(ctx context.Context, arg UpdateSSHKeyParams) (Ssh, error)
 	UpdateStepOutput(ctx context.Context, arg UpdateStepOutputParams) error
 	UpdateStepStatus(ctx context.Context, arg UpdateStepStatusParams) (Step, error)
+	UpdateTag(ctx context.Context, arg UpdateTagParams) (Tag, error)
 	UpdateVariable(ctx context.Context, arg UpdateVariableParams) (Variable, error)
 	UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams) (Workspace, error)
 	UpdateWorkspaceTagValue(ctx context.Context, arg UpdateWorkspaceTagValueParams) (Workspacetag, error)

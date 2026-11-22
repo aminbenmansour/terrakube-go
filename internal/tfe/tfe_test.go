@@ -129,7 +129,7 @@ func (s *stubQuerier) ListWorkspaceTagsByWorkspace(_ context.Context, workspaceI
 
 func (s *stubQuerier) GetTagByName(_ context.Context, arg store.GetTagByNameParams) (store.Tag, error) {
 	for _, tag := range s.tags {
-		if tag.OrganizationID == arg.OrganizationID && tag.Name == arg.Name {
+		if tag.OrganizationID == arg.OrganizationID && tag.Name != nil && arg.Name != nil && *tag.Name == *arg.Name {
 			return tag, nil
 		}
 	}
@@ -555,7 +555,7 @@ func TestListWorkspacesTagFilter(t *testing.T) {
 			{ID: "ws-1", Name: "dev", OrganizationID: "org-1", GlobalRemoteState: true},
 			{ID: "ws-2", Name: "prod", OrganizationID: "org-1", GlobalRemoteState: true},
 		},
-		tags: []store.Tag{{ID: "tag-1", Name: "env", OrganizationID: "org-1"}},
+		tags: []store.Tag{{ID: "tag-1", Name: stringPtr("env"), OrganizationID: "org-1"}},
 		workspaceTagsByWorkspace: map[string][]store.Workspacetag{
 			"ws-1": {{ID: "wt-1", TagID: "tag-1", WorkspaceID: "ws-1", TagValue: stringPtr("dev")}},
 			"ws-2": {{ID: "wt-2", TagID: "tag-1", WorkspaceID: "ws-2", TagValue: stringPtr("prod")}},
@@ -731,7 +731,7 @@ func TestTagBindingsRoundTrip(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("patch status = %d, want 200; body = %s", rec.Code, rec.Body.String())
 	}
-	if q.createdTag == nil || q.createdTag.Name != "env" {
+	if q.createdTag == nil || q.createdTag.Name == nil || *q.createdTag.Name != "env" {
 		t.Fatalf("created tag = %+v", q.createdTag)
 	}
 	if q.createdWorkspaceTag == nil || q.createdWorkspaceTag.TagValue == nil || *q.createdWorkspaceTag.TagValue != "dev" {

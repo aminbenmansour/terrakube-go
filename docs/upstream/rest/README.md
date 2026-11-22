@@ -39,6 +39,8 @@ tools that produced them are in
 | `action` create / patch / delete | **201** with the resource / **204** / **204**; audit fields set from the PAT's user | same statuses; `createdBy`/`updatedBy` are null (no user in the token) |
 | `ssh` | organization-scoped CRUD; `privateKey` is never returned; delete in use **409** | same; no team permission check yet (#44) |
 | `agent` | list, create, delete; delete in use **409**; superuser-only writes | same routes and 409; writes open (no RBAC yet) |
+| `tag` | organization-scoped CRUD; optional name; duplicate name **500** | same routes and optional name; duplicate **409** (unique index) |
+| `workspacetag` | list/create/patch/delete under the workspace; missing/unknown `tagId` **409**; duplicate binding **500** | same routes and 409; duplicate binding **409** |
 | `collection` / `item` / `reference` | organization-scoped CRUD, `GET /reference/:id/collection?include=item`; writes gated on a team permission; missing required attribute **409**; no `priority` means **0** | same routes and statuses; writes are open (no RBAC yet) |
 | `POST /operations` (atomic) | `add`/`update`; `Content-Type` **and** `Accept` must be the atomic media type or **415**; an unsupported op is a no-op 200 | same shape and 415; an unsupported op is **400** and a failure is one error object, not an array of per-op results |
 | Resources | `type`, `id`, `attributes`, `relationships` | `type`, `id`, `attributes`, and `relationships` for the links that exist |
@@ -47,7 +49,7 @@ tools that produced them are in
 The differences that matter are deliberate: we are a superset where upstream is
 stricter (paging on `organization`, extra error members), and leaving a
 relationship out is honest — the tables behind most of them (`team`,
-`policySet`, `template`, `tag`, `provider`, …) do not exist yet.
+`policySet`, `template`, `provider`, …) do not exist yet.
 Workspace `ssh` and `agent` ids are validated against their tables now; a `vcs`
 id is still stored without its table, so it round-trips but an unknown id is not
 refused (#48). See `docs/upstream/ui-rest-operations.md`.

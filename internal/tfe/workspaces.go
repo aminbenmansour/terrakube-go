@@ -472,7 +472,9 @@ func (a *API) organizationTagNames(r *http.Request, organizationID string) (map[
 	}
 	names := make(map[string]string, len(tags))
 	for _, tag := range tags {
-		names[tag.ID] = tag.Name
+		if tag.Name != nil {
+			names[tag.ID] = *tag.Name
+		}
 	}
 	return names, nil
 }

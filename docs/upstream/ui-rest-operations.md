@@ -9,7 +9,7 @@ from `ui/src` and regenerated with `scripts/ui-rest-inventory.sh`.
 
 ## Where we stand
 
-`internal/api` currently answers 65 routes. Everything marked *missing* below
+`internal/api` currently answers 74 routes. Everything marked *missing* below
 returns 404, and the page that calls it shows an error or an empty state.
 
 | Resource | Operations | Status |
@@ -20,7 +20,7 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `workspace` relationships (`project`, `vcs`, `ssh`, `agent`) | patch | implemented |
 | `collection`, `item`, `reference` | 12 (collections, items, workspace references, `/reference/:id/collection`) | implemented |
 | `job` | get, patch | implemented |
-| `tag`, `workspaceTag` | list, create, list workspace tags | **missing** |
+| `tag`, `workspaceTag` | 10 (tag CRUD, workspace bindings list/create/patch/delete) | implemented |
 | `template` | list | **missing** |
 | `ssh`, `agent` | 5 | implemented |
 | `team`, `vcs` | 11 | **missing** |
@@ -37,14 +37,14 @@ returns 404, and the page that calls it shows an error or an empty state.
 
 Consequence: the UI can load and browse organizations, projects, workspaces and
 the workspace page's GraphQL data, but the variable editor, run details, VCS
-setup, tags, teams, the registry and policy screens do not work against this
-API yet. That is the bulk of M5 and it is REST work, not GraphQL work.
+setup, teams, the registry and policy screens do not work against this API
+yet. That is the bulk of M5 and it is REST work, not GraphQL work.
 
 ## Order that unblocks the most UI
 
 1. `job` get/patch and the workspace relationship patches (lock, project, VCS).
 2. `vcs` (creating a workspace from a repository); `ssh` and `agent` are done.
-3. `tag`, `workspaceTag`, `template` (the workspace list filters).
+3. `template` (the workspace list filters).
 4. `provider`, `module` and the registry service.
 5. `policy_set`, `policy_exemption`, `federated`, `notificationConfiguration`.
 6. The legacy `/workspace/:id/variable` editor routes are served; the collection
