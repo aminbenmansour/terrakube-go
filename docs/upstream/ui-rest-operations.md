@@ -9,7 +9,7 @@ from `ui/src` and regenerated with `scripts/ui-rest-inventory.sh`.
 
 ## Where we stand
 
-`internal/api` currently answers 22 routes. Everything marked *missing* below
+`internal/api` currently answers 44 routes. Everything marked *missing* below
 returns 404, and the page that calls it shows an error or an empty state.
 
 | Resource | Operations | Status |
@@ -17,9 +17,9 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `organization` | get | implemented |
 | `project` | list, create, get, patch, delete | implemented |
 | `workspace` | list, create, get, patch, delete | implemented |
-| `workspace` relationships (`project`, `vcs`, `agent`) | patch | **missing** |
+| `workspace` relationships (`project`, `vcs`, `ssh`, `agent`) | patch | implemented |
 | variable / `collection` | 15 (collections, items, references) | **missing** — only the legacy `/workspace/:id/variable` routes exist |
-| `job` | get, patch | **missing** |
+| `job` | get, patch | implemented |
 | `tag`, `workspaceTag` | list, create, list workspace tags | **missing** |
 | `template` | list | **missing** |
 | `team`, `ssh`, `agent`, `vcs` | 16 | **missing** |
@@ -31,7 +31,8 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `/remote/tfe/v2/runs/:id/policy-checks` | 1 | implemented |
 | `/organization/:id/globalvar` | 4 | implemented |
 | `POST /operations` (atomic extension) | 2 (`add`, `update` workspace) | implemented |
-| `/organization/:id/operations`, `/doc`, `/action` | 3 | **missing** — helpers around the vocabulary endpoint |
+| `action` | list, get, create, patch, delete | implemented |
+| `/organization/:id/operations`, `/doc` | 2 | **missing** — the vocabulary endpoint the filter builder reads |
 
 Consequence: the UI can load and browse organizations, projects, workspaces and
 the workspace page's GraphQL data, but the variable editor, run details, VCS
