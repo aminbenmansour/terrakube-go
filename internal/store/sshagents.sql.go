@@ -9,6 +9,28 @@ import (
 	"context"
 )
 
+const countWorkspacesWithAgent = `-- name: CountWorkspacesWithAgent :one
+SELECT count(*) FROM workspace WHERE agent_id = $1
+`
+
+func (q *Queries) CountWorkspacesWithAgent(ctx context.Context, agentID *string) (int64, error) {
+	row := q.db.QueryRow(ctx, countWorkspacesWithAgent, agentID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countWorkspacesWithSSHKey = `-- name: CountWorkspacesWithSSHKey :one
+SELECT count(*) FROM workspace WHERE ssh_id = $1
+`
+
+func (q *Queries) CountWorkspacesWithSSHKey(ctx context.Context, sshID *string) (int64, error) {
+	row := q.db.QueryRow(ctx, countWorkspacesWithSSHKey, sshID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAgent = `-- name: CreateAgent :one
 INSERT INTO agent (id, name, url, description, organization_id)
 VALUES ($1, $2, $3, $4, $5)

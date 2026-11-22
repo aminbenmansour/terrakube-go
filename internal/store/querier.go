@@ -10,6 +10,8 @@ import (
 
 type Querier interface {
 	ApproveJob(ctx context.Context, arg ApproveJobParams) (Job, error)
+	CountWorkspacesWithAgent(ctx context.Context, agentID *string) (int64, error)
+	CountWorkspacesWithSSHKey(ctx context.Context, sshID *string) (int64, error)
 	CreateAction(ctx context.Context, arg CreateActionParams) (Action, error)
 	CreateAgent(ctx context.Context, arg CreateAgentParams) (Agent, error)
 	CreateArchive(ctx context.Context, arg CreateArchiveParams) (TempArchive, error)
