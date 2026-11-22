@@ -118,6 +118,7 @@ func New(deps Deps) http.Handler {
 		r.Delete("/", a.deleteWorkspace)
 		r.Get("/variable", a.listVariables)
 		r.Post("/variable", a.createVariable)
+		r.Patch("/relationships/{relation}", a.updateWorkspaceRelationship)
 		r.Route("/variable/{variableID}", func(r chi.Router) {
 			r.Use(a.variableInWorkspace)
 			r.Get("/", a.getVariable)

@@ -297,8 +297,10 @@ Captured from `azbuilder/api-server:2.34.3`; the responses are in
 - We are a superset in two places: `organization` accepts page parameters
   (upstream answers 400 `Cannot paginate organization`) and our error objects
   carry `status` and `title` as well as `detail`.
-- We are behind in two: no `relationships` member on any resource (the tables
-  behind them do not exist yet) and no `/relationships/{relation}` routes.
+- We are behind in one: most resources still have no `relationships` member
+  because the tables behind them do not exist yet. The workspace carries
+  `organization`, `project`, `vcs`, `ssh` and `agent`, and its
+  `/relationships/{relation}` PATCH route exists for those four.
 - `fields[type]` is honoured: only the named attributes are returned, a
   parameter for another type removes attributes entirely, and an empty
   parameter leaves no `attributes` member, as a live 2.34.3 does. A name we do
@@ -317,8 +319,12 @@ Captured from `azbuilder/api-server:2.34.3`; the responses are in
   alike, as upstream does. `relationships.project` is stored on create and
   update; an id that does not exist is `404 Unknown identifier <id> for project`
   and a project from another organization is `403 Project does not belong to the
-  workspace organization`. `relationships.vcs` and `.agent` are still ignored:
-  neither table nor resource exists yet (#48, #120).
+  workspace organization`. `relationships.vcs`, `.ssh` and `.agent` are stored
+  too, for both create and update, but their tables do not exist yet (#48,
+  #120), so an id is accepted without validation. The same four relations have a
+  `PATCH /organization/{id}/workspace/{id}/relationships/{relation}` route, the
+  one the UI's settings screens call; `moduleSshKey` and `sharedIds` are stored
+  as attributes.
 - The recordings are replayed by `internal/api/upstream_contract_test.go`, so an
   attribute rename fails `make check`. They are regenerated with
   `scripts/upstream-capture/` against a new upstream tag; a capture that is
@@ -357,8 +363,9 @@ Current M1 limitations (tracked for later milestones):
 - Authentication is a single static bearer token (`TERRAKUBE_AUTH_TOKEN`).
   PATs, team tokens, executor tokens and Dex JWTs are not implemented yet.
 - `include=` is implemented only for the workspace's `variable`, `organization`
-  and `project`; relationship endpoints and RSQL beyond `attr==value` /
-  `attr==prefix*` are not implemented.
+  and `project`; relationship writes exist only for the workspace's `project`,
+  `vcs`, `ssh` and `agent`, and RSQL beyond `attr==value` / `attr==prefix*` is
+  not implemented.
 - Variable values are stored in plaintext. Upstream encrypts them with
   `io.terrakube.encryption.*`; this must land before anything is exposed.
 - `tag` and `workspacetag` are implemented through the TFE tag-binding
