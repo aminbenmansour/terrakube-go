@@ -35,6 +35,8 @@ type stubQuerier struct {
 	agents          []store.Agent
 	sshKeyUses      map[string]int64
 	agentUses       map[string]int64
+	tags            []store.Tag
+	workspaceTags   []store.Workspacetag
 	err             error
 	created         *store.CreateOrganizationParams
 	createdAction   *store.CreateActionParams

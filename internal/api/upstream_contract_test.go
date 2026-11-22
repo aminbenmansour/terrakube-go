@@ -519,6 +519,80 @@ var replayedCaptures = map[string]replay{
 		target: "ssh-agent-query",
 		method: http.MethodDelete,
 	},
+	"organization-tag-list": {
+		target: "tag-query",
+		// The recording predates the create, so the list is empty.
+		querier: &stubQuerier{},
+	},
+	"organization-tag-create": {
+		target: "tag-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"tag","attributes":{"name":"capture-tag"}}}`,
+	},
+	"organization-tag-get": {
+		target: "tag-query",
+	},
+	"organization-tag-patch": {
+		target: "tag-query",
+		idFrom: "organization-tag-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"tag","id":"{id}","attributes":{"name":"capture-tag-after"}}}`,
+	},
+	"organization-tag-filter": {
+		target: "tag-query",
+	},
+	"organization-tag-create-missing-name": {
+		target: "tag-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"tag","attributes":{}}}`,
+	},
+	"organization-tag-missing": {
+		target: "tag-query",
+	},
+	"workspace-tag-list": {
+		target:  "tag-query",
+		querier: &stubQuerier{workspaces: []store.Workspace{{ID: capturedRelWS, OrganizationID: capturedRelOrg}}},
+	},
+	"workspace-tag-create": {
+		target: "tag-query",
+		idFrom: "organization-tag-create",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"workspacetag","attributes":{"tagId":"{id}","value":"prod"}}}`,
+	},
+	"workspace-tag-list-after": {
+		target: "tag-query",
+	},
+	"workspace-tag-patch": {
+		target: "tag-query",
+		idFrom: "workspace-tag-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"workspacetag","id":"{id}","attributes":{"value":null}}}`,
+	},
+	"workspace-tag-missing-tag": {
+		target: "tag-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"workspacetag","attributes":{"value":"x"}}}`,
+	},
+	"workspace-tag-unknown-tag": {
+		target: "tag-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"workspacetag","attributes":{"tagId":"00000000-0000-4000-8000-000000000099","value":"x"}}}`,
+	},
+	"workspace-tag-delete": {
+		target: "tag-query",
+		idFrom: "workspace-tag-create",
+		method: http.MethodDelete,
+	},
+	"organization-tag-delete": {
+		target: "tag-query",
+		idFrom: "organization-tag-create",
+		method: http.MethodDelete,
+	},
+	"organization-tag-delete-unnamed": {
+		target: "tag-query",
+		idFrom: "organization-tag-create-missing-name",
+		method: http.MethodDelete,
+	},
 	"organization-agent-unlink-in-use": {
 		target:  "resource-query",
 		method:  http.MethodPatch,
@@ -540,6 +614,8 @@ var deferredCaptures = map[string]string{
 	"delete-method-not-allowed":        "upstream answers 500 with a servlet error page, which is not a contract worth copying",
 	"organization-globalvar-duplicate": "upstream's duplicate-key lifecycle hook throws and Spring answers 500; our unique constraint answers 409",
 	"organization-atomic-unknown":      "upstream answers 400 with an array of per-operation results; we answer one JSON:API error object",
+	"organization-tag-duplicate":       "upstream's unique-constraint violation surfaces as Spring's 500 page; our unique index answers 409",
+	"workspace-tag-duplicate":          "the same Spring 500 on the unique (tag, workspace) constraint; ours answers 409",
 }
 
 // The ids upstream's demo seed gave the captures; the job captures were taken
@@ -647,6 +723,24 @@ func captureSSHStore(t *testing.T, captures map[string]upstreamCapture) *stubQue
 		},
 		sshKeyUses: map[string]int64{capturedRelSSH: 1},
 		agentUses:  map[string]int64{capturedRelAgent: 1},
+	}
+}
+
+func captureTagStore(t *testing.T, captures map[string]upstreamCapture) *stubQuerier {
+	t.Helper()
+	tagID := captures["organization-tag-create"].resourceID(t)
+	unnamed := captures["organization-tag-create-missing-name"].resourceID(t)
+	binding := captures["workspace-tag-create"].resourceID(t)
+
+	return &stubQuerier{
+		tags: []store.Tag{
+			{ID: tagID, Name: strPtr("capture-tag-after"), OrganizationID: capturedRelOrg},
+			{ID: unnamed, OrganizationID: capturedRelOrg},
+		},
+		workspaceTags: []store.Workspacetag{
+			{ID: binding, TagID: tagID, WorkspaceID: capturedRelWS},
+		},
+		workspaces: []store.Workspace{{ID: capturedRelWS, OrganizationID: capturedRelOrg, Name: "capture-rel-workspace"}},
 	}
 }
 
@@ -883,6 +977,11 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 			case "ssh-agent-query":
 				target = strings.TrimPrefix(capture.path, "/api/v1")
 				querier = captureSSHStore(t, captures)
+			case "tag-query":
+				target = strings.TrimPrefix(capture.path, "/api/v1")
+				if querier == nil {
+					querier = captureTagStore(t, captures)
+				}
 			}
 			if querier == nil {
 				querier = &stubQuerier{}
@@ -1172,6 +1271,58 @@ func (s *stubQuerier) CountWorkspacesWithAgent(_ context.Context, id *string) (i
 
 func (s *stubQuerier) DeleteAgent(context.Context, string) error {
 	return nil
+}
+
+func (s *stubQuerier) ListTagsByOrganization(context.Context, string) ([]store.Tag, error) {
+	return s.tags, s.err
+}
+
+func (s *stubQuerier) GetTag(_ context.Context, id string) (store.Tag, error) {
+	for _, tag := range s.tags {
+		if tag.ID == id {
+			return tag, nil
+		}
+	}
+	return store.Tag{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateTag(_ context.Context, arg store.CreateTagParams) (store.Tag, error) {
+	return store.Tag{ID: arg.ID, Name: arg.Name, OrganizationID: arg.OrganizationID}, s.err
+}
+
+func (s *stubQuerier) UpdateTag(_ context.Context, arg store.UpdateTagParams) (store.Tag, error) {
+	return store.Tag{ID: arg.ID, Name: arg.Name, OrganizationID: capturedRelOrg}, s.err
+}
+
+func (s *stubQuerier) DeleteTag(context.Context, string) error {
+	return s.err
+}
+
+func (s *stubQuerier) ListWorkspaceTagsByWorkspace(context.Context, string) ([]store.Workspacetag, error) {
+	return s.workspaceTags, s.err
+}
+
+func (s *stubQuerier) GetWorkspaceTag(_ context.Context, id string) (store.Workspacetag, error) {
+	for _, binding := range s.workspaceTags {
+		if binding.ID == id {
+			return binding, nil
+		}
+	}
+	return store.Workspacetag{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateWorkspaceTag(_ context.Context, arg store.CreateWorkspaceTagParams) (store.Workspacetag, error) {
+	return store.Workspacetag{
+		ID: arg.ID, TagID: arg.TagID, TagValue: arg.TagValue, WorkspaceID: arg.WorkspaceID,
+	}, s.err
+}
+
+func (s *stubQuerier) UpdateWorkspaceTagValue(_ context.Context, arg store.UpdateWorkspaceTagValueParams) (store.Workspacetag, error) {
+	return store.Workspacetag{ID: arg.ID, TagValue: arg.TagValue, WorkspaceID: capturedRelWS}, s.err
+}
+
+func (s *stubQuerier) DeleteWorkspaceTag(context.Context, string) error {
+	return s.err
 }
 
 func (s *stubQuerier) GetAction(_ context.Context, id string) (store.Action, error) {
