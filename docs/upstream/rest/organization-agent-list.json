@@ -1,0 +1,1 @@
+{"data":[{"type":"agent","id":"aaaaaaaa-0000-4000-8000-000000000003","attributes":{"description":"capture","name":"capture-agent","url":"http://agent:8090"},"relationships":{"organization":{"data":{"type":"organization","id":"70000000-0000-0000-0000-000000000001"}}}}]}

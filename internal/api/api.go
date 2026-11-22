@@ -95,6 +95,18 @@ func New(deps Deps) http.Handler {
 			r.Patch("/", a.updateJob)
 		})
 
+		// SSH keys and self-hosted agent pools for workspace connections.
+		r.Get("/ssh", a.listSSHKeys)
+		r.Post("/ssh", a.createSSHKey)
+		r.Route("/ssh/{sshID}", func(r chi.Router) {
+			r.Get("/", a.getSSHKey)
+			r.Patch("/", a.updateSSHKey)
+			r.Delete("/", a.deleteSSHKey)
+		})
+		r.Get("/agent", a.listAgents)
+		r.Post("/agent", a.createAgent)
+		r.Delete("/agent/{agentID}", a.deleteAgent)
+
 		// Organization-level variables inherited by every workspace.
 		r.Get("/globalvar", a.listGlobalVariables)
 		r.Post("/globalvar", a.createGlobalVariable)

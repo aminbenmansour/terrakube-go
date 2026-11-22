@@ -134,6 +134,30 @@ func (a *API) getWorkspace(w http.ResponseWriter, r *http.Request) {
 		included = append(included, projectResource(project))
 	}
 
+	// The workspace page asks for the ssh key and agent pool by name; the vcs
+	// include waits for the provider table (#48).
+	if want["ssh"] && ws.SshID != nil && *ws.SshID != "" {
+		key, err := a.deps.Store.GetSSHKey(r.Context(), *ws.SshID)
+		if err != nil {
+			if !a.writeStoreError(w, "get ssh key", err) {
+				a.internalError(w, "get ssh key", err)
+			}
+			return
+		}
+		included = append(included, sshResource(key))
+	}
+
+	if want["agent"] && ws.AgentID != nil && *ws.AgentID != "" {
+		agent, err := a.deps.Store.GetAgent(r.Context(), *ws.AgentID)
+		if err != nil {
+			if !a.writeStoreError(w, "get agent", err) {
+				a.internalError(w, "get agent", err)
+			}
+			return
+		}
+		included = append(included, agentResource(agent))
+	}
+
 	// The workspace page reads its collection references and then asks each
 	// one for its collection items (workspaceDataUtils.ts, include.REFERENCE).
 	if want["reference"] {
@@ -208,6 +232,9 @@ func (a *API) createWorkspaceFromData(w http.ResponseWriter, r *http.Request, or
 
 	links, ok := workspaceLinks(w, data, nil)
 	if !ok {
+		return store.Workspace{}, false
+	}
+	if !a.validateWorkspaceLinks(w, r, orgID, links) {
 		return store.Workspace{}, false
 	}
 
@@ -332,6 +359,9 @@ func (a *API) applyWorkspaceUpdate(w http.ResponseWriter, r *http.Request, ws st
 		return false
 	}
 	params.VcsID, params.SshID, params.AgentID = links["vcs"], links["ssh"], links["agent"]
+	if !a.validateWorkspaceLinks(w, r, ws.OrganizationID, links) {
+		return false
+	}
 
 	if _, err := a.deps.Store.UpdateWorkspace(r.Context(), params); err != nil {
 		if !a.writeStoreError(w, "update workspace", err) {
@@ -449,8 +479,14 @@ func (a *API) updateWorkspaceRelationship(w http.ResponseWriter, r *http.Request
 		case "vcs":
 			params.VcsID = value
 		case "ssh":
+			if id != "" && !a.checkSSHRelationship(w, r, id, ws.OrganizationID) {
+				return
+			}
 			params.SshID = value
 		case "agent":
+			if id != "" && !a.checkAgentRelationship(w, r, id, ws.OrganizationID) {
+				return
+			}
 			params.AgentID = value
 		}
 	}

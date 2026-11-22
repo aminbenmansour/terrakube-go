@@ -445,6 +445,54 @@ var replayedCaptures = map[string]replay{
 		target: "collection-query",
 		method: http.MethodDelete,
 	},
+	"organization-ssh-list": {
+		target: "ssh-agent-query",
+	},
+	"organization-ssh-get": {
+		target: "ssh-agent-query",
+	},
+	"organization-ssh-create": {
+		target: "ssh-agent-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"ssh","attributes":{"name":"capture-ssh-created","description":"capture","sshType":"rsa","privateKey":"-----BEGIN PRIVATE KEY-----\ncapture\n-----END PRIVATE KEY-----"}}}`,
+	},
+	"organization-ssh-patch": {
+		target: "ssh-agent-query",
+		idFrom: "organization-ssh-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"ssh","id":"{id}","attributes":{"description":"after"}}}`,
+	},
+	"organization-ssh-create-missing-name": {
+		target: "ssh-agent-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"ssh","attributes":{"sshType":"rsa"}}}`,
+	},
+	"organization-ssh-missing": {
+		target: "ssh-agent-query",
+	},
+	"organization-ssh-delete": {
+		target: "ssh-agent-query",
+		idFrom: "organization-ssh-create",
+		method: http.MethodDelete,
+	},
+	"organization-ssh-delete-unnamed": {
+		target: "ssh-agent-query",
+		idFrom: "organization-ssh-create-missing-name",
+		method: http.MethodDelete,
+	},
+	"organization-agent-list": {
+		target: "ssh-agent-query",
+	},
+	"organization-agent-create": {
+		target: "ssh-agent-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"agent","attributes":{"name":"capture-agent-created","description":"capture","url":"http://capture:8090"}}}`,
+	},
+	"organization-agent-delete": {
+		target: "ssh-agent-query",
+		idFrom: "organization-agent-create",
+		method: http.MethodDelete,
+	},
 }
 
 // deferredCaptures are recorded but cannot be asserted yet. Each needs a reason,
@@ -473,6 +521,8 @@ const (
 	capturedRelWS      = "77777777-7777-4777-8777-777777777777"
 	capturedRelP1      = "70000000-0000-0000-0000-000000000010"
 	capturedRelP2      = "70000000-0000-0000-0000-000000000020"
+	capturedRelSSH     = "aaaaaaaa-0000-4000-8000-000000000002"
+	capturedRelAgent   = "aaaaaaaa-0000-4000-8000-000000000003"
 	capturedRelForeign = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 	capturedRelUnknown = "00000000-0000-0000-0000-000000000000"
 	capturedForeignOrg = "d9b58bd3-f3fc-4056-a026-1163297e80a8"
@@ -497,6 +547,8 @@ func captureWorkspaceStore() *stubQuerier {
 			{ID: capturedRelP2, Name: "governance-tofu", OrganizationID: capturedRelOrg},
 			{ID: capturedRelForeign, Name: "demo-project", OrganizationID: capturedForeignOrg},
 		},
+		sshKeys: []store.Ssh{{ID: capturedRelSSH, Name: strPtr("capture-ssh"), OrganizationID: capturedRelOrg}},
+		agents:  []store.Agent{{ID: capturedRelAgent, Name: strPtr("capture-agent"), OrganizationID: capturedRelOrg}},
 	}
 }
 
@@ -542,6 +594,25 @@ func captureCollectionStore(t *testing.T, captures map[string]upstreamCapture) *
 		collectionRefs: []store.Reference{{
 			ID: referenceID, Description: strPtr("capture"), WorkspaceID: capturedRelWS, CollectionID: collectionID,
 		}},
+	}
+}
+
+func captureSSHStore(t *testing.T, captures map[string]upstreamCapture) *stubQuerier {
+	t.Helper()
+	created := captures["organization-ssh-create"].resourceID(t)
+	unnamed := captures["organization-ssh-create-missing-name"].resourceID(t)
+	agent := captures["organization-agent-create"].resourceID(t)
+
+	return &stubQuerier{
+		sshKeys: []store.Ssh{
+			{ID: capturedRelSSH, Name: strPtr("capture-ssh"), Description: strPtr("capture"), OrganizationID: capturedRelOrg},
+			{ID: created, Name: strPtr("capture-ssh-created"), Description: strPtr("after"), SshType: strPtr("rsa"), OrganizationID: capturedRelOrg},
+			{ID: unnamed, SshType: strPtr("rsa"), OrganizationID: capturedRelOrg},
+		},
+		agents: []store.Agent{
+			{ID: capturedRelAgent, Name: strPtr("capture-agent"), Description: strPtr("capture"), Url: strPtr("http://agent:8090"), OrganizationID: capturedRelOrg},
+			{ID: agent, Name: strPtr("capture-agent-created"), Description: strPtr("capture"), Url: strPtr("http://capture:8090"), OrganizationID: capturedRelOrg},
+		},
 	}
 }
 
@@ -775,6 +846,9 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 			case "collection-query":
 				target = strings.TrimPrefix(capture.path, "/api/v1")
 				querier = captureCollectionStore(t, captures)
+			case "ssh-agent-query":
+				target = strings.TrimPrefix(capture.path, "/api/v1")
+				querier = captureSSHStore(t, captures)
 			}
 			if querier == nil {
 				querier = &stubQuerier{}
@@ -1002,6 +1076,60 @@ func (s *stubQuerier) CreateReference(_ context.Context, arg store.CreateReferen
 
 func (s *stubQuerier) DeleteReference(context.Context, string) error {
 	return s.err
+}
+
+func (s *stubQuerier) ListSSHKeysByOrganization(context.Context, string) ([]store.Ssh, error) {
+	return s.sshKeys, s.err
+}
+
+func (s *stubQuerier) GetSSHKey(_ context.Context, id string) (store.Ssh, error) {
+	for _, key := range s.sshKeys {
+		if key.ID == id {
+			return key, nil
+		}
+	}
+	return store.Ssh{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateSSHKey(_ context.Context, arg store.CreateSSHKeyParams) (store.Ssh, error) {
+	return store.Ssh{
+		ID: arg.ID, Name: arg.Name, Description: arg.Description,
+		PrivateKey: arg.PrivateKey, SshType: arg.SshType, OrganizationID: arg.OrganizationID,
+	}, nil
+}
+
+func (s *stubQuerier) UpdateSSHKey(_ context.Context, arg store.UpdateSSHKeyParams) (store.Ssh, error) {
+	return store.Ssh{
+		ID: arg.ID, Name: arg.Name, Description: arg.Description,
+		PrivateKey: arg.PrivateKey, SshType: arg.SshType,
+	}, nil
+}
+
+func (s *stubQuerier) DeleteSSHKey(context.Context, string) error {
+	return nil
+}
+
+func (s *stubQuerier) ListAgentsByOrganization(context.Context, string) ([]store.Agent, error) {
+	return s.agents, s.err
+}
+
+func (s *stubQuerier) GetAgent(_ context.Context, id string) (store.Agent, error) {
+	for _, agent := range s.agents {
+		if agent.ID == id {
+			return agent, nil
+		}
+	}
+	return store.Agent{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateAgent(_ context.Context, arg store.CreateAgentParams) (store.Agent, error) {
+	return store.Agent{
+		ID: arg.ID, Name: arg.Name, Url: arg.Url, Description: arg.Description, OrganizationID: arg.OrganizationID,
+	}, nil
+}
+
+func (s *stubQuerier) DeleteAgent(context.Context, string) error {
+	return nil
 }
 
 func (s *stubQuerier) GetAction(_ context.Context, id string) (store.Action, error) {
