@@ -340,6 +340,7 @@ Captured from `azbuilder/api-server:2.34.3`; the responses are in
 | variable | `GET/POST /workspace/{id}/variable`, `GET/PATCH/DELETE /variable/{id}`, and the same under `/organization/{id}/workspace/{id}/variable[/{id}]` |
 | job | `GET /organization/{id}/job`, `GET/PATCH /organization/{id}/job/{id}` |
 | globalvar | `GET/POST /organization/{id}/globalvar`, `GET/PATCH/DELETE /organization/{id}/globalvar/{id}` |
+| operations | `POST /operations` — JSON:API atomic `add`/`update` for workspace |
 
 The organization-scoped workspace and variable routes exist because the React UI
 uses them; a resource reached through the wrong organization answers 404, and a
@@ -355,6 +356,15 @@ which is upstream's `putIfAbsent` order. A sensitive global's value is omitted
 from every response, including the create response, as upstream does. Duplicate
 keys are `409`; upstream's lifecycle hook throws and Spring answers `500`, a
 bug recorded in the captures rather than copied.
+
+`POST /operations` implements the JSON:API atomic operations extension the UI
+uses to create and update workspaces. It supports `op: add` (with `data.lid`,
+attributes and the same relationships as `POST /workspace`) and `op: update`
+(addressed by `href` to the workspace); both require the atomic media type on
+`Content-Type` **and** `Accept`, and answer `415` otherwise. The success shape
+is upstream's `{"atomic:results":[{"data":…}]}`. Two divergences: an unsupported
+`op` is `400` where upstream silently no-ops it, and a failure answers one
+JSON:API error object where upstream answers an array of per-operation results.
 
 Current M1 limitations (tracked for later milestones):
 
