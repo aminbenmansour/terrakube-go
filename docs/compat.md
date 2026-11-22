@@ -259,8 +259,9 @@ object key.
 
 ## Management API — `/api/v1`
 
-Elide-generated JSON:API. This API implements 44 routes (organization, project,
-workspace, variable, globalvar, job, action and the atomic extension); the 106
+Elide-generated JSON:API. This API implements 57 routes (organization, project,
+workspace, variable, globalvar, job, action, collection/item/reference and the
+atomic extension); the 106
 REST operations the UI actually sends are listed in
 `docs/upstream/ui-rest-operations.md`, with what is missing. Reference
 specification (upstream, v2.27.0) is at
@@ -365,6 +366,20 @@ are open, and writes exist because the UI's editor sends them (upstream
 restricts writes to superusers; this API has no RBAC yet). Creating does not
 set `createdBy`/`updatedBy` because a static token carries no user identity, so
 they are null; timestamps are set.
+
+`collection`, `item` and `reference` are the Settings > Collections screen and
+the read-only "Collection Variables" table on the workspace page. A collection
+belongs to one organization and lists its items and references; a reference
+binds a collection to a workspace in the same organization, and
+`GET /reference/:id/collection?include=item` is the read the workspace page
+makes for each reference. Missing required attributes answer upstream's `409`
+data-integrity conflict (its Elide/primitive behaviour), an invalid category is
+`400`, and a collection created without `priority` gets `0` as upstream does.
+Upstream gates collection writes on a team permission; this API has no RBAC
+yet (#44), so the routes are open behind the same bearer token.
+`GET /workspace/:id?include=reference` now emits the reference relationship and
+`included` rows, and workspace resources carry the audit attributes and
+`lastJobDate` upstream serialises.
 
 `POST /operations` implements the JSON:API atomic operations extension the UI
 uses to create and update workspaces. It supports `op: add` (with `data.lid`,
