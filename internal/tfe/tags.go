@@ -218,7 +218,7 @@ func (a *API) applyTagBindings(r *http.Request, ws store.Workspace, bindings []t
 func (a *API) ensureTag(r *http.Request, organizationID, name string) (store.Tag, error) {
 	tag, err := a.deps.Store.GetTagByName(r.Context(), store.GetTagByNameParams{
 		OrganizationID: organizationID,
-		Name:           name,
+		Name:           &name,
 	})
 	if err == nil {
 		return tag, nil
@@ -229,7 +229,7 @@ func (a *API) ensureTag(r *http.Request, organizationID, name string) (store.Tag
 
 	tag, err = a.deps.Store.CreateTag(r.Context(), store.CreateTagParams{
 		ID:             uuid.NewString(),
-		Name:           name,
+		Name:           &name,
 		OrganizationID: organizationID,
 	})
 	if err == nil {
@@ -239,7 +239,7 @@ func (a *API) ensureTag(r *http.Request, organizationID, name string) (store.Tag
 	// A concurrent request may have created the same organization/name pair.
 	if existing, getErr := a.deps.Store.GetTagByName(r.Context(), store.GetTagByNameParams{
 		OrganizationID: organizationID,
-		Name:           name,
+		Name:           &name,
 	}); getErr == nil {
 		return existing, nil
 	}

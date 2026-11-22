@@ -230,7 +230,7 @@ type Step struct {
 
 type Tag struct {
 	ID             string             `json:"id"`
-	Name           string             `json:"name"`
+	Name           *string            `json:"name"`
 	OrganizationID string             `json:"organization_id"`
 	CreatedDate    pgtype.Timestamptz `json:"created_date"`
 	CreatedBy      *string            `json:"created_by"`

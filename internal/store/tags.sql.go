@@ -10,15 +10,15 @@ import (
 )
 
 const createTag = `-- name: CreateTag :one
-INSERT INTO tag (id, name, organization_id)
-VALUES ($1, $2, $3)
+INSERT INTO tag (id, name, created_date, updated_date, organization_id)
+VALUES ($1, $2, now(), now(), $3)
 RETURNING id, name, organization_id, created_date, created_by, updated_date, updated_by
 `
 
 type CreateTagParams struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	OrganizationID string `json:"organization_id"`
+	ID             string  `json:"id"`
+	Name           *string `json:"name"`
+	OrganizationID string  `json:"organization_id"`
 }
 
 func (q *Queries) CreateTag(ctx context.Context, arg CreateTagParams) (Tag, error) {
@@ -37,8 +37,8 @@ func (q *Queries) CreateTag(ctx context.Context, arg CreateTagParams) (Tag, erro
 }
 
 const createWorkspaceTag = `-- name: CreateWorkspaceTag :one
-INSERT INTO workspacetag (id, tag_id, tag_value, workspace_id)
-VALUES ($1, $2, $3, $4)
+INSERT INTO workspacetag (id, tag_id, tag_value, workspace_id, created_date, updated_date)
+VALUES ($1, $2, $3, $4, now(), now())
 RETURNING id, tag_id, tag_value, workspace_id, created_date, created_by, updated_date, updated_by
 `
 
@@ -70,17 +70,98 @@ func (q *Queries) CreateWorkspaceTag(ctx context.Context, arg CreateWorkspaceTag
 	return i, err
 }
 
+const deleteTag = `-- name: DeleteTag :exec
+DELETE FROM tag WHERE id = $1
+`
+
+func (q *Queries) DeleteTag(ctx context.Context, id string) error {
+	_, err := q.db.Exec(ctx, deleteTag, id)
+	return err
+}
+
+const deleteWorkspaceTag = `-- name: DeleteWorkspaceTag :exec
+DELETE FROM workspacetag WHERE id = $1
+`
+
+func (q *Queries) DeleteWorkspaceTag(ctx context.Context, id string) error {
+	_, err := q.db.Exec(ctx, deleteWorkspaceTag, id)
+	return err
+}
+
+const getTag = `-- name: GetTag :one
+SELECT id, name, organization_id, created_date, created_by, updated_date, updated_by FROM tag WHERE id = $1
+`
+
+func (q *Queries) GetTag(ctx context.Context, id string) (Tag, error) {
+	row := q.db.QueryRow(ctx, getTag, id)
+	var i Tag
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.OrganizationID,
+		&i.CreatedDate,
+		&i.CreatedBy,
+		&i.UpdatedDate,
+		&i.UpdatedBy,
+	)
+	return i, err
+}
+
 const getTagByName = `-- name: GetTagByName :one
 SELECT id, name, organization_id, created_date, created_by, updated_date, updated_by FROM tag WHERE organization_id = $1 AND name = $2
 `
 
 type GetTagByNameParams struct {
-	OrganizationID string `json:"organization_id"`
-	Name           string `json:"name"`
+	OrganizationID string  `json:"organization_id"`
+	Name           *string `json:"name"`
 }
 
 func (q *Queries) GetTagByName(ctx context.Context, arg GetTagByNameParams) (Tag, error) {
 	row := q.db.QueryRow(ctx, getTagByName, arg.OrganizationID, arg.Name)
+	var i Tag
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.OrganizationID,
+		&i.CreatedDate,
+		&i.CreatedBy,
+		&i.UpdatedDate,
+		&i.UpdatedBy,
+	)
+	return i, err
+}
+
+const getWorkspaceTag = `-- name: GetWorkspaceTag :one
+SELECT id, tag_id, tag_value, workspace_id, created_date, created_by, updated_date, updated_by FROM workspacetag WHERE id = $1
+`
+
+func (q *Queries) GetWorkspaceTag(ctx context.Context, id string) (Workspacetag, error) {
+	row := q.db.QueryRow(ctx, getWorkspaceTag, id)
+	var i Workspacetag
+	err := row.Scan(
+		&i.ID,
+		&i.TagID,
+		&i.TagValue,
+		&i.WorkspaceID,
+		&i.CreatedDate,
+		&i.CreatedBy,
+		&i.UpdatedDate,
+		&i.UpdatedBy,
+	)
+	return i, err
+}
+
+const updateTag = `-- name: UpdateTag :one
+UPDATE tag SET name = $2, updated_date = now() WHERE id = $1 RETURNING id, name, organization_id, created_date, created_by, updated_date, updated_by
+`
+
+type UpdateTagParams struct {
+	ID   string  `json:"id"`
+	Name *string `json:"name"`
+}
+
+func (q *Queries) UpdateTag(ctx context.Context, arg UpdateTagParams) (Tag, error) {
+	row := q.db.QueryRow(ctx, updateTag, arg.ID, arg.Name)
 	var i Tag
 	err := row.Scan(
 		&i.ID,
