@@ -43,6 +43,7 @@ func TestRelationshipMarshalling(t *testing.T) {
 			"workspace":  Link("workspaces", "ws-1"),
 			"run-events": LinkList("run-events"),
 			"tags":       LinkList("tags", "a", "b"),
+			"templates":  NullLink(),
 		},
 	}
 	raw, err := json.Marshal(resource)
@@ -54,6 +55,7 @@ func TestRelationshipMarshalling(t *testing.T) {
 		`"workspace":{"data":{"type":"workspaces","id":"ws-1"}}`,
 		`"run-events":{"data":[]}`,
 		`"tags":{"data":[{"type":"tags","id":"a"},{"type":"tags","id":"b"}]}`,
+		`"templates":{"data":null}`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("resource = %s, missing %s", body, want)
@@ -167,6 +169,28 @@ func TestRelationshipIDNull(t *testing.T) {
 	}
 	if !present || id != "" {
 		t.Errorf("RelationshipID() = (%q, %v), want (\"\", true)", id, present)
+	}
+}
+
+func TestRelationshipList(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPatch, "/", strings.NewReader(`{"data":[{"type":"template","id":"t1"},{"type":"template","id":"t2"}]}`))
+	ids, err := RelationshipList(req)
+	if err != nil {
+		t.Fatalf("RelationshipList() error = %v", err)
+	}
+	if len(ids) != 2 || ids[1].ID != "t2" {
+		t.Errorf("RelationshipList() = %v", ids)
+	}
+
+	// An explicit null clears the relationship; a missing data member is an
+	// error rather than a silent clear.
+	req = httptest.NewRequest(http.MethodPatch, "/", strings.NewReader(`{"data":null}`))
+	if ids, err := RelationshipList(req); err != nil || ids != nil {
+		t.Errorf("null data = (%v, %v), want (nil, nil)", ids, err)
+	}
+	req = httptest.NewRequest(http.MethodPatch, "/", strings.NewReader(`{}`))
+	if _, err := RelationshipList(req); err == nil {
+		t.Error("missing data should be an error")
 	}
 }
 

@@ -259,9 +259,10 @@ object key.
 
 ## Management API — `/api/v1`
 
-Elide-generated JSON:API. This API implements 89 routes (organization, project,
+Elide-generated JSON:API. This API implements 100 routes (organization, project,
 workspace, variable, globalvar, job, action, collection/item/reference,
-ssh, agent, vcs, template, team, tag/workspacetag and the atomic extension); the 106
+ssh, agent, vcs, template, team, notification configuration/trigger,
+tag/workspacetag and the atomic extension); the 106
 REST operations the UI actually sends are listed in
 `docs/upstream/ui-rest-operations.md`, with what is missing. Reference
 specification (upstream, v2.27.0) is at
@@ -402,6 +403,27 @@ false except `destroyJob`, which defaults to true as upstream does. `role` is a
 free string upstream does not validate, and null is accepted. Upstream gates
 team writes on superuser; this API has no RBAC yet (#44), so the routes are open
 behind the bearer token and nothing enforces the permissions stored on the row.
+
+`notificationConfiguration` is the Settings > Notifications screen. A
+configuration is organization-wide or workspace-scoped (created under
+`/organization/:id/workspace/:workspaceId/notificationConfiguration`, which
+fills both ids); `name`, `channelType` and `destinationUrl` are required and a
+missing or null one answers upstream's `409`. `channelType` is
+`SLACK|TEAMS|WEBHOOK`; `messageStyle` is `DETAILED|SIMPLE` and defaults to
+`DETAILED`; `active` defaults to true. `signingSecret` is write-only: it is
+never returned, and PATCHing null clears it. Triggers live at
+`/notification_configuration/:id/triggers` (create) and
+`/notification_configuration/:id/triggers/:triggerId` (delete); `jobStatus` is
+required (`409`) and is upstream's `JobStatus` enum (`400 Invalid value: x`).
+`PATCH /notification_configuration/:id/relationships/templates` replaces the
+"applies to these templates" set wholesale; an empty list means every template,
+and an unknown template is `404`, as upstream. Deleting a configuration cascades
+its triggers and template links. Two divergences and one gap: an unknown
+attribute in a PATCH is ignored here (upstream `404 Unknown attribute`), the
+workspace relationship is emitted as JSON null (upstream emits `data:null` plus
+empty `triggers`/`templates`/`policySet` arrays), and the
+`/notification/v1/.../test` endpoints and actual delivery are not implemented
+yet (#52). Writes are open until RBAC lands (#44).
 
 `template` is the Settings > Templates screen and the source of the workspace's
 `defaultTemplate`: list, get, create, patch and delete under
@@ -590,8 +612,8 @@ Differences from upstream at this stage:
 - UUID primary keys stay `varchar(36)` as upstream.
 - Audit columns use upstream names (`created_date`, `created_by`,
   `updated_date`, `updated_by`).
-- Additional upstream tables (tokens, registry, policies) arrive in later
-  migrations rather than all at once.
+- Additional upstream tables (tokens, registry, policies, the notification
+  outbox) arrive in later migrations rather than all at once.
 
 ## UI contract
 

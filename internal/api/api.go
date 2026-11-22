@@ -113,6 +113,11 @@ func New(deps Deps) http.Handler {
 			r.Delete("/", a.deleteVCS)
 		})
 
+		// Notifications: Settings > Notifications, org-wide and per workspace.
+		r.Get("/notificationConfiguration", a.listNotificationConfigurations)
+		r.Post("/notificationConfiguration", a.createNotificationConfiguration)
+		r.Get("/notificationConfiguration/{configurationID}", a.getNotificationConfiguration)
+
 		// Teams: Settings > Teams and the access pickers.
 		r.Get("/team", a.listTeams)
 		r.Post("/team", a.createTeam)
@@ -183,6 +188,17 @@ func New(deps Deps) http.Handler {
 	})
 	r.Get("/reference/{referenceID}/collection", a.getReferenceCollection)
 
+	// Notification configurations are addressed by id at the root because the
+	// UI's editor and trigger sub-resource calls are not organization-nested.
+	r.Route("/notification_configuration/{configurationID}", func(r chi.Router) {
+		r.Get("/", a.getNotificationConfiguration)
+		r.Patch("/", a.updateNotificationConfiguration)
+		r.Delete("/", a.deleteNotificationConfiguration)
+		r.Post("/triggers", a.createNotificationTrigger)
+		r.Delete("/triggers/{triggerID}", a.deleteNotificationTrigger)
+		r.Patch("/relationships/templates", a.replaceNotificationTemplates)
+	})
+
 	// Workspaces
 	r.Route("/workspace/{workspaceID}", func(r chi.Router) {
 		r.Get("/", a.getWorkspace)
@@ -204,6 +220,8 @@ func New(deps Deps) http.Handler {
 		r.Patch("/relationships/{relation}", a.updateWorkspaceRelationship)
 		r.Get("/workspaceTag", a.listWorkspaceTags)
 		r.Post("/workspaceTag", a.createWorkspaceTag)
+		r.Get("/notificationConfiguration", a.listWorkspaceNotificationConfigurations)
+		r.Post("/notificationConfiguration", a.createWorkspaceNotificationConfiguration)
 		r.Route("/workspaceTag/{workspaceTagID}", func(r chi.Router) {
 			r.Patch("/", a.updateWorkspaceTag)
 			r.Delete("/", a.deleteWorkspaceTag)

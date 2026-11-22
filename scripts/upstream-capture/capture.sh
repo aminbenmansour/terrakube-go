@@ -394,6 +394,57 @@ request organization-template-delete "/api/v1/organization/${rel_org}/template/$
 request organization-template-get-after-delete "/api/v1/organization/${rel_org}/template/${template_new}"
 request organization-template-delete-empty "/api/v1/organization/${rel_org}/template/${template_empty}" -X DELETE
 
+# Notifications: Settings > Notifications. A configuration is org-wide (no
+# workspace) or workspace-scoped, gets triggers per job status, and may narrow
+# itself to a set of templates.
+notify_template='00000000-0000-4000-8000-000000000095'
+pg "delete from notification_configuration where name like 'capture-notify%' and organization_id = '${rel_org}';
+    insert into template (id, name, organization_id)
+    values ('${notify_template}', 'capture-notify-template', '${rel_org}') on conflict (id) do nothing" >/dev/null
+request organization-notification-create "/api/v1/organization/${rel_org}/notificationConfiguration" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"notification_configuration","attributes":{"name":"capture-notify","description":"capture","channelType":"WEBHOOK","destinationUrl":"https://example.com/hook","signingSecret":"capture-secret","active":true,"messageStyle":"SIMPLE"}}}'
+notify_new="$(python3 -c "import json;print(json.load(open('$out/organization-notification-create.json'))['data']['id'])")"
+request organization-notification-list "/api/v1/organization/${rel_org}/notificationConfiguration"
+request organization-notification-get "/api/v1/organization/${rel_org}/notificationConfiguration/${notify_new}"
+request organization-notification-patch "/api/v1/notification_configuration/${notify_new}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"notification_configuration\",\"id\":\"${notify_new}\",\"attributes\":{\"description\":null,\"active\":false,\"messageStyle\":\"DETAILED\"}}}"
+request organization-notification-trigger-create "/api/v1/notification_configuration/${notify_new}/triggers" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"notification_trigger","attributes":{"jobStatus":"failed"}}}'
+notify_trigger="$(python3 -c "import json;print(json.load(open('$out/organization-notification-trigger-create.json'))['data']['id'])")"
+request organization-notification-trigger-missing "/api/v1/notification_configuration/${notify_new}/triggers" -X POST \
+  -H 'Content-Type: application/vnd.api+json' --data '{"data":{"type":"notification_trigger","attributes":{}}}'
+request organization-notification-trigger-invalid "/api/v1/notification_configuration/${notify_new}/triggers" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"notification_trigger","attributes":{"jobStatus":"nope"}}}'
+request organization-notification-templates "/api/v1/notification_configuration/${notify_new}/relationships/templates" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":[{\"type\":\"template\",\"id\":\"${notify_template}\"}]}"
+request organization-notification-templates-unknown "/api/v1/notification_configuration/${notify_new}/relationships/templates" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":[{"type":"template","id":"00000000-0000-4000-8000-000000000099"}]}'
+request organization-notification-workspace-create "/api/v1/organization/${rel_org}/workspace/${rel_ws}/notificationConfiguration" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"notification_configuration","attributes":{"name":"capture-notify-workspace","channelType":"TEAMS","destinationUrl":"https://teams.example.com/hook"}}}'
+notify_ws="$(python3 -c "import json;print(json.load(open('$out/organization-notification-workspace-create.json'))['data']['id'])")"
+request organization-notification-workspace-list "/api/v1/organization/${rel_org}/workspace/${rel_ws}/notificationConfiguration"
+request organization-notification-create-missing-name "/api/v1/organization/${rel_org}/notificationConfiguration" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"notification_configuration","attributes":{"channelType":"WEBHOOK","destinationUrl":"https://example.com/x"}}}'
+request organization-notification-create-invalid "/api/v1/organization/${rel_org}/notificationConfiguration" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"notification_configuration","attributes":{"name":"capture-notify-bad","channelType":"NOPE","destinationUrl":"https://example.com/x"}}}'
+request organization-notification-missing "/api/v1/organization/${rel_org}/notificationConfiguration/00000000-0000-4000-8000-000000000098"
+request organization-notification-bad-id "/api/v1/organization/${rel_org}/notificationConfiguration/not-a-uuid"
+request organization-notification-trigger-delete "/api/v1/notification_configuration/${notify_new}/triggers/${notify_trigger}" -X DELETE
+request organization-notification-workspace-delete "/api/v1/notification_configuration/${notify_ws}" -X DELETE
+request organization-notification-delete "/api/v1/notification_configuration/${notify_new}" -X DELETE
+request organization-notification-get-after-delete "/api/v1/organization/${rel_org}/notificationConfiguration/${notify_new}"
+pg "delete from notification_configuration where name like 'capture-notify%' and organization_id = '${rel_org}';
+    delete from template where id = '${notify_template}'" >/dev/null
+
 # Tags: Settings > Tags and the workspace tag editor. The tag delete cascades
 # its bindings, so the workspace rows go with it.
 pg "delete from workspacetag where tag_id in (select id from tag where name like 'capture-tag%');

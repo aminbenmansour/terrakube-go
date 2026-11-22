@@ -9,7 +9,7 @@ from `ui/src` and regenerated with `scripts/ui-rest-inventory.sh`.
 
 ## Where we stand
 
-`internal/api` currently answers 89 routes. Everything marked *missing* below
+`internal/api` currently answers 100 routes. Everything marked *missing* below
 returns 404, and the page that calls it shows an error or an empty state.
 
 | Resource | Operations | Status |
@@ -27,7 +27,7 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `team` | 5 (list, get, create, patch, delete) | implemented |
 | `provider`, `module` | 19 (versions, implementations, module versions) | **missing** |
 | `policy_set`, `policy_exemption` | 19 (attachments, parameters, parameters CRUD) | **missing** |
-| `notificationConfiguration` | 5 (triggers, templates relationship) | **missing** — the GraphQL reads exist, the writes do not |
+| `notificationConfiguration`, `notification_trigger` | 7 (config CRUD, triggers create/delete, templates relationship) | implemented; the two `/notification/v1/.../test` sends are **missing** (delivery, #52) |
 | `federated` (OIDC credentials) | 9 | **missing** |
 | registry `/registry/v1/providers` | 4 | separate service (`cmd/registry`, M6) |
 | `/remote/tfe/v2/runs/:id/policy-checks` | 1 | implemented |
@@ -44,7 +44,7 @@ registry and policy screens do not work against this API yet. That is the bulk o
 
 1. `job` get/patch and the workspace relationship patches (lock, project, VCS).
 2. `provider`, `module` and the registry service.
-3. `policy_set`, `policy_exemption`, `federated`, `notificationConfiguration`.
+3. `policy_set`, `policy_exemption`, `federated`.
 4. The legacy `/workspace/:id/variable` editor routes are served; the collection
    screens are done.
 

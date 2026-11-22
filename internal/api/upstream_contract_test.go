@@ -613,6 +613,96 @@ var replayedCaptures = map[string]replay{
 		target:  "team-query",
 		querier: &stubQuerier{},
 	},
+	"organization-notification-list": {
+		target: "notification-query",
+	},
+	"organization-notification-create": {
+		target: "notification-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"notification_configuration","attributes":{"name":"capture-notify","description":"capture","channelType":"WEBHOOK","destinationUrl":"https://example.com/hook","signingSecret":"capture-secret","active":true,"messageStyle":"SIMPLE"}}}`,
+	},
+	"organization-notification-get": {
+		target: "notification-query",
+	},
+	"organization-notification-patch": {
+		target: "notification-query",
+		idFrom: "organization-notification-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"notification_configuration","id":"{id}","attributes":{"description":null,"active":false,"messageStyle":"DETAILED"}}}`,
+	},
+	"organization-notification-trigger-create": {
+		target: "notification-query",
+		idFrom: "organization-notification-create",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"notification_trigger","attributes":{"jobStatus":"failed"}}}`,
+	},
+	"organization-notification-trigger-missing": {
+		target: "notification-query",
+		idFrom: "organization-notification-create",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"notification_trigger","attributes":{}}}`,
+	},
+	"organization-notification-trigger-invalid": {
+		target: "notification-query",
+		idFrom: "organization-notification-create",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"notification_trigger","attributes":{"jobStatus":"nope"}}}`,
+	},
+	"organization-notification-templates": {
+		target: "notification-query",
+		idFrom: "organization-notification-create",
+		method: http.MethodPatch,
+		body:   `{"data":[{"type":"template","id":"` + capturedNotifyTemplate + `"}]}`,
+	},
+	"organization-notification-templates-unknown": {
+		target: "notification-query",
+		idFrom: "organization-notification-create",
+		method: http.MethodPatch,
+		body:   `{"data":[{"type":"template","id":"00000000-0000-4000-8000-000000000099"}]}`,
+	},
+	"organization-notification-workspace-create": {
+		target: "notification-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"notification_configuration","attributes":{"name":"capture-notify-workspace","channelType":"TEAMS","destinationUrl":"https://teams.example.com/hook"}}}`,
+	},
+	"organization-notification-workspace-list": {
+		target: "notification-query",
+	},
+	"organization-notification-create-missing-name": {
+		target: "notification-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"notification_configuration","attributes":{"channelType":"WEBHOOK","destinationUrl":"https://example.com/x"}}}`,
+	},
+	"organization-notification-create-invalid": {
+		target: "notification-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"notification_configuration","attributes":{"name":"capture-notify-bad","channelType":"NOPE","destinationUrl":"https://example.com/x"}}}`,
+	},
+	"organization-notification-missing": {
+		target: "notification-query",
+	},
+	"organization-notification-bad-id": {
+		target: "notification-query",
+	},
+	"organization-notification-trigger-delete": {
+		target: "notification-query",
+		idFrom: "organization-notification-trigger-create",
+		method: http.MethodDelete,
+	},
+	"organization-notification-workspace-delete": {
+		target: "notification-query",
+		idFrom: "organization-notification-workspace-create",
+		method: http.MethodDelete,
+	},
+	"organization-notification-delete": {
+		target: "notification-query",
+		idFrom: "organization-notification-create",
+		method: http.MethodDelete,
+	},
+	"organization-notification-get-after-delete": {
+		target:  "notification-query",
+		querier: &stubQuerier{},
+	},
 	"organization-template-list": {
 		target: "template-query",
 	},
@@ -761,19 +851,20 @@ const (
 	capturedWSID  = "0beb7db4-b073-4bd4-9a98-94fe7e2d9939"
 	// The workspace relationship captures were seeded against this org, which
 	// the upstream demo gives two projects.
-	capturedRelOrg     = "70000000-0000-0000-0000-000000000001"
-	capturedRelWS      = "77777777-7777-4777-8777-777777777777"
-	capturedRelP1      = "70000000-0000-0000-0000-000000000010"
-	capturedRelP2      = "70000000-0000-0000-0000-000000000020"
-	capturedRelVCS     = "aaaaaaaa-0000-4000-8000-000000000001"
-	capturedRelSSH     = "aaaaaaaa-0000-4000-8000-000000000002"
-	capturedRelAgent   = "aaaaaaaa-0000-4000-8000-000000000003"
-	capturedRelForeign = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-	capturedRelUnknown = "00000000-0000-0000-0000-000000000000"
-	capturedForeignOrg = "d9b58bd3-f3fc-4056-a026-1163297e80a8"
-	capturedGvID       = "99999999-9999-4999-8999-999999999990"
-	capturedGvSecret   = "99999999-9999-4999-8999-999999999993"
-	capturedStepID     = "66666666-6666-4666-8666-666666666666"
+	capturedRelOrg         = "70000000-0000-0000-0000-000000000001"
+	capturedRelWS          = "77777777-7777-4777-8777-777777777777"
+	capturedRelP1          = "70000000-0000-0000-0000-000000000010"
+	capturedRelP2          = "70000000-0000-0000-0000-000000000020"
+	capturedRelVCS         = "aaaaaaaa-0000-4000-8000-000000000001"
+	capturedRelSSH         = "aaaaaaaa-0000-4000-8000-000000000002"
+	capturedRelAgent       = "aaaaaaaa-0000-4000-8000-000000000003"
+	capturedRelForeign     = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+	capturedRelUnknown     = "00000000-0000-0000-0000-000000000000"
+	capturedForeignOrg     = "d9b58bd3-f3fc-4056-a026-1163297e80a8"
+	capturedGvID           = "99999999-9999-4999-8999-999999999990"
+	capturedGvSecret       = "99999999-9999-4999-8999-999999999993"
+	capturedStepID         = "66666666-6666-4666-8666-666666666666"
+	capturedNotifyTemplate = "00000000-0000-4000-8000-000000000095"
 )
 
 func workspaceProjectBody(projectID string) string {
@@ -901,6 +992,36 @@ func captureTeamStore(t *testing.T, captures map[string]upstreamCapture) *stubQu
 			ID: created, Name: "capture-team", ManageWorkspace: true, ManageJob: true,
 			PlanJob: true, ApproveJob: true, DestroyJob: true, Role: strPtr("write"),
 			OrganizationID: capturedRelOrg,
+		}},
+	}
+}
+
+func captureNotificationStore(t *testing.T, captures map[string]upstreamCapture) *stubQuerier {
+	t.Helper()
+	configID := captures["organization-notification-create"].resourceID(t)
+	workspaceConfigID := captures["organization-notification-workspace-create"].resourceID(t)
+	triggerID := captures["organization-notification-trigger-create"].resourceID(t)
+
+	return &stubQuerier{
+		org:        store.Organization{ID: capturedRelOrg},
+		workspaces: []store.Workspace{{ID: capturedRelWS, OrganizationID: capturedRelOrg}},
+		templates:  []store.Template{{ID: capturedNotifyTemplate, OrganizationID: capturedRelOrg}},
+		notifications: []store.NotificationConfiguration{
+			{
+				ID: configID, Name: "capture-notify", Description: strPtr("capture"),
+				OrganizationID: capturedRelOrg, ChannelType: "WEBHOOK",
+				DestinationUrl: "https://example.com/hook", SigningSecret: strPtr("capture-secret"),
+				Active: false, MessageStyle: "DETAILED",
+			},
+			{
+				ID: workspaceConfigID, Name: "capture-notify-workspace",
+				OrganizationID: capturedRelOrg, WorkspaceID: strPtr(capturedRelWS),
+				ChannelType: "TEAMS", DestinationUrl: "https://teams.example.com/hook",
+				Active: true, MessageStyle: "DETAILED",
+			},
+		},
+		triggers: []store.NotificationTrigger{{
+			ID: triggerID, JobStatus: "failed", ConfigurationID: configID,
 		}},
 	}
 }
@@ -1181,6 +1302,11 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 				target = strings.TrimPrefix(capture.path, "/api/v1")
 				if querier == nil {
 					querier = captureVCSStore(t, captures)
+				}
+			case "notification-query":
+				target = strings.TrimPrefix(capture.path, "/api/v1")
+				if querier == nil {
+					querier = captureNotificationStore(t, captures)
 				}
 			case "team-query":
 				target = strings.TrimPrefix(capture.path, "/api/v1")
@@ -1710,6 +1836,133 @@ func (s *stubQuerier) DeleteTeam(_ context.Context, id string) error {
 			return s.err
 		}
 	}
+	return s.err
+}
+
+func (s *stubQuerier) ListNotificationConfigurationsByOrganization(_ context.Context, orgID string) ([]store.NotificationConfiguration, error) {
+	var out []store.NotificationConfiguration
+	for _, config := range s.notifications {
+		if config.OrganizationID == orgID {
+			out = append(out, config)
+		}
+	}
+	return out, s.err
+}
+
+func (s *stubQuerier) ListNotificationConfigurationsByWorkspace(_ context.Context, workspaceID *string) ([]store.NotificationConfiguration, error) {
+	var out []store.NotificationConfiguration
+	for _, config := range s.notifications {
+		if workspaceID != nil && config.WorkspaceID != nil && *config.WorkspaceID == *workspaceID {
+			out = append(out, config)
+		}
+	}
+	return out, s.err
+}
+
+func (s *stubQuerier) GetNotificationConfiguration(_ context.Context, id string) (store.NotificationConfiguration, error) {
+	for _, config := range s.notifications {
+		if config.ID == id {
+			return config, nil
+		}
+	}
+	return store.NotificationConfiguration{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateNotificationConfiguration(_ context.Context, arg store.CreateNotificationConfigurationParams) (store.NotificationConfiguration, error) {
+	config := store.NotificationConfiguration{
+		ID: arg.ID, Name: arg.Name, Description: arg.Description,
+		OrganizationID: arg.OrganizationID, WorkspaceID: arg.WorkspaceID,
+		ChannelType: arg.ChannelType, DestinationUrl: arg.DestinationUrl,
+		SigningSecret: arg.SigningSecret, Active: arg.Active, MessageStyle: arg.MessageStyle,
+	}
+	s.notifications = append(s.notifications, config)
+	return config, s.err
+}
+
+func (s *stubQuerier) UpdateNotificationConfiguration(_ context.Context, arg store.UpdateNotificationConfigurationParams) (store.NotificationConfiguration, error) {
+	for i := range s.notifications {
+		if s.notifications[i].ID == arg.ID {
+			s.notifications[i].Name = arg.Name
+			s.notifications[i].Description = arg.Description
+			s.notifications[i].ChannelType = arg.ChannelType
+			s.notifications[i].DestinationUrl = arg.DestinationUrl
+			s.notifications[i].SigningSecret = arg.SigningSecret
+			s.notifications[i].Active = arg.Active
+			s.notifications[i].MessageStyle = arg.MessageStyle
+			return s.notifications[i], s.err
+		}
+	}
+	return store.NotificationConfiguration{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) DeleteNotificationConfiguration(_ context.Context, id string) error {
+	for i := range s.notifications {
+		if s.notifications[i].ID == id {
+			s.notifications = append(s.notifications[:i], s.notifications[i+1:]...)
+			break
+		}
+	}
+	var kept []store.NotificationTrigger
+	for _, trigger := range s.triggers {
+		if trigger.ConfigurationID != id {
+			kept = append(kept, trigger)
+		}
+	}
+	s.triggers = kept
+	return s.err
+}
+
+func (s *stubQuerier) ListNotificationTriggersByConfiguration(_ context.Context, configurationID string) ([]store.NotificationTrigger, error) {
+	var out []store.NotificationTrigger
+	for _, trigger := range s.triggers {
+		if trigger.ConfigurationID == configurationID {
+			out = append(out, trigger)
+		}
+	}
+	return out, s.err
+}
+
+func (s *stubQuerier) GetNotificationTrigger(_ context.Context, id string) (store.NotificationTrigger, error) {
+	for _, trigger := range s.triggers {
+		if trigger.ID == id {
+			return trigger, nil
+		}
+	}
+	return store.NotificationTrigger{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateNotificationTrigger(_ context.Context, arg store.CreateNotificationTriggerParams) (store.NotificationTrigger, error) {
+	trigger := store.NotificationTrigger{
+		ID: arg.ID, JobStatus: arg.JobStatus, ConfigurationID: arg.ConfigurationID,
+	}
+	s.triggers = append(s.triggers, trigger)
+	return trigger, s.err
+}
+
+func (s *stubQuerier) DeleteNotificationTrigger(_ context.Context, id string) error {
+	for i := range s.triggers {
+		if s.triggers[i].ID == id {
+			s.triggers = append(s.triggers[:i], s.triggers[i+1:]...)
+			return s.err
+		}
+	}
+	return s.err
+}
+
+func (s *stubQuerier) ListNotificationConfigurationTemplateIDs(_ context.Context, configurationID string) ([]string, error) {
+	return s.notificationTemplates[configurationID], s.err
+}
+
+func (s *stubQuerier) DeleteNotificationConfigurationTemplates(_ context.Context, configurationID string) error {
+	delete(s.notificationTemplates, configurationID)
+	return s.err
+}
+
+func (s *stubQuerier) AddNotificationConfigurationTemplate(_ context.Context, arg store.AddNotificationConfigurationTemplateParams) error {
+	if s.notificationTemplates == nil {
+		s.notificationTemplates = map[string][]string{}
+	}
+	s.notificationTemplates[arg.ConfigurationID] = append(s.notificationTemplates[arg.ConfigurationID], arg.TemplateID)
 	return s.err
 }
 
