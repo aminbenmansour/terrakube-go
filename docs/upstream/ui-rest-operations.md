@@ -9,7 +9,7 @@ from `ui/src` and regenerated with `scripts/ui-rest-inventory.sh`.
 
 ## Where we stand
 
-`internal/api` currently answers 44 routes. Everything marked *missing* below
+`internal/api` currently answers 57 routes. Everything marked *missing* below
 returns 404, and the page that calls it shows an error or an empty state.
 
 | Resource | Operations | Status |
@@ -18,7 +18,7 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `project` | list, create, get, patch, delete | implemented |
 | `workspace` | list, create, get, patch, delete | implemented |
 | `workspace` relationships (`project`, `vcs`, `ssh`, `agent`) | patch | implemented |
-| variable / `collection` | 15 (collections, items, references) | **missing** — only the legacy `/workspace/:id/variable` routes exist |
+| `collection`, `item`, `reference` | 12 (collections, items, workspace references, `/reference/:id/collection`) | implemented |
 | `job` | get, patch | implemented |
 | `tag`, `workspaceTag` | list, create, list workspace tags | **missing** |
 | `template` | list | **missing** |
@@ -41,12 +41,13 @@ API yet. That is the bulk of M5 and it is REST work, not GraphQL work.
 
 ## Order that unblocks the most UI
 
-1. `collection` + items (the variable editor is on every workspace page).
-2. `job` get/patch and the workspace relationship patches (lock, project, VCS).
-3. `vcs`, `ssh`, `agent` (creating a workspace from a repository).
-4. `tag`, `workspaceTag`, `template` (the workspace list filters).
-5. `provider`, `module` and the registry service.
-6. `policy_set`, `policy_exemption`, `federated`, `notificationConfiguration`.
+1. `job` get/patch and the workspace relationship patches (lock, project, VCS).
+2. `vcs`, `ssh`, `agent` (creating a workspace from a repository).
+3. `tag`, `workspaceTag`, `template` (the workspace list filters).
+4. `provider`, `module` and the registry service.
+5. `policy_set`, `policy_exemption`, `federated`, `notificationConfiguration`.
+6. The legacy `/workspace/:id/variable` editor routes are served; the collection
+   screens are done.
 
 ## Measured route surface
 

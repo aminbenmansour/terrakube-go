@@ -239,6 +239,52 @@ request action-patch             '/api/v1/action/capture.temp-action' -X PATCH \
 request action-delete            '/api/v1/action/capture.temp-action' -X DELETE
 pg "delete from action where id = 'capture.temp-action'" >/dev/null
 
+# Variable collections: Settings > Collections, plus the read-only table the
+# workspace page fills from a reference. rel_org/rel_ws carry a team with
+# manage_collection (upstream gates collection writes on a team permission).
+coll_org="${rel_org}"
+coll_ws="${rel_ws}"
+pg "delete from item where collection_id in (select id from collection where name like 'capture-collection%');
+    delete from reference where collection_id in (select id from collection where name like 'capture-collection%');
+    delete from collection where name like 'capture-collection%'" >/dev/null
+request organization-collection-create "/api/v1/organization/${coll_org}/collection" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"collection","attributes":{"name":"capture-collection","description":"capture","priority":10}}}'
+coll_id="$(python3 -c "import json;print(json.load(open('$out/organization-collection-create.json'))['data']['id'])")"
+request organization-collection-list   "/api/v1/organization/${coll_org}/collection"
+request organization-collection-get    "/api/v1/organization/${coll_org}/collection/${coll_id}"
+request organization-collection-patch  "/api/v1/organization/${coll_org}/collection/${coll_id}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"collection\",\"id\":\"${coll_id}\",\"attributes\":{\"name\":\"capture-collection-after\"}}}"
+request organization-collection-item-create "/api/v1/organization/${coll_org}/collection/${coll_id}/item" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"item","attributes":{"key":"CAPTURE_KEY","value":"one","description":"capture","sensitive":false,"hcl":false,"category":"ENV"}}}'
+coll_item_id="$(python3 -c "import json;print(json.load(open('$out/organization-collection-item-create.json'))['data']['id'])")"
+request organization-collection-item-list "/api/v1/organization/${coll_org}/collection/${coll_id}/item"
+request organization-collection-item-patch "/api/v1/organization/${coll_org}/collection/${coll_id}/item/${coll_item_id}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"item\",\"id\":\"${coll_item_id}\",\"attributes\":{\"value\":\"after\"}}}"
+request organization-collection-item-invalid-category "/api/v1/organization/${coll_org}/collection/${coll_id}/item" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"item","attributes":{"key":"CAPTURE_BAD","value":"x","category":"env"}}}'
+request organization-collection-item-missing-key "/api/v1/organization/${coll_org}/collection/${coll_id}/item" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"item","attributes":{"value":"x","category":"ENV"}}}'
+request organization-collection-create-missing-name "/api/v1/organization/${coll_org}/collection" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"collection","attributes":{"priority":5}}}'
+request organization-collection-missing "/api/v1/organization/${coll_org}/collection/00000000-0000-4000-8000-000000000000"
+request organization-collection-reference-create "/api/v1/organization/${coll_org}/collection/${coll_id}/reference" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"reference\",\"attributes\":{\"description\":\"capture\"},\"relationships\":{\"workspace\":{\"data\":{\"type\":\"workspace\",\"id\":\"${coll_ws}\"}}}}}"
+coll_ref_id="$(python3 -c "import json;print(json.load(open('$out/organization-collection-reference-create.json'))['data']['id'])")"
+request organization-collection-reference-list "/api/v1/organization/${coll_org}/collection/${coll_id}/reference"
+request reference-collection "/api/v1/reference/${coll_ref_id}/collection?include=item"
+request organization-workspace-reference "/api/v1/organization/${coll_org}/workspace/${coll_ws}?include=reference"
+request organization-collection-item-delete "/api/v1/organization/${coll_org}/collection/${coll_id}/item/${coll_item_id}" -X DELETE
+request organization-collection-reference-delete "/api/v1/organization/${coll_org}/collection/${coll_id}/reference/${coll_ref_id}" -X DELETE
+request organization-collection-delete "/api/v1/organization/${coll_org}/collection/${coll_id}" -X DELETE
+
 # Leave the disposable database as it was: these rows exist only for captures.
 pg "delete from workspace where name in ('capture-atomic', 'capture-rel-workspace')" >/dev/null
 pg "delete from job where commit_id = 'deaDBEEF'" >/dev/null

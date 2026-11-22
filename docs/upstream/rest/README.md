@@ -37,6 +37,7 @@ tools that produced them are in
 | `action` ids | editor slugs (`terrakube.open-ai`), not UUIDs | same |
 | `action` list filter | `filter[action]=active==true;type=in=('A','B')` | same |
 | `action` create / patch / delete | **201** with the resource / **204** / **204**; audit fields set from the PAT's user | same statuses; `createdBy`/`updatedBy` are null (no user in the token) |
+| `collection` / `item` / `reference` | organization-scoped CRUD, `GET /reference/:id/collection?include=item`; writes gated on a team permission; missing required attribute **409**; no `priority` means **0** | same routes and statuses; writes are open (no RBAC yet) |
 | `POST /operations` (atomic) | `add`/`update`; `Content-Type` **and** `Accept` must be the atomic media type or **415**; an unsupported op is a no-op 200 | same shape and 415; an unsupported op is **400** and a failure is one error object, not an array of per-op results |
 | Resources | `type`, `id`, `attributes`, `relationships` | `type`, `id`, `attributes`, and `relationships` for the links that exist |
 | Error objects | `detail` only | `detail`, `status`, `title` |
@@ -44,7 +45,7 @@ tools that produced them are in
 The differences that matter are deliberate: we are a superset where upstream is
 stricter (paging on `organization`, extra error members), and leaving a
 relationship out is honest — the tables behind most of them (`team`,
-`policySet`, `template`, `tag`, `collection`, `provider`, …) do not exist yet.
+`policySet`, `template`, `tag`, `provider`, …) do not exist yet.
 Workspace `vcs`, `ssh` and `agent` ids are stored without their tables, so they
 round-trip but an unknown id is not refused. See
 `docs/upstream/ui-rest-operations.md`.

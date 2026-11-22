@@ -20,19 +20,22 @@ import (
 // methods they exercise. Unimplemented methods panic, which is what we want.
 type stubQuerier struct {
 	store.Querier
-	orgs          []store.Organization
-	org           store.Organization
-	jobs          []store.Job
-	steps         []store.Step
-	workspaces    []store.Workspace
-	projects      []store.Project
-	globals       []store.Globalvar
-	actions       []store.Action
-	err           error
-	created       *store.CreateOrganizationParams
-	createdAction *store.CreateActionParams
-	updatedAction *store.UpdateActionParams
-	deletedAction string
+	orgs            []store.Organization
+	org             store.Organization
+	jobs            []store.Job
+	steps           []store.Step
+	workspaces      []store.Workspace
+	projects        []store.Project
+	globals         []store.Globalvar
+	actions         []store.Action
+	collections     []store.Collection
+	collectionItems []store.Item
+	collectionRefs  []store.Reference
+	err             error
+	created         *store.CreateOrganizationParams
+	createdAction   *store.CreateActionParams
+	updatedAction   *store.UpdateActionParams
+	deletedAction   string
 }
 
 func (s *stubQuerier) ListOrganizations(context.Context) ([]store.Organization, error) {
