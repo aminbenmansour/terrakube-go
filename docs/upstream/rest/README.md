@@ -31,14 +31,15 @@ tools that produced them are in
 | `include=` | adds an `included` member | same for the workspace's `variable`, `organization`, `project`, `reference`, `ssh` and `agent`; other names are ignored |
 | Workspace PATCH | **204 with no body**, attributes or relationships | same (fixed 2026-11-21) |
 | `relationships.project` on workspace | stored; unknown id `404 Unknown identifier ...`, other organization `403 Project does not belong ...` | same |
-| `relationships.vcs`/`.ssh`/`.agent` on workspace | stored, validated against their tables | same for ssh and agent; a vcs id is stored unvalidated until the provider table lands (#48) |
-| `PATCH /relationships/{relation}` | `204`, project validated; vcs/ssh/agent must exist | same for project, ssh and agent; vcs unvalidated |
+| `relationships.vcs`/`.ssh`/`.agent` on workspace | stored, validated against their tables | same |
+| `PATCH /relationships/{relation}` | `204`, project validated; vcs/ssh/agent must exist | same |
 | Duplicate `globalvar` key | **500** (a lifecycle hook throws) | **409** — the unique constraint, not upstream's bug |
 | `action` ids | editor slugs (`terrakube.open-ai`), not UUIDs | same |
 | `action` list filter | `filter[action]=active==true;type=in=('A','B')` | same |
 | `action` create / patch / delete | **201** with the resource / **204** / **204**; audit fields set from the PAT's user | same statuses; `createdBy`/`updatedBy` are null (no user in the token) |
 | `ssh` | organization-scoped CRUD; `privateKey` is never returned; delete in use **409** | same; no team permission check yet (#44) |
 | `agent` | list, create, delete; delete in use **409**; superuser-only writes | same routes and 409; writes open (no RBAC yet) |
+| `vcs` | organization-scoped CRUD; `name`/`description`/`vcsType` required; invalid enum **400**; secrets never returned; delete unlinks its workspaces | same routes and statuses; secrets plaintext until #54 |
 | `tag` | organization-scoped CRUD; optional name; duplicate name **500** | same routes and optional name; duplicate **409** (unique index) |
 | `workspacetag` | list/create/patch/delete under the workspace; missing/unknown `tagId` **409**; duplicate binding **500** | same routes and 409; duplicate binding **409** |
 | `collection` / `item` / `reference` | organization-scoped CRUD, `GET /reference/:id/collection?include=item`; writes gated on a team permission; missing required attribute **409**; no `priority` means **0** | same routes and statuses; writes are open (no RBAC yet) |
@@ -50,9 +51,8 @@ The differences that matter are deliberate: we are a superset where upstream is
 stricter (paging on `organization`, extra error members), and leaving a
 relationship out is honest — the tables behind most of them (`team`,
 `policySet`, `template`, `provider`, …) do not exist yet.
-Workspace `ssh` and `agent` ids are validated against their tables now; a `vcs`
-id is still stored without its table, so it round-trips but an unknown id is not
-refused (#48). See `docs/upstream/ui-rest-operations.md`.
+Workspace `vcs`, `ssh` and `agent` ids are validated against their tables now.
+See `docs/upstream/ui-rest-operations.md`.
 
 `fields` follows the same rule: JSON:API says a server "MUST NOT include
 additional fields" when `fields` is sent, and the UI uses it on every

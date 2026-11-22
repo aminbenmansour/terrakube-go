@@ -37,6 +37,7 @@ type stubQuerier struct {
 	agentUses       map[string]int64
 	tags            []store.Tag
 	workspaceTags   []store.Workspacetag
+	vcs             []store.Vc
 	err             error
 	created         *store.CreateOrganizationParams
 	createdAction   *store.CreateActionParams

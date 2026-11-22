@@ -259,9 +259,9 @@ object key.
 
 ## Management API — `/api/v1`
 
-Elide-generated JSON:API. This API implements 74 routes (organization, project,
+Elide-generated JSON:API. This API implements 79 routes (organization, project,
 workspace, variable, globalvar, job, action, collection/item/reference,
-ssh, agent, tag/workspacetag and the atomic extension); the 106
+ssh, agent, vcs, tag/workspacetag and the atomic extension); the 106
 REST operations the UI actually sends are listed in
 `docs/upstream/ui-rest-operations.md`, with what is missing. Reference
 specification (upstream, v2.27.0) is at
@@ -321,9 +321,9 @@ Captured from `azbuilder/api-server:2.34.3`; the responses are in
   alike, as upstream does. `relationships.project` is stored on create and
   update; an id that does not exist is `404 Unknown identifier <id> for project`
   and a project from another organization is `403 Project does not belong to the
-  workspace organization`. `relationships.vcs`, `.ssh` and `.agent` are stored
-  too, for both create and update, but their tables do not exist yet (#48,
-  #120), so an id is accepted without validation. The same four relations have a
+  workspace organization`. `relationships.vcs`, `.ssh` and `.agent` are validated against their
+  tables for both create and update: an unknown id is `404 Unknown identifier
+  <id> for vcs|ssh|agent`, and one from another organization is `403`. The same four relations have a
   `PATCH /organization/{id}/workspace/{id}/relationships/{relation}` route, the
   one the UI's settings screens call; `moduleSshKey` and `sharedIds` are stored
   as attributes.
@@ -410,13 +410,13 @@ Current M1 limitations (tracked for later milestones):
 - Authentication is a single static bearer token (`TERRAKUBE_AUTH_TOKEN`).
   PATs, team tokens, executor tokens and Dex JWTs are not implemented yet.
 - `include=` is implemented only for the workspace's `variable`,
-  `organization`, `project`, `reference`, `ssh` and `agent`; relationship
+  `organization`, `project`, `reference`, `vcs`, `ssh` and `agent`; relationship
   writes exist only for the workspace's `project`, `vcs`, `ssh` and `agent`,
   and RSQL beyond `attr==value` / `attr==prefix*` is not implemented.
 - Variable values are stored in plaintext. Upstream encrypts them with
   `io.terrakube.encryption.*`; this must land before anything is exposed.
-- `tag` and `workspacetag` are implemented through the TFE tag-binding
-  endpoints; the Elide-style management endpoints are not.
+- `tag` and `workspacetag` are served both through the TFE tag-binding
+  endpoints and through the Elide-style management routes.
 
 ## Compatibility tests
 

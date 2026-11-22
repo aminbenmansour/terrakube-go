@@ -519,6 +519,63 @@ var replayedCaptures = map[string]replay{
 		target: "ssh-agent-query",
 		method: http.MethodDelete,
 	},
+	"organization-vcs-list": {
+		target: "vcs-query",
+	},
+	"organization-vcs-create": {
+		target: "vcs-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"vcs","attributes":{"name":"capture-vcs-created","description":"capture","vcsType":"GITLAB","connectionType":"STANDALONE","clientId":"client","clientSecret":"secret","privateKey":"key","callback":"callback","endpoint":"https://gitlab.example.com","apiUrl":"https://gitlab.example.com/api/v4","redirectUrl":"https://ui.example.com/settings/vcs","status":"PENDING"}}}`,
+	},
+	"organization-vcs-get": {
+		target: "vcs-query",
+	},
+	"organization-vcs-patch": {
+		target: "vcs-query",
+		idFrom: "organization-vcs-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"vcs","id":"{id}","attributes":{"description":"after","status":"COMPLETED"}}}`,
+	},
+	"organization-vcs-create-missing-required": {
+		target: "vcs-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"vcs","attributes":{"name":"capture-vcs-incomplete"}}}`,
+	},
+	"organization-vcs-create-invalid-type": {
+		target: "vcs-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"vcs","attributes":{"name":"capture-vcs-bad","description":"capture","vcsType":"NOPE"}}}`,
+	},
+	"organization-vcs-missing": {
+		target: "vcs-query",
+	},
+	"workspace-relationship-vcs-link-in-use": {
+		target:  "resource-query",
+		method:  http.MethodPatch,
+		body:    `{"data":{"type":"vcs","id":"` + capturedRelVCS + `"}}`,
+		querier: captureWorkspaceStore(),
+	},
+	"workspace-include-vcs": {
+		target:  "resource-query",
+		querier: captureWorkspaceStore(),
+	},
+	"organization-vcs-delete-in-use": {
+		target: "vcs-query",
+		method: http.MethodDelete,
+	},
+	"workspace-get-after-vcs-delete": {
+		target:  "workspace",
+		querier: captureWorkspaceStore(),
+	},
+	"organization-vcs-delete": {
+		target: "vcs-query",
+		idFrom: "organization-vcs-create",
+		method: http.MethodDelete,
+	},
+	"organization-vcs-get-after-delete": {
+		target:  "vcs-query",
+		querier: &stubQuerier{},
+	},
 	"organization-tag-list": {
 		target: "tag-query",
 		// The recording predates the create, so the list is empty.
@@ -629,6 +686,7 @@ const (
 	capturedRelWS      = "77777777-7777-4777-8777-777777777777"
 	capturedRelP1      = "70000000-0000-0000-0000-000000000010"
 	capturedRelP2      = "70000000-0000-0000-0000-000000000020"
+	capturedRelVCS     = "aaaaaaaa-0000-4000-8000-000000000001"
 	capturedRelSSH     = "aaaaaaaa-0000-4000-8000-000000000002"
 	capturedRelAgent   = "aaaaaaaa-0000-4000-8000-000000000003"
 	capturedRelForeign = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
@@ -648,7 +706,11 @@ func captureWorkspaceStore() *stubQuerier {
 	return &stubQuerier{
 		workspaces: []store.Workspace{{
 			ID: capturedRelWS, OrganizationID: capturedRelOrg, Name: "capture-rel-workspace",
-			ProjectID: strPtr(capturedRelP1),
+			ProjectID: strPtr(capturedRelP1), VcsID: strPtr(capturedRelVCS),
+		}},
+		vcs: []store.Vc{{
+			ID: capturedRelVCS, Name: "capture-vcs", Description: "capture", VcsType: "GITHUB",
+			Status: strPtr("COMPLETED"), ConnectionType: strPtr("OAUTH"), OrganizationID: capturedRelOrg,
 		}},
 		projects: []store.Project{
 			{ID: capturedRelP1, Name: "governance-terraform", OrganizationID: capturedRelOrg},
@@ -723,6 +785,31 @@ func captureSSHStore(t *testing.T, captures map[string]upstreamCapture) *stubQue
 		},
 		sshKeyUses: map[string]int64{capturedRelSSH: 1},
 		agentUses:  map[string]int64{capturedRelAgent: 1},
+	}
+}
+
+func captureVCSStore(t *testing.T, captures map[string]upstreamCapture) *stubQuerier {
+	t.Helper()
+	created := captures["organization-vcs-create"].resourceID(t)
+
+	return &stubQuerier{
+		vcs: []store.Vc{
+			{
+				ID: capturedRelVCS, Name: "capture-vcs", Description: "capture", VcsType: "GITHUB",
+				Status: strPtr("COMPLETED"), ConnectionType: strPtr("OAUTH"), OrganizationID: capturedRelOrg,
+			},
+			{
+				ID: created, Name: "capture-vcs-created", Description: "capture", VcsType: "GITLAB",
+				ClientID: strPtr("client"), ClientSecret: strPtr("secret"), PrivateKey: strPtr("key"),
+				Callback: strPtr("callback"), Endpoint: strPtr("https://gitlab.example.com"),
+				ApiUrl: strPtr("https://gitlab.example.com/api/v4"), RedirectUrl: strPtr("https://ui.example.com/settings/vcs"),
+				Status: strPtr("PENDING"), ConnectionType: strPtr("STANDALONE"), OrganizationID: capturedRelOrg,
+			},
+		},
+		workspaces: []store.Workspace{{
+			ID: capturedRelWS, OrganizationID: capturedRelOrg, Name: "capture-rel-workspace",
+			VcsID: strPtr(capturedRelVCS),
+		}},
 	}
 }
 
@@ -981,6 +1068,11 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 				target = strings.TrimPrefix(capture.path, "/api/v1")
 				if querier == nil {
 					querier = captureTagStore(t, captures)
+				}
+			case "vcs-query":
+				target = strings.TrimPrefix(capture.path, "/api/v1")
+				if querier == nil {
+					querier = captureVCSStore(t, captures)
 				}
 			}
 			if querier == nil {
@@ -1323,6 +1415,83 @@ func (s *stubQuerier) UpdateWorkspaceTagValue(_ context.Context, arg store.Updat
 
 func (s *stubQuerier) DeleteWorkspaceTag(context.Context, string) error {
 	return s.err
+}
+
+func (s *stubQuerier) ListVCSByOrganization(context.Context, string) ([]store.Vc, error) {
+	return s.vcs, s.err
+}
+
+func (s *stubQuerier) GetVCS(_ context.Context, id string) (store.Vc, error) {
+	for _, provider := range s.vcs {
+		if provider.ID == id {
+			return provider, nil
+		}
+	}
+	return store.Vc{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateVCS(_ context.Context, arg store.CreateVCSParams) (store.Vc, error) {
+	return store.Vc{
+		ID: arg.ID, Name: arg.Name, Description: arg.Description, VcsType: arg.VcsType,
+		ClientID: arg.ClientID, ClientSecret: arg.ClientSecret, AccessToken: arg.AccessToken,
+		Status: arg.Status, Callback: arg.Callback, RedirectUrl: arg.RedirectUrl,
+		Endpoint: arg.Endpoint, ApiUrl: arg.ApiUrl, ConnectionType: arg.ConnectionType,
+		PrivateKey: arg.PrivateKey, OrganizationID: arg.OrganizationID,
+	}, s.err
+}
+
+func (s *stubQuerier) UpdateVCS(_ context.Context, arg store.UpdateVCSParams) (store.Vc, error) {
+	for i := range s.vcs {
+		if s.vcs[i].ID == arg.ID {
+			s.vcs[i].Name = arg.Name
+			s.vcs[i].Description = arg.Description
+			s.vcs[i].VcsType = arg.VcsType
+			s.vcs[i].ClientID = arg.ClientID
+			s.vcs[i].ClientSecret = arg.ClientSecret
+			s.vcs[i].AccessToken = arg.AccessToken
+			s.vcs[i].Status = arg.Status
+			s.vcs[i].Callback = arg.Callback
+			s.vcs[i].RedirectUrl = arg.RedirectUrl
+			s.vcs[i].Endpoint = arg.Endpoint
+			s.vcs[i].ApiUrl = arg.ApiUrl
+			s.vcs[i].ConnectionType = arg.ConnectionType
+			s.vcs[i].PrivateKey = arg.PrivateKey
+			return s.vcs[i], s.err
+		}
+	}
+	return store.Vc{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) ClearWorkspaceVCS(_ context.Context, id *string) error {
+	for i := range s.workspaces {
+		if s.workspaces[i].VcsID != nil && id != nil && *s.workspaces[i].VcsID == *id {
+			s.workspaces[i].VcsID = nil
+		}
+	}
+	return s.err
+}
+
+func (s *stubQuerier) DeleteVCS(_ context.Context, id string) error {
+	for i := range s.vcs {
+		if s.vcs[i].ID == id {
+			s.vcs = append(s.vcs[:i], s.vcs[i+1:]...)
+			return s.err
+		}
+	}
+	return s.err
+}
+
+func (s *stubQuerier) ListWorkspaceIDsByVCS(_ context.Context, id *string) ([]string, error) {
+	ids := []string{}
+	if id == nil {
+		return ids, s.err
+	}
+	for _, ws := range s.workspaces {
+		if ws.VcsID != nil && *ws.VcsID == *id {
+			ids = append(ids, ws.ID)
+		}
+	}
+	return ids, s.err
 }
 
 func (s *stubQuerier) GetAction(_ context.Context, id string) (store.Action, error) {

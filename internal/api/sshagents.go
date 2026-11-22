@@ -304,6 +304,20 @@ func (a *API) agentInOrganization(w http.ResponseWriter, r *http.Request) (store
 	return agent, true
 }
 
+// checkVCSRelationship validates a workspace's vcs link; a provider from
+// another organization is refused like a project.
+func (a *API) checkVCSRelationship(w http.ResponseWriter, r *http.Request, vcsID, orgID string) bool {
+	provider, err := a.deps.Store.GetVCS(r.Context(), vcsID)
+	if err != nil {
+		return a.relationshipLoadFailed(w, "get vcs provider", err, vcsID, "vcs")
+	}
+	if provider.OrganizationID != orgID {
+		jsonapi.WriteError(w, http.StatusForbidden, "Forbidden", "VCS provider does not belong to the workspace organization")
+		return false
+	}
+	return true
+}
+
 // checkSSHRelationship validates a workspace's ssh link against the table that
 // now backs it; a key from another organization is refused like a project.
 func (a *API) checkSSHRelationship(w http.ResponseWriter, r *http.Request, sshID, orgID string) bool {
@@ -337,9 +351,12 @@ func writeInUseConflict(w http.ResponseWriter) {
 	jsonapi.WriteError(w, http.StatusConflict, "Conflict", "This operation conflicts with data that already exists.")
 }
 
-// validateWorkspaceLinks refuses an ssh or agent id that does not resolve in
-// the workspace organization. VCS validation lands with #48.
+// validateWorkspaceLinks refuses a vcs, ssh or agent id that does not resolve
+// in the workspace organization.
 func (a *API) validateWorkspaceLinks(w http.ResponseWriter, r *http.Request, orgID string, links map[string]*string) bool {
+	if links["vcs"] != nil && !a.checkVCSRelationship(w, r, *links["vcs"], orgID) {
+		return false
+	}
 	if links["ssh"] != nil && !a.checkSSHRelationship(w, r, *links["ssh"], orgID) {
 		return false
 	}

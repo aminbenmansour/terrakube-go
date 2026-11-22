@@ -10,6 +10,9 @@ import (
 
 type Querier interface {
 	ApproveJob(ctx context.Context, arg ApproveJobParams) (Job, error)
+	// Deleting a provider in use unlinks its workspaces instead of failing, which
+	// is what upstream does through the mapped relationship.
+	ClearWorkspaceVCS(ctx context.Context, vcsID *string) error
 	CountWorkspacesWithAgent(ctx context.Context, agentID *string) (int64, error)
 	CountWorkspacesWithSSHKey(ctx context.Context, sshID *string) (int64, error)
 	CreateAction(ctx context.Context, arg CreateActionParams) (Action, error)
@@ -27,6 +30,7 @@ type Querier interface {
 	CreateSSHKey(ctx context.Context, arg CreateSSHKeyParams) (Ssh, error)
 	CreateStep(ctx context.Context, arg CreateStepParams) (Step, error)
 	CreateTag(ctx context.Context, arg CreateTagParams) (Tag, error)
+	CreateVCS(ctx context.Context, arg CreateVCSParams) (Vc, error)
 	CreateVariable(ctx context.Context, arg CreateVariableParams) (Variable, error)
 	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (Workspace, error)
 	CreateWorkspaceTag(ctx context.Context, arg CreateWorkspaceTagParams) (Workspacetag, error)
@@ -41,6 +45,7 @@ type Querier interface {
 	DeleteReference(ctx context.Context, id string) error
 	DeleteSSHKey(ctx context.Context, id string) error
 	DeleteTag(ctx context.Context, id string) error
+	DeleteVCS(ctx context.Context, id string) error
 	DeleteVariable(ctx context.Context, id string) error
 	DeleteWorkspaceTag(ctx context.Context, id string) error
 	GetAction(ctx context.Context, id string) (Action, error)
@@ -67,6 +72,7 @@ type Querier interface {
 	GetStepByJobAndNumber(ctx context.Context, arg GetStepByJobAndNumberParams) (Step, error)
 	GetTag(ctx context.Context, id string) (Tag, error)
 	GetTagByName(ctx context.Context, arg GetTagByNameParams) (Tag, error)
+	GetVCS(ctx context.Context, id string) (Vc, error)
 	GetVariable(ctx context.Context, id string) (Variable, error)
 	GetWorkspace(ctx context.Context, id string) (Workspace, error)
 	GetWorkspaceByName(ctx context.Context, arg GetWorkspaceByNameParams) (Workspace, error)
@@ -87,7 +93,9 @@ type Querier interface {
 	ListSSHKeysByOrganization(ctx context.Context, organizationID string) ([]Ssh, error)
 	ListStepsByJob(ctx context.Context, jobID int64) ([]Step, error)
 	ListTagsByOrganization(ctx context.Context, organizationID string) ([]Tag, error)
+	ListVCSByOrganization(ctx context.Context, organizationID string) ([]Vc, error)
 	ListVariablesByWorkspace(ctx context.Context, workspaceID string) ([]Variable, error)
+	ListWorkspaceIDsByVCS(ctx context.Context, vcsID *string) ([]string, error)
 	ListWorkspaceTagsByWorkspace(ctx context.Context, workspaceID string) ([]Workspacetag, error)
 	ListWorkspacesByOrganization(ctx context.Context, organizationID string) ([]Workspace, error)
 	ListWorkspacesByProject(ctx context.Context, projectID *string) ([]Workspace, error)
@@ -110,6 +118,7 @@ type Querier interface {
 	UpdateStepOutput(ctx context.Context, arg UpdateStepOutputParams) error
 	UpdateStepStatus(ctx context.Context, arg UpdateStepStatusParams) (Step, error)
 	UpdateTag(ctx context.Context, arg UpdateTagParams) (Tag, error)
+	UpdateVCS(ctx context.Context, arg UpdateVCSParams) (Vc, error)
 	UpdateVariable(ctx context.Context, arg UpdateVariableParams) (Variable, error)
 	UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams) (Workspace, error)
 	UpdateWorkspaceTagValue(ctx context.Context, arg UpdateWorkspaceTagValueParams) (Workspacetag, error)

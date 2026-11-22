@@ -134,8 +134,25 @@ func (a *API) getWorkspace(w http.ResponseWriter, r *http.Request) {
 		included = append(included, projectResource(project))
 	}
 
-	// The workspace page asks for the ssh key and agent pool by name; the vcs
-	// include waits for the provider table (#48).
+	// The workspace page asks for the ssh key, agent pool and provider by name.
+	if want["vcs"] && ws.VcsID != nil && *ws.VcsID != "" {
+		provider, err := a.deps.Store.GetVCS(r.Context(), *ws.VcsID)
+		if err != nil {
+			if !a.writeStoreError(w, "get vcs provider", err) {
+				a.internalError(w, "get vcs provider", err)
+			}
+			return
+		}
+		resource, err := a.vcsResource(r.Context(), provider)
+		if err != nil {
+			if !a.writeStoreError(w, "get vcs workspaces", err) {
+				a.internalError(w, "get vcs workspaces", err)
+			}
+			return
+		}
+		included = append(included, resource)
+	}
+
 	if want["ssh"] && ws.SshID != nil && *ws.SshID != "" {
 		key, err := a.deps.Store.GetSSHKey(r.Context(), *ws.SshID)
 		if err != nil {
@@ -400,8 +417,7 @@ func workspaceUpdateParams(ws store.Workspace) store.UpdateWorkspaceParams {
 }
 
 // workspaceLinks reads the vcs, ssh and agent relationships: absent keeps the
-// current id, null clears it. Upstream resolves these ids against its tables;
-// those tables do not exist here yet (#48, #120), so an id is stored as sent.
+// current id, null clears it. Upstream resolves these ids against its tables.
 func workspaceLinks(w http.ResponseWriter, data *jsonapi.RequestData, current map[string]*string) (map[string]*string, bool) {
 	links := map[string]*string{"vcs": nil, "ssh": nil, "agent": nil}
 	for name, id := range current {
@@ -477,6 +493,9 @@ func (a *API) updateWorkspaceRelationship(w http.ResponseWriter, r *http.Request
 		}
 		switch relation {
 		case "vcs":
+			if id != "" && !a.checkVCSRelationship(w, r, id, ws.OrganizationID) {
+				return
+			}
 			params.VcsID = value
 		case "ssh":
 			if id != "" && !a.checkSSHRelationship(w, r, id, ws.OrganizationID) {

@@ -22,6 +22,7 @@ type workspaceStub struct {
 	projects   []store.Project
 	sshKeys    []store.Ssh
 	agents     []store.Agent
+	vcs        []store.Vc
 	created    *store.CreateWorkspaceParams
 	updated    *store.UpdateWorkspaceParams
 }
@@ -102,6 +103,9 @@ func newWorkspaceStub() *workspaceStub {
 		agents: []store.Agent{
 			{ID: "70000000-0000-4000-8000-000000000033", OrganizationID: relOrgID},
 		},
+		vcs: []store.Vc{
+			{ID: "70000000-0000-4000-8000-000000000031", OrganizationID: relOrgID},
+		},
 	}
 }
 
@@ -112,6 +116,15 @@ func (s *workspaceStub) GetSSHKey(_ context.Context, id string) (store.Ssh, erro
 		}
 	}
 	return store.Ssh{}, pgx.ErrNoRows
+}
+
+func (s *workspaceStub) GetVCS(_ context.Context, id string) (store.Vc, error) {
+	for _, provider := range s.vcs {
+		if provider.ID == id {
+			return provider, nil
+		}
+	}
+	return store.Vc{}, pgx.ErrNoRows
 }
 
 func (s *workspaceStub) GetAgent(_ context.Context, id string) (store.Agent, error) {

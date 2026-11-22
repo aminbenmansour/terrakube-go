@@ -9,7 +9,7 @@ from `ui/src` and regenerated with `scripts/ui-rest-inventory.sh`.
 
 ## Where we stand
 
-`internal/api` currently answers 74 routes. Everything marked *missing* below
+`internal/api` currently answers 79 routes. Everything marked *missing* below
 returns 404, and the page that calls it shows an error or an empty state.
 
 | Resource | Operations | Status |
@@ -23,7 +23,8 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `tag`, `workspaceTag` | 10 (tag CRUD, workspace bindings list/create/patch/delete) | implemented |
 | `template` | list | **missing** |
 | `ssh`, `agent` | 5 | implemented |
-| `team`, `vcs` | 11 | **missing** |
+| `vcs` | 5 (list, get, create, patch, delete) | implemented |
+| `team` | 6 | **missing** |
 | `provider`, `module` | 19 (versions, implementations, module versions) | **missing** |
 | `policy_set`, `policy_exemption` | 19 (attachments, parameters, parameters CRUD) | **missing** |
 | `notificationConfiguration` | 5 (triggers, templates relationship) | **missing** — the GraphQL reads exist, the writes do not |
@@ -36,14 +37,13 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `/organization/:id/operations`, `/doc` | 2 | **missing** — the vocabulary endpoint the filter builder reads |
 
 Consequence: the UI can load and browse organizations, projects, workspaces and
-the workspace page's GraphQL data, but the variable editor, run details, VCS
-setup, teams, the registry and policy screens do not work against this API
-yet. That is the bulk of M5 and it is REST work, not GraphQL work.
+the workspace page's GraphQL data, but the variable editor, run details, teams,
+the registry and policy screens do not work against this API yet. That is the bulk of M5 and it is REST work, not GraphQL work.
 
 ## Order that unblocks the most UI
 
 1. `job` get/patch and the workspace relationship patches (lock, project, VCS).
-2. `vcs` (creating a workspace from a repository); `ssh` and `agent` are done.
+2. `team`; the vcs picker, ssh and agent are done.
 3. `template` (the workspace list filters).
 4. `provider`, `module` and the registry service.
 5. `policy_set`, `policy_exemption`, `federated`, `notificationConfiguration`.
