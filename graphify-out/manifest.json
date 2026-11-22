@@ -42,15 +42,15 @@
     "semantic_hash": ""
   },
   "internal/api/api.go": {
-    "mtime": 1795365043.8049724,
-    "seen": 1795365433.8237462,
-    "ast_hash": "c9296a858ead752da8da3b7ec85dc8f6",
+    "mtime": 1795365861.4167676,
+    "seen": 1795376198.12453,
+    "ast_hash": "ecc96fc46acc2f5ad11edaf358ce4633",
     "semantic_hash": ""
   },
   "internal/api/api_test.go": {
-    "mtime": 1795365127.8829496,
-    "seen": 1795365433.8237476,
-    "ast_hash": "87cd43ced82145f1837bcc5b31f9dac5",
+    "mtime": 1795366005.2888434,
+    "seen": 1795376198.124531,
+    "ast_hash": "7106a8c50cfe664605e283e11d670bc7",
     "semantic_hash": ""
   },
   "internal/api/organizations.go": {
@@ -72,9 +72,9 @@
     "semantic_hash": ""
   },
   "internal/api/workspaces.go": {
-    "mtime": 1795364901.1150577,
-    "seen": 1795365433.8237746,
-    "ast_hash": "38d01fa8ba6d71d7748eb9edc919fc0b",
+    "mtime": 1795365861.4169981,
+    "seen": 1795376198.1245508,
+    "ast_hash": "90ece0b352eda810086e338b31bca332",
     "semantic_hash": ""
   },
   "internal/auth/token.go": {
@@ -180,39 +180,39 @@
     "semantic_hash": "2aa0aa7b1f0622471b4b82f8f5df9350"
   },
   "internal/store/content.sql.go": {
-    "mtime": 1795365224.7530646,
-    "seen": 1795365433.82386,
+    "mtime": 1795365804.5653818,
+    "seen": 1795376198.1246076,
     "ast_hash": "b3c5913649d672f7dcb81946287379ac",
     "semantic_hash": "b3c5913649d672f7dcb81946287379ac"
   },
   "internal/store/db.go": {
-    "mtime": 1795365224.7540648,
-    "seen": 1795365433.8238614,
+    "mtime": 1795365804.5643818,
+    "seen": 1795376198.1246085,
     "ast_hash": "648e346100def55720b5154f3397df7c",
     "semantic_hash": "648e346100def55720b5154f3397df7c"
   },
   "internal/store/models.go": {
-    "mtime": 1795365224.7540648,
-    "seen": 1795365433.8238635,
-    "ast_hash": "cab5dd94d1f40d9230ef50b79417e9ff",
+    "mtime": 1795365804.5643818,
+    "seen": 1795376198.1246102,
+    "ast_hash": "51d35d2cc9adf32e66eef539bd6468db",
     "semantic_hash": ""
   },
   "internal/store/organizations.sql.go": {
-    "mtime": 1795365224.7530646,
-    "seen": 1795365433.8238645,
+    "mtime": 1795365804.5643818,
+    "seen": 1795376198.1246111,
     "ast_hash": "5e48973a8db4c866758a974401fddb15",
     "semantic_hash": "5e48973a8db4c866758a974401fddb15"
   },
   "internal/store/projects.sql.go": {
-    "mtime": 1795365224.7530646,
-    "seen": 1795365433.823866,
+    "mtime": 1795365804.5653818,
+    "seen": 1795376198.1246119,
     "ast_hash": "971b76d08b6c2022c9e3dbaa69f03ab9",
     "semantic_hash": "971b76d08b6c2022c9e3dbaa69f03ab9"
   },
   "internal/store/querier.go": {
-    "mtime": 1795365224.7530646,
-    "seen": 1795365433.823867,
-    "ast_hash": "446135107e990efb9214d7d17c9ef4df",
+    "mtime": 1795365804.5643818,
+    "seen": 1795376198.1246126,
+    "ast_hash": "dce2e13f5f2f757de7533c7390bfc5c6",
     "semantic_hash": ""
   },
   "internal/store/queries/content.sql": {
@@ -240,8 +240,8 @@
     "semantic_hash": ""
   },
   "internal/store/queries/tags.sql": {
-    "mtime": 1795365220.9500058,
-    "seen": 1795365433.823879,
+    "mtime": 1795365637.1045036,
+    "seen": 1795376198.1246204,
     "ast_hash": "9740700d43f17aadafc2c7a2f18c74b7",
     "semantic_hash": ""
   },
@@ -258,26 +258,26 @@
     "semantic_hash": ""
   },
   "internal/store/state.sql.go": {
-    "mtime": 1795365224.7540648,
-    "seen": 1795365433.8238838,
+    "mtime": 1795365804.5653818,
+    "seen": 1795376198.124625,
     "ast_hash": "26fc7e307bea4344f818f6dca5ad7475",
     "semantic_hash": ""
   },
   "internal/store/tags.sql.go": {
-    "mtime": 1795365224.7530646,
-    "seen": 1795365433.823885,
+    "mtime": 1795365804.5653818,
+    "seen": 1795376198.1246257,
     "ast_hash": "963d280e211f49ddfab6e504b7bcfec3",
     "semantic_hash": ""
   },
   "internal/store/variables.sql.go": {
-    "mtime": 1795365224.7530646,
-    "seen": 1795365433.8238864,
+    "mtime": 1795365804.5653818,
+    "seen": 1795376198.1246264,
     "ast_hash": "b66f505805cb59ad903d71b9ee82e73d",
     "semantic_hash": "b66f505805cb59ad903d71b9ee82e73d"
   },
   "internal/store/workspaces.sql.go": {
-    "mtime": 1795365224.7540648,
-    "seen": 1795365433.8238876,
+    "mtime": 1795365804.5653818,
+    "seen": 1795376198.124628,
     "ast_hash": "2d0057f116bcaacdc3223086b8447fe4",
     "semantic_hash": ""
   },
@@ -336,8 +336,8 @@
     "semantic_hash": "a149b6efa9b8fb4d5322053558c83f2d"
   },
   "internal/tfe/tags.go": {
-    "mtime": 1795365238.4550228,
-    "seen": 1795365433.8239002,
+    "mtime": 1795365637.1046686,
+    "seen": 1795376198.1246367,
     "ast_hash": "26c8d60d566ec9596bbcc01466264e24",
     "semantic_hash": ""
   },
@@ -348,14 +348,14 @@
     "semantic_hash": ""
   },
   "internal/tfe/tfe_test.go": {
-    "mtime": 1795365283.2129617,
-    "seen": 1795365433.8239026,
+    "mtime": 1795365637.1049101,
+    "seen": 1795376198.1246386,
     "ast_hash": "483cd75a964bc0220cc673c3ad57c9fe",
     "semantic_hash": ""
   },
   "internal/tfe/workspaces.go": {
-    "mtime": 1795365238.4551451,
-    "seen": 1795365433.8239038,
+    "mtime": 1795365637.105016,
+    "seen": 1795376198.1246393,
     "ast_hash": "09e8af8c14aab673fa1435afebab3fd2",
     "semantic_hash": ""
   },
@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "docs/compat.md": {
-    "mtime": 1795365340.2238443,
-    "seen": 1795365433.8239753,
-    "ast_hash": "d6eec9211be0aa0b8f554dff3bdffdcf",
+    "mtime": 1795376182.2876992,
+    "seen": 1795376198.1246872,
+    "ast_hash": "f53a01c763733eeb8590d6419f24a3ad",
     "semantic_hash": ""
   },
   "internal/executor/executor.go": {
@@ -882,9 +882,9 @@
     "semantic_hash": ""
   },
   "docs/upstream/ui-rest-operations.md": {
-    "mtime": 1795365340.2240088,
-    "seen": 1795365433.8239837,
-    "ast_hash": "bfa53a12c029469d71ad687239a64dec",
+    "mtime": 1795376182.2873907,
+    "seen": 1795376198.1246922,
+    "ast_hash": "5edf357c701b1581a0d46569c2479213",
     "semantic_hash": ""
   },
   "docs/upstream/ui-rest-operations.txt": {
@@ -894,9 +894,9 @@
     "semantic_hash": ""
   },
   "internal/api/testdata/routes.txt": {
-    "mtime": 1795365165.0773635,
-    "seen": 1795365433.8239865,
-    "ast_hash": "0a20157b64d5491c689d50c138f7720d",
+    "mtime": 1795366046.8618953,
+    "seen": 1795376198.124694,
+    "ast_hash": "a9bd0bc44c41085fa5cb937d6315c53b",
     "semantic_hash": ""
   },
   "internal/httpapi/cors.go": {
@@ -912,117 +912,117 @@
     "semantic_hash": ""
   },
   "docs/upstream/rest/delete-method-not-allowed.json": {
-    "mtime": 1795365097.139026,
-    "seen": 1795365433.823606,
-    "ast_hash": "ba11c31574dc7c912154d482c4568c02",
+    "mtime": 1795365957.7296326,
+    "seen": 1795376198.1244204,
+    "ast_hash": "daf5315c6f3fc0286eb29643d9841ca6",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-bad-id.json": {
-    "mtime": 1795365097.1104207,
-    "seen": 1795365433.8236196,
+    "mtime": 1795365957.70565,
+    "seen": 1795376198.1244311,
     "ast_hash": "61e18efab833431cbb5834f40abbc03d",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-get-fields.json": {
-    "mtime": 1795365096.7695374,
-    "seen": 1795365433.8236444,
+    "mtime": 1795365957.4639432,
+    "seen": 1795376198.1244483,
     "ast_hash": "bc85c2e704cc7c5c8558d5028f8ed56f",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-get.json": {
-    "mtime": 1795365096.7565372,
-    "seen": 1795365433.8236456,
+    "mtime": 1795365957.448726,
+    "seen": 1795376198.124449,
     "ast_hash": "88f4c33c8730930a4cd371aaf39e9646",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-list-fields.json": {
-    "mtime": 1795365096.6736171,
-    "seen": 1795365433.8236647,
+    "mtime": 1795365957.3666492,
+    "seen": 1795376198.1244626,
     "ast_hash": "44fa0eec29ae7cd05fbec33f60dee071",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-list-filtered.json": {
-    "mtime": 1795365096.6608481,
-    "seen": 1795365433.8236659,
+    "mtime": 1795365957.3521857,
+    "seen": 1795376198.1244633,
     "ast_hash": "f18d54322416b13e95bb7ef5c124e7e8",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-list-include.json": {
-    "mtime": 1795365096.7197716,
-    "seen": 1795365433.823667,
+    "mtime": 1795365957.4123108,
+    "seen": 1795376198.124464,
     "ast_hash": "722d460b169cdc3ca8aeb41015e60704",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-list-paged.json": {
-    "mtime": 1795365096.5488055,
-    "seen": 1795365433.8236682,
+    "mtime": 1795365957.2511013,
+    "seen": 1795376198.1244652,
     "ast_hash": "f72e48de6f5e3ab8e7b8e4f6bd2a39a2",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-list-sorted.json": {
-    "mtime": 1795365096.638846,
-    "seen": 1795365433.8236694,
+    "mtime": 1795365957.3296106,
+    "seen": 1795376198.1244662,
     "ast_hash": "9a682897eea6c5e6a478f997e28d64cf",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-list-totals.json": {
-    "mtime": 1795365096.5376604,
-    "seen": 1795365433.8236706,
+    "mtime": 1795365957.2368429,
+    "seen": 1795376198.124467,
     "ast_hash": "f72e48de6f5e3ab8e7b8e4f6bd2a39a2",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-list.json": {
-    "mtime": 1795365096.5218744,
-    "seen": 1795365433.8236718,
+    "mtime": 1795365957.2249372,
+    "seen": 1795376198.1244683,
     "ast_hash": "31469f7d7a126f901ce7ba58bdb3100f",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-missing.json": {
-    "mtime": 1795365097.095514,
-    "seen": 1795365433.8236728,
+    "mtime": 1795365957.693509,
+    "seen": 1795376198.124469,
     "ast_hash": "8b7f44fb1c2cbcdb2e29de9e3e86ee92",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-projects.json": {
-    "mtime": 1795365096.8385732,
-    "seen": 1795365433.8236742,
+    "mtime": 1795365957.5223224,
+    "seen": 1795376198.1244698,
     "ast_hash": "e0234245cb00aa260ccfa99a9a0b235e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-relationships.json": {
-    "mtime": 1795365096.8242955,
-    "seen": 1795365433.8236754,
+    "mtime": 1795365957.507763,
+    "seen": 1795376198.1244707,
     "ast_hash": "e0234245cb00aa260ccfa99a9a0b235e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-list-paged.json": {
-    "mtime": 1795365096.8587952,
-    "seen": 1795365433.8237073,
-    "ast_hash": "9a13b1efc2800a963f6e1a878749283c",
+    "mtime": 1795365957.5443847,
+    "seen": 1795376198.124502,
+    "ast_hash": "abef037137da7cd85b006d0f7ab0989b",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-list-totals.json": {
-    "mtime": 1795365097.0793533,
-    "seen": 1795365433.8237085,
-    "ast_hash": "29fc6279fa9c7ad327bca24b6626977f",
+    "mtime": 1795365957.6820152,
+    "seen": 1795376198.124503,
+    "ast_hash": "a5c0f6e948c927d2a064b08d092348ad",
     "semantic_hash": ""
   },
   "docs/upstream/rest/README.md": {
-    "mtime": 1795365352.0895693,
-    "seen": 1795365433.823981,
-    "ast_hash": "620fc9d4fa0471c05340819d73fac9b8",
+    "mtime": 1795376174.30867,
+    "seen": 1795376198.1246908,
+    "ast_hash": "e4278e298c4b6e99f36445afbda40168",
     "semantic_hash": ""
   },
   "internal/api/upstream_contract_test.go": {
-    "mtime": 1795365257.4880512,
-    "seen": 1795365433.8237703,
-    "ast_hash": "167957c568083f5df02af6a1422f0a91",
+    "mtime": 1795366042.3707767,
+    "seen": 1795376198.1245468,
+    "ast_hash": "a11deae72b24d4cbf11f645752b3120d",
     "semantic_hash": ""
   },
   "scripts/upstream-capture/capture.sh": {
-    "mtime": 1795365096.3583236,
-    "seen": 1795365433.8239477,
-    "ast_hash": "271c7f9ad1ac93235606aadd7b749198",
+    "mtime": 1795365954.3260593,
+    "seen": 1795376198.1246696,
+    "ast_hash": "a8c1efe9267cbb080d90f9e177acf145",
     "semantic_hash": ""
   },
   "scripts/upstream-capture/compare.sh": {
@@ -1062,32 +1062,32 @@
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-job-get.json": {
-    "mtime": 1795365097.835473,
-    "seen": 1795365433.8236587,
-    "ast_hash": "605f4f2a648b5e5f580a397f0a2fd8bb",
+    "mtime": 1795365958.3879294,
+    "seen": 1795376198.124458,
+    "ast_hash": "a3941317f09830a1a19e4daadc2291ac",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-job-include.json": {
-    "mtime": 1795365097.8704786,
-    "seen": 1795365433.8236597,
-    "ast_hash": "3783f5021280da99631c9861c57e45bc",
+    "mtime": 1795365958.4106522,
+    "seen": 1795376198.1244588,
+    "ast_hash": "59c2755cafa16571ed230ba59529617e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-job-list.json": {
-    "mtime": 1795365097.805551,
-    "seen": 1795365433.823661,
-    "ast_hash": "9eb7b4b9a57192c6d472162859def69b",
+    "mtime": 1795365958.3630586,
+    "seen": 1795376198.1244595,
+    "ast_hash": "965625dd9ac9ec4d93e8b8e184a582a0",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-job-patch-invalid.json": {
-    "mtime": 1795365097.9534667,
-    "seen": 1795365433.8236623,
+    "mtime": 1795365958.4696913,
+    "seen": 1795376198.1244607,
     "ast_hash": "bef1f2fbf2e9c1b6c9dbf7c18f0ee5c2",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-job-patch.json": {
-    "mtime": 1795365097.9245527,
-    "seen": 1795365433.8236635,
+    "mtime": 1795365958.4496522,
+    "seen": 1795376198.1244617,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
@@ -1104,62 +1104,62 @@
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-create-project-foreign.json": {
-    "mtime": 1795365099.4036584,
-    "seen": 1795365433.8237062,
+    "mtime": 1795365959.6907399,
+    "seen": 1795376198.1244998,
     "ast_hash": "b65aedf3883df66898ddee8892322923",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-patch-attribute.json": {
-    "mtime": 1795365099.2505705,
-    "seen": 1795365433.8237097,
+    "mtime": 1795365959.5606554,
+    "seen": 1795376198.1245036,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-patch-project-clear.json": {
-    "mtime": 1795365099.380572,
-    "seen": 1795365433.8237107,
+    "mtime": 1795365959.6666555,
+    "seen": 1795376198.1245043,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-patch-project-foreign.json": {
-    "mtime": 1795365099.3333478,
-    "seen": 1795365433.8237123,
+    "mtime": 1795365959.6276555,
+    "seen": 1795376198.1245053,
     "ast_hash": "b65aedf3883df66898ddee8892322923",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-patch-project-moved.json": {
-    "mtime": 1795365099.3015711,
-    "seen": 1795365433.8237133,
+    "mtime": 1795365959.6046553,
+    "seen": 1795376198.124506,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-patch-project-unknown.json": {
-    "mtime": 1795365099.3575752,
-    "seen": 1795365433.8237145,
+    "mtime": 1795365959.6481745,
+    "seen": 1795376198.1245072,
     "ast_hash": "dcfe00997c2c7acd362e466ce5b031c6",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-patch-project.json": {
-    "mtime": 1795365099.2735708,
-    "seen": 1795365433.823716,
+    "mtime": 1795365959.5816553,
+    "seen": 1795376198.124508,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "internal/api/workspaces_test.go": {
-    "mtime": 1795364901.1151247,
-    "seen": 1795365433.8237758,
-    "ast_hash": "607760798961f67f49b5a5b2c103bfc3",
+    "mtime": 1795366042.3705747,
+    "seen": 1795376198.1245518,
+    "ast_hash": "45ec2fe9d01f159aa7529bf921dc02cb",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-get-fields-empty.json": {
-    "mtime": 1795365096.7857652,
-    "seen": 1795365433.8236415,
+    "mtime": 1795365957.475777,
+    "seen": 1795376198.1244462,
     "ast_hash": "f2ddb4734cdeabc23ef938fb35e4e9bd",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-get-fields-other.json": {
-    "mtime": 1795365096.796873,
-    "seen": 1795365433.823643,
+    "mtime": 1795365957.4865758,
+    "seen": 1795376198.1244473,
     "ast_hash": "f2ddb4734cdeabc23ef938fb35e4e9bd",
     "semantic_hash": ""
   },
@@ -1176,56 +1176,56 @@
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-globalvar-create.json": {
-    "mtime": 1795365100.2297971,
-    "seen": 1795365433.8236473,
-    "ast_hash": "2fdea4ca6b7152f7644e14b8fce9decc",
+    "mtime": 1795365960.5356677,
+    "seen": 1795376198.12445,
+    "ast_hash": "12922899ae5311a00b866966f40f8eef",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-globalvar-delete.json": {
-    "mtime": 1795365100.270584,
-    "seen": 1795365433.8236482,
+    "mtime": 1795365960.570658,
+    "seen": 1795376198.1244512,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-globalvar-duplicate.json": {
-    "mtime": 1795365100.3324656,
-    "seen": 1795365433.8236496,
-    "ast_hash": "71a7ba0f5c9c3543e72f7ba601da8ff6",
+    "mtime": 1795365960.6233134,
+    "seen": 1795376198.1244519,
+    "ast_hash": "53def92f1ef0b8d258d8b4cc9209a579",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-globalvar-get-sensitive.json": {
-    "mtime": 1795365100.2132113,
-    "seen": 1795365433.823651,
+    "mtime": 1795365960.5189133,
+    "seen": 1795376198.1244528,
     "ast_hash": "4bb20a4901f659f0d3f9357d40cd6cd3",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-globalvar-get.json": {
-    "mtime": 1795365100.200359,
-    "seen": 1795365433.8236523,
+    "mtime": 1795365960.5061498,
+    "seen": 1795376198.1244535,
     "ast_hash": "34a2b73002a8c7778ba7497af647f6d2",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-globalvar-invalid-category.json": {
-    "mtime": 1795365100.2886045,
-    "seen": 1795365433.8236537,
+    "mtime": 1795365960.589658,
+    "seen": 1795376198.1244545,
     "ast_hash": "6a8b121b70b431ee01a3cec3befe3ac8",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-globalvar-list.json": {
-    "mtime": 1795365100.1753707,
-    "seen": 1795365433.823655,
+    "mtime": 1795365960.488334,
+    "seen": 1795376198.1244552,
     "ast_hash": "6ab9a5abd7315176778c605410d20559",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-globalvar-missing-key.json": {
-    "mtime": 1795365100.3061342,
-    "seen": 1795365433.823656,
+    "mtime": 1795365960.6068683,
+    "seen": 1795376198.1244562,
     "ast_hash": "a88a6651f5a7b07cb4a4b3fb9ca2f3e6",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-globalvar-patch.json": {
-    "mtime": 1795365100.2515838,
-    "seen": 1795365433.8236573,
+    "mtime": 1795365960.555658,
+    "seen": 1795376198.124457,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
@@ -1242,8 +1242,8 @@
     "semantic_hash": ""
   },
   "internal/store/globalvars.sql.go": {
-    "mtime": 1795365224.7530646,
-    "seen": 1795365433.8238626,
+    "mtime": 1795365804.5653818,
+    "seen": 1795376198.1246095,
     "ast_hash": "9c9ae641454c8dcc785e50d3cbabb033",
     "semantic_hash": ""
   },
@@ -1260,68 +1260,68 @@
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-relationship-agent-clear.json": {
-    "mtime": 1795365099.6375756,
-    "seen": 1795365433.8237169,
+    "mtime": 1795365959.8966563,
+    "seen": 1795376198.1245086,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-relationship-agent-set.json": {
-    "mtime": 1795365099.6165752,
-    "seen": 1795365433.8237183,
+    "mtime": 1795365959.8786561,
+    "seen": 1795376198.1245093,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-relationship-project-clear.json": {
-    "mtime": 1795365099.450573,
-    "seen": 1795365433.8237195,
+    "mtime": 1795365959.7346556,
+    "seen": 1795376198.1245103,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-relationship-project-foreign.json": {
-    "mtime": 1795365099.473393,
-    "seen": 1795365433.8237207,
+    "mtime": 1795365959.761567,
+    "seen": 1795376198.1245115,
     "ast_hash": "b65aedf3883df66898ddee8892322923",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-relationship-project-set.json": {
-    "mtime": 1795365099.4265728,
-    "seen": 1795365433.8237216,
+    "mtime": 1795365959.7126558,
+    "seen": 1795376198.1245122,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-relationship-project-unknown.json": {
-    "mtime": 1795365099.4929953,
-    "seen": 1795365433.823723,
+    "mtime": 1795365959.7772596,
+    "seen": 1795376198.124513,
     "ast_hash": "dcfe00997c2c7acd362e466ce5b031c6",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-relationship-ssh-clear.json": {
-    "mtime": 1795365099.590575,
-    "seen": 1795365433.823724,
+    "mtime": 1795365959.856656,
+    "seen": 1795376198.1245139,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-relationship-ssh-set.json": {
-    "mtime": 1795365099.5645747,
-    "seen": 1795365433.8237252,
+    "mtime": 1795365959.838656,
+    "seen": 1795376198.1245148,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-relationship-unknown.json": {
-    "mtime": 1795365099.651968,
-    "seen": 1795365433.8237264,
+    "mtime": 1795365959.9134417,
+    "seen": 1795376198.1245155,
     "ast_hash": "72620db7796aea3a6c1d5ef1ebd55956",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-relationship-vcs-clear.json": {
-    "mtime": 1795365099.5365741,
-    "seen": 1795365433.8237276,
+    "mtime": 1795365959.817656,
+    "seen": 1795376198.1245162,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-relationship-vcs-set.json": {
-    "mtime": 1795365099.514574,
-    "seen": 1795365433.8237286,
+    "mtime": 1795365959.801656,
+    "seen": 1795376198.1245182,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
@@ -1332,20 +1332,20 @@
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-atomic-create.json": {
-    "mtime": 1795365099.8038106,
-    "seen": 1795365433.8236163,
-    "ast_hash": "1354ee1442e1136570dfc5ed048ff768",
+    "mtime": 1795365960.0940304,
+    "seen": 1795376198.124428,
+    "ast_hash": "d756898aa0ef2a9cfd6fe9652b61a72c",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-atomic-unknown.json": {
-    "mtime": 1795365099.842194,
-    "seen": 1795365433.8236175,
+    "mtime": 1795365960.1322618,
+    "seen": 1795376198.1244292,
     "ast_hash": "7ebd001cc4d0d266a629ffc1125cd36b",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-atomic-update.json": {
-    "mtime": 1795365099.8274598,
-    "seen": 1795365433.8236187,
+    "mtime": 1795365960.1130311,
+    "seen": 1795376198.1244302,
     "ast_hash": "06ab4784d4507d8026affe269ce2521c",
     "semantic_hash": ""
   },
@@ -1362,50 +1362,50 @@
     "semantic_hash": ""
   },
   "docs/upstream/rest/action-create.json": {
-    "mtime": 1795365100.7643209,
-    "seen": 1795365433.8235896,
-    "ast_hash": "1908c632b4c5acbe2958ace628176902",
+    "mtime": 1795365960.970709,
+    "seen": 1795376198.1244104,
+    "ast_hash": "49635b7fb1b3d9d83364776e402c86b8",
     "semantic_hash": ""
   },
   "docs/upstream/rest/action-delete.json": {
-    "mtime": 1795365100.799591,
-    "seen": 1795365433.823593,
+    "mtime": 1795365961.0076592,
+    "seen": 1795376198.124412,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/action-fields.json": {
-    "mtime": 1795365100.7351842,
-    "seen": 1795365433.8235953,
+    "mtime": 1795365960.938394,
+    "seen": 1795376198.1244137,
     "ast_hash": "6a55786bd7a9320e28aff941743845d6",
     "semantic_hash": ""
   },
   "docs/upstream/rest/action-get.json": {
-    "mtime": 1795365100.7192237,
-    "seen": 1795365433.823597,
+    "mtime": 1795365960.9267936,
+    "seen": 1795376198.1244147,
     "ast_hash": "e0d39555ddf13efa22b6e3819eb01bf7",
     "semantic_hash": ""
   },
   "docs/upstream/rest/action-list-filtered.json": {
-    "mtime": 1795365100.7032828,
-    "seen": 1795365433.8235989,
+    "mtime": 1795365960.9154446,
+    "seen": 1795376198.1244156,
     "ast_hash": "3578ffba129155d74ee6c93d8ee83945",
     "semantic_hash": ""
   },
   "docs/upstream/rest/action-list.json": {
-    "mtime": 1795365100.6796649,
-    "seen": 1795365433.8236017,
+    "mtime": 1795365960.9007676,
+    "seen": 1795376198.1244173,
     "ast_hash": "e5956848cf1ff9678e933c8d54d41219",
     "semantic_hash": ""
   },
   "docs/upstream/rest/action-missing.json": {
-    "mtime": 1795365100.7489333,
-    "seen": 1795365433.823603,
+    "mtime": 1795365960.9513125,
+    "seen": 1795376198.1244183,
     "ast_hash": "670f4d439b688916d0f1c891dd953823",
     "semantic_hash": ""
   },
   "docs/upstream/rest/action-patch.json": {
-    "mtime": 1795365100.785591,
-    "seen": 1795365433.8236046,
+    "mtime": 1795365960.9846592,
+    "seen": 1795376198.1244192,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
@@ -1422,8 +1422,8 @@
     "semantic_hash": ""
   },
   "internal/store/actions.sql.go": {
-    "mtime": 1795365224.7540648,
-    "seen": 1795365433.8238573,
+    "mtime": 1795365804.5653818,
+    "seen": 1795376198.1246057,
     "ast_hash": "f3fb0a4d218ea91b5409acf7ffdc372f",
     "semantic_hash": ""
   },
@@ -1440,111 +1440,111 @@
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-create-missing-name.json": {
-    "mtime": 1795365101.3655655,
-    "seen": 1795365433.8236208,
+    "mtime": 1795365961.5232508,
+    "seen": 1795376198.1244318,
     "ast_hash": "a88a6651f5a7b07cb4a4b3fb9ca2f3e6",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-create.json": {
-    "mtime": 1795365101.1758945,
-    "seen": 1795365433.8236222,
-    "ast_hash": "a7074aab945316d2a97306a727171986",
+    "mtime": 1795365961.2954347,
+    "seen": 1795376198.1244326,
+    "ast_hash": "01e4123ae3f537122476d84158ce493e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-delete.json": {
-    "mtime": 1795365101.5806015,
-    "seen": 1795365433.8236234,
+    "mtime": 1795365961.7036612,
+    "seen": 1795376198.1244335,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-get.json": {
-    "mtime": 1795365101.2347496,
-    "seen": 1795365433.8236246,
-    "ast_hash": "c49da4b303a721d081b9e585fb63e49d",
+    "mtime": 1795365961.3577707,
+    "seen": 1795376198.1244345,
+    "ast_hash": "246e8ec6e1232bd7094aa443d5970e3c",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-item-create.json": {
-    "mtime": 1795365101.2703881,
-    "seen": 1795365433.8236258,
-    "ast_hash": "48cc156e12fe26a05b7c0ced127dcc99",
+    "mtime": 1795365961.4011807,
+    "seen": 1795376198.1244352,
+    "ast_hash": "3f03f2c9c575414f47377403c5d6a8a9",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-item-delete.json": {
-    "mtime": 1795365101.5366008,
-    "seen": 1795365433.8236272,
+    "mtime": 1795365961.650661,
+    "seen": 1795376198.1244361,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-item-invalid-category.json": {
-    "mtime": 1795365101.3337293,
-    "seen": 1795365433.8236284,
+    "mtime": 1795365961.4858298,
+    "seen": 1795376198.1244373,
     "ast_hash": "6a8b121b70b431ee01a3cec3befe3ac8",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-item-list.json": {
-    "mtime": 1795365101.2997253,
-    "seen": 1795365433.8236299,
-    "ast_hash": "f426abde0817f22c9663dbc057bb7fb3",
+    "mtime": 1795365961.4396458,
+    "seen": 1795376198.1244383,
+    "ast_hash": "d96e5af6a0dc716f4bf5c6902eed5fa0",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-item-missing-key.json": {
-    "mtime": 1795365101.3499293,
-    "seen": 1795365433.823631,
+    "mtime": 1795365961.5102162,
+    "seen": 1795376198.124439,
     "ast_hash": "a88a6651f5a7b07cb4a4b3fb9ca2f3e6",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-item-patch.json": {
-    "mtime": 1795365101.318598,
-    "seen": 1795365433.8236322,
+    "mtime": 1795365961.4696605,
+    "seen": 1795376198.1244397,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-list.json": {
-    "mtime": 1795365101.2161422,
-    "seen": 1795365433.8236334,
-    "ast_hash": "cc9ea030d5f897c9fa31923df749939a",
+    "mtime": 1795365961.3415546,
+    "seen": 1795376198.124441,
+    "ast_hash": "04d131ca85e7da6b2d17a796786388a9",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-missing.json": {
-    "mtime": 1795365101.3831346,
-    "seen": 1795365433.8236346,
+    "mtime": 1795365961.5351906,
+    "seen": 1795376198.1244416,
     "ast_hash": "4f7185ef07a0c56a43c11a6ff5e1e525",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-patch.json": {
-    "mtime": 1795365101.2515972,
-    "seen": 1795365433.8236363,
+    "mtime": 1795365961.3746603,
+    "seen": 1795376198.1244426,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-reference-create.json": {
-    "mtime": 1795365101.4146626,
-    "seen": 1795365433.8236375,
-    "ast_hash": "a317875be3a7ced49c1378ed547bce21",
+    "mtime": 1795365961.5614078,
+    "seen": 1795376198.1244433,
+    "ast_hash": "7f05fcce425fa4305a103b26ebc2dd91",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-reference-delete.json": {
-    "mtime": 1795365101.556601,
-    "seen": 1795365433.8236387,
+    "mtime": 1795365961.6776612,
+    "seen": 1795376198.1244442,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-collection-reference-list.json": {
-    "mtime": 1795365101.4631767,
-    "seen": 1795365433.82364,
-    "ast_hash": "d61fd269c3cca8984f9ddff9dc5145dc",
+    "mtime": 1795365961.5965104,
+    "seen": 1795376198.1244452,
+    "ast_hash": "3a23368dc1055053b87d47927d181259",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-workspace-reference.json": {
-    "mtime": 1795365101.5139518,
-    "seen": 1795365433.8237035,
-    "ast_hash": "c8962096f1f5b646777c8fb5cee7d6fe",
+    "mtime": 1795365961.63595,
+    "seen": 1795376198.124498,
+    "ast_hash": "1fde7df049c2f7cd540e75f10dd68b69",
     "semantic_hash": ""
   },
   "docs/upstream/rest/reference-collection.json": {
-    "mtime": 1795365101.4938004,
-    "seen": 1795365433.8237047,
-    "ast_hash": "107704115c9e29348cd1a11abc9072c3",
+    "mtime": 1795365961.6156485,
+    "seen": 1795376198.1244988,
+    "ast_hash": "89ed5c508be7eda7f97ea06f3d9cf35a",
     "semantic_hash": ""
   },
   "internal/api/collections.go": {
@@ -1560,8 +1560,8 @@
     "semantic_hash": ""
   },
   "internal/store/collections.sql.go": {
-    "mtime": 1795365224.7530646,
-    "seen": 1795365433.8238587,
+    "mtime": 1795365804.5653818,
+    "seen": 1795376198.1246066,
     "ast_hash": "f9ea47c7c08346cab5fabf153493d9d6",
     "semantic_hash": ""
   },
@@ -1578,75 +1578,75 @@
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-agent-create.json": {
-    "mtime": 1795365101.8496323,
-    "seen": 1795365433.8236074,
-    "ast_hash": "e1c6857db00e3a007eb23415b5cb81ed",
+    "mtime": 1795365961.9220219,
+    "seen": 1795376198.1244216,
+    "ast_hash": "3428dd66a3e25dce0b638fff328c3f5c",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-agent-delete.json": {
-    "mtime": 1795365101.8976057,
-    "seen": 1795365433.8236105,
+    "mtime": 1795365961.959662,
+    "seen": 1795376198.124424,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-agent-list.json": {
-    "mtime": 1795365101.8271823,
-    "seen": 1795365433.8236132,
+    "mtime": 1795365961.9039655,
+    "seen": 1795376198.124426,
     "ast_hash": "5809481b945602b670de3a5003768f6a",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-ssh-create-missing-name.json": {
-    "mtime": 1795365101.736399,
-    "seen": 1795365433.8236768,
-    "ast_hash": "fc6c87596bb7f81e704f07ad799e7f93",
+    "mtime": 1795365961.8171287,
+    "seen": 1795376198.124472,
+    "ast_hash": "8546a62db2d59e7e2eeec57b7a0cf01e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-ssh-create.json": {
-    "mtime": 1795365101.6708124,
-    "seen": 1795365433.823678,
-    "ast_hash": "f3cd3d4b67d6e9aa100c9f3629e0c5d0",
+    "mtime": 1795365961.7604434,
+    "seen": 1795376198.1244726,
+    "ast_hash": "dbb644e059614c2480b273e0bc14062e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-ssh-delete-unnamed.json": {
-    "mtime": 1795365101.8046045,
-    "seen": 1795365433.8236802,
+    "mtime": 1795365961.8906617,
+    "seen": 1795376198.124474,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-ssh-delete.json": {
-    "mtime": 1795365101.7856042,
-    "seen": 1795365433.8236814,
+    "mtime": 1795365961.8716617,
+    "seen": 1795376198.1244748,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-ssh-get.json": {
-    "mtime": 1795365101.6416044,
-    "seen": 1795365433.8236825,
+    "mtime": 1795365961.7376692,
+    "seen": 1795376198.1244762,
     "ast_hash": "17bb04dea92eea596eab94a9c59fbcc9",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-ssh-list.json": {
-    "mtime": 1795365101.594339,
-    "seen": 1795365433.823685,
+    "mtime": 1795365961.7216244,
+    "seen": 1795376198.1244776,
     "ast_hash": "9d70c0a69eac27666a99ba097ed456b7",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-ssh-missing.json": {
-    "mtime": 1795365101.7658162,
-    "seen": 1795365433.8236861,
+    "mtime": 1795365961.8548496,
+    "seen": 1795376198.1244786,
     "ast_hash": "d305bf2bc6664c06f6fa1d562df299a3",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-ssh-patch.json": {
-    "mtime": 1795365101.7176032,
-    "seen": 1795365433.8236873,
+    "mtime": 1795365961.7986615,
+    "seen": 1795376198.1244793,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "internal/api/sshagents.go": {
-    "mtime": 1795364901.1147468,
-    "seen": 1795365433.8237653,
-    "ast_hash": "6cfb66ed34c74aea6430ea21ef4abe53",
+    "mtime": 1795365861.4171474,
+    "seen": 1795376198.1245434,
+    "ast_hash": "3f687f62b9a3a88529f90cfefb4c79ca",
     "semantic_hash": ""
   },
   "internal/api/sshagents_test.go": {
@@ -1662,8 +1662,8 @@
     "semantic_hash": ""
   },
   "internal/store/sshagents.sql.go": {
-    "mtime": 1795365224.7530646,
-    "seen": 1795365433.8238828,
+    "mtime": 1795365804.5653818,
+    "seen": 1795376198.1246238,
     "ast_hash": "871af58991909e2975fb3c774e786a7c",
     "semantic_hash": ""
   },
@@ -1674,165 +1674,273 @@
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-agent-delete-in-use.json": {
-    "mtime": 1795365101.9997327,
-    "seen": 1795365433.8236094,
+    "mtime": 1795365962.055677,
+    "seen": 1795376198.1244233,
     "ast_hash": "a88a6651f5a7b07cb4a4b3fb9ca2f3e6",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-agent-link-in-use.json": {
-    "mtime": 1795365101.982607,
-    "seen": 1795365433.823612,
+    "mtime": 1795365962.037662,
+    "seen": 1795376198.124425,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-agent-unlink-in-use.json": {
-    "mtime": 1795365102.0156074,
-    "seen": 1795365433.8236148,
+    "mtime": 1795365962.0716622,
+    "seen": 1795376198.1244268,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-ssh-delete-in-use.json": {
-    "mtime": 1795365101.938737,
-    "seen": 1795365433.8236792,
+    "mtime": 1795365962.0044816,
+    "seen": 1795376198.1244733,
     "ast_hash": "a88a6651f5a7b07cb4a4b3fb9ca2f3e6",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-ssh-link-in-use.json": {
-    "mtime": 1795365101.9206061,
-    "seen": 1795365433.8236837,
+    "mtime": 1795365961.9816618,
+    "seen": 1795376198.124477,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-ssh-unlink-in-use.json": {
-    "mtime": 1795365101.9576066,
-    "seen": 1795365433.8236887,
+    "mtime": 1795365962.018662,
+    "seen": 1795376198.1244802,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-tag-create-missing-name.json": {
-    "mtime": 1795365102.296611,
-    "seen": 1795365433.8236907,
-    "ast_hash": "73f4f925840790a0823e1301bd36d026",
+    "mtime": 1795365962.6008043,
+    "seen": 1795376198.124481,
+    "ast_hash": "72b2dcd784dd5040537419f2e5ea5126",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-tag-create.json": {
-    "mtime": 1795365102.206592,
-    "seen": 1795365433.8236928,
-    "ast_hash": "46b34a83f3e19e71a2a67f89bcd5be00",
+    "mtime": 1795365962.5083547,
+    "seen": 1795376198.1244822,
+    "ast_hash": "982a635269e5bb2dde8c395b92b67ca3",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-tag-delete-unnamed.json": {
-    "mtime": 1795365102.5706146,
-    "seen": 1795365433.823694,
+    "mtime": 1795365962.8406644,
+    "seen": 1795376198.124483,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-tag-delete.json": {
-    "mtime": 1795365102.5466144,
-    "seen": 1795365433.8236952,
+    "mtime": 1795365962.8186643,
+    "seen": 1795376198.1244836,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-tag-duplicate.json": {
-    "mtime": 1795365102.517614,
-    "seen": 1795365433.8236964,
-    "ast_hash": "e0fe5194db0400da5cfc89a563818c6d",
+    "mtime": 1795365962.8035605,
+    "seen": 1795376198.1244845,
+    "ast_hash": "c18132cc7b3ead77383934bbc4e124bd",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-tag-filter.json": {
-    "mtime": 1795365102.2789476,
-    "seen": 1795365433.8236973,
-    "ast_hash": "1e0dd9a6eee99fbbaaeec08914ebe3c8",
+    "mtime": 1795365962.5729432,
+    "seen": 1795376198.1244855,
+    "ast_hash": "6d09eaac9ed54c4950fa3c26acb4e2dc",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-tag-get.json": {
-    "mtime": 1795365102.2446103,
-    "seen": 1795365433.8236988,
-    "ast_hash": "081439ac100bd9336cf2714558af8ad9",
+    "mtime": 1795365962.5389311,
+    "seen": 1795376198.1244862,
+    "ast_hash": "01def47131aaf6138fdd17d613ac692e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-tag-list.json": {
-    "mtime": 1795365102.180495,
-    "seen": 1795365433.8236997,
+    "mtime": 1795365962.4857764,
+    "seen": 1795376198.124487,
     "ast_hash": "e0234245cb00aa260ccfa99a9a0b235e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-tag-missing.json": {
-    "mtime": 1795365102.3269062,
-    "seen": 1795365433.823701,
+    "mtime": 1795365962.6323411,
+    "seen": 1795376198.1244876,
     "ast_hash": "ceabb7250828e86441f5da5bb1becdad",
     "semantic_hash": ""
   },
   "docs/upstream/rest/organization-tag-patch.json": {
-    "mtime": 1795365102.2596107,
-    "seen": 1795365433.8237023,
+    "mtime": 1795365962.5566635,
+    "seen": 1795376198.1244884,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-tag-create.json": {
-    "mtime": 1795365102.3571694,
-    "seen": 1795365433.82373,
-    "ast_hash": "88e83101dec3ca2f74ada89e9f5548be",
+    "mtime": 1795365962.6596582,
+    "seen": 1795376198.124519,
+    "ast_hash": "ed68324f8f22706d8e7e105d16b8dd19",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-tag-delete.json": {
-    "mtime": 1795365102.4956136,
-    "seen": 1795365433.8237312,
+    "mtime": 1795365962.7836642,
+    "seen": 1795376198.1245198,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-tag-duplicate.json": {
-    "mtime": 1795365102.4716134,
-    "seen": 1795365433.8237321,
-    "ast_hash": "22a52b2f7d1e14af275b7f680a4401d3",
+    "mtime": 1795365962.7653904,
+    "seen": 1795376198.1245208,
+    "ast_hash": "3822141cb71eba299f3772617bfb0f68",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-tag-list-after.json": {
-    "mtime": 1795365102.3898406,
-    "seen": 1795365433.8237336,
-    "ast_hash": "11d64bc6cfb1ba193c8b91cf5754929b",
+    "mtime": 1795365962.6931937,
+    "seen": 1795376198.1245217,
+    "ast_hash": "1f549ac8be99a0a1c45407762290fb68",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-tag-list.json": {
-    "mtime": 1795365102.3395207,
-    "seen": 1795365433.8237345,
+    "mtime": 1795365962.6453786,
+    "seen": 1795376198.1245227,
     "ast_hash": "e0234245cb00aa260ccfa99a9a0b235e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-tag-missing-tag.json": {
-    "mtime": 1795365102.4291902,
-    "seen": 1795365433.8237355,
+    "mtime": 1795365962.7273302,
+    "seen": 1795376198.1245234,
     "ast_hash": "a88a6651f5a7b07cb4a4b3fb9ca2f3e6",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-tag-patch.json": {
-    "mtime": 1795365102.4096127,
-    "seen": 1795365433.823737,
+    "mtime": 1795365962.711664,
+    "seen": 1795376198.1245246,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "docs/upstream/rest/workspace-tag-unknown-tag.json": {
-    "mtime": 1795365102.4502444,
-    "seen": 1795365433.8237379,
+    "mtime": 1795365962.741664,
+    "seen": 1795376198.1245253,
     "ast_hash": "a88a6651f5a7b07cb4a4b3fb9ca2f3e6",
     "semantic_hash": ""
   },
   "internal/api/tags.go": {
-    "mtime": 1795365224.6824863,
-    "seen": 1795365433.823768,
+    "mtime": 1795365637.1038444,
+    "seen": 1795376198.124545,
     "ast_hash": "4baf1a3c55efd73e5abf8e22ed33e940",
     "semantic_hash": ""
   },
   "internal/api/tags_test.go": {
-    "mtime": 1795365224.682565,
-    "seen": 1795365433.823769,
+    "mtime": 1795365637.103926,
+    "seen": 1795376198.1245458,
     "ast_hash": "3b8b0fbe3fac74be8456d0f925d7287f",
     "semantic_hash": ""
   },
   "migrations/0011_tag_nullable_name.sql": {
-    "mtime": 1795365008.8016357,
-    "seen": 1795365433.8239343,
+    "mtime": 1795365637.1050754,
+    "seen": 1795376198.1246598,
     "ast_hash": "2a6883e315bd36871572d00432566882",
+    "semantic_hash": ""
+  },
+  "docs/upstream/rest/organization-vcs-create-invalid-type.json": {
+    "mtime": 1795365962.1994758,
+    "seen": 1795376198.1244898,
+    "ast_hash": "7e366e893cdaffd494dba2510d243d73",
+    "semantic_hash": ""
+  },
+  "docs/upstream/rest/organization-vcs-create-missing-required.json": {
+    "mtime": 1795365962.1855507,
+    "seen": 1795376198.1244907,
+    "ast_hash": "a88a6651f5a7b07cb4a4b3fb9ca2f3e6",
+    "semantic_hash": ""
+  },
+  "docs/upstream/rest/organization-vcs-create.json": {
+    "mtime": 1795365962.1064336,
+    "seen": 1795376198.1244915,
+    "ast_hash": "aa98ab9ad052115517972c7df32b0b49",
+    "semantic_hash": ""
+  },
+  "docs/upstream/rest/organization-vcs-delete-in-use.json": {
+    "mtime": 1795365962.2836628,
+    "seen": 1795376198.1244924,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "docs/upstream/rest/organization-vcs-delete.json": {
+    "mtime": 1795365962.3196628,
+    "seen": 1795376198.1244931,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "docs/upstream/rest/organization-vcs-get-after-delete.json": {
+    "mtime": 1795365962.334555,
+    "seen": 1795376198.1244938,
+    "ast_hash": "058b29054dfcbbdf7fc790e42071508f",
+    "semantic_hash": ""
+  },
+  "docs/upstream/rest/organization-vcs-get.json": {
+    "mtime": 1795365962.1458817,
+    "seen": 1795376198.1244946,
+    "ast_hash": "d959a2b6d2b19a1919e45e8f05cd986f",
+    "semantic_hash": ""
+  },
+  "docs/upstream/rest/organization-vcs-list.json": {
+    "mtime": 1795365962.0884335,
+    "seen": 1795376198.1244955,
+    "ast_hash": "bb217da7b86c532b5e7d881b455a830f",
+    "semantic_hash": ""
+  },
+  "docs/upstream/rest/organization-vcs-missing.json": {
+    "mtime": 1795365962.2169707,
+    "seen": 1795376198.1244965,
+    "ast_hash": "fb17ace831a3b30431dd88e1b7faae86",
+    "semantic_hash": ""
+  },
+  "docs/upstream/rest/organization-vcs-patch.json": {
+    "mtime": 1795365962.1646624,
+    "seen": 1795376198.124497,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "docs/upstream/rest/workspace-get-after-vcs-delete.json": {
+    "mtime": 1795365962.3015878,
+    "seen": 1795376198.1245005,
+    "ast_hash": "a418517ba40a4f17f0339ae343750a9c",
+    "semantic_hash": ""
+  },
+  "docs/upstream/rest/workspace-include-vcs.json": {
+    "mtime": 1795365962.2619936,
+    "seen": 1795376198.1245012,
+    "ast_hash": "97785e6bf2b755f514a5fffb0632a438",
+    "semantic_hash": ""
+  },
+  "docs/upstream/rest/workspace-relationship-vcs-link-in-use.json": {
+    "mtime": 1795365962.2386627,
+    "seen": 1795376198.1245174,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "internal/api/vcs.go": {
+    "mtime": 1795365851.2308621,
+    "seen": 1795376198.1245484,
+    "ast_hash": "81d160bdc03d9f3d80c0adc7d03894eb",
+    "semantic_hash": ""
+  },
+  "internal/api/vcs_test.go": {
+    "mtime": 1795365908.4656718,
+    "seen": 1795376198.1245494,
+    "ast_hash": "71ec3fdaf699c26c1b5624aa9884f3d8",
+    "semantic_hash": ""
+  },
+  "internal/store/queries/vcs.sql": {
+    "mtime": 1795365799.432329,
+    "seen": 1795376198.1246223,
+    "ast_hash": "8a172d63f675486d371f40e5158c88fd",
+    "semantic_hash": ""
+  },
+  "internal/store/vcs.sql.go": {
+    "mtime": 1795365804.5643818,
+    "seen": 1795376198.124627,
+    "ast_hash": "fe4432978e967d19918a1dd7770ff522",
+    "semantic_hash": ""
+  },
+  "migrations/0012_vcs.sql": {
+    "mtime": 1795365794.8872824,
+    "seen": 1795376198.1246605,
+    "ast_hash": "d1048fca6617776d55c15093b7b05319",
     "semantic_hash": ""
   }
 }
