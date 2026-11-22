@@ -265,6 +265,30 @@ type Variable struct {
 	WorkspaceID         string  `json:"workspace_id"`
 }
 
+type Vc struct {
+	ID              string             `json:"id"`
+	Name            string             `json:"name"`
+	Description     string             `json:"description"`
+	VcsType         string             `json:"vcs_type"`
+	ClientID        *string            `json:"client_id"`
+	ClientSecret    *string            `json:"client_secret"`
+	AccessToken     *string            `json:"access_token"`
+	RefreshToken    *string            `json:"refresh_token"`
+	TokenExpiration pgtype.Timestamptz `json:"token_expiration"`
+	Status          *string            `json:"status"`
+	CreatedDate     pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate     pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy       *string            `json:"created_by"`
+	UpdatedBy       *string            `json:"updated_by"`
+	Callback        *string            `json:"callback"`
+	RedirectUrl     *string            `json:"redirect_url"`
+	Endpoint        *string            `json:"endpoint"`
+	ApiUrl          *string            `json:"api_url"`
+	ConnectionType  *string            `json:"connection_type"`
+	PrivateKey      *string            `json:"private_key"`
+	OrganizationID  string             `json:"organization_id"`
+}
+
 type Workspace struct {
 	ID                              string             `json:"id"`
 	Name                            string             `json:"name"`
