@@ -576,6 +576,43 @@ var replayedCaptures = map[string]replay{
 		target:  "vcs-query",
 		querier: &stubQuerier{},
 	},
+	"organization-team-list": {
+		target: "team-query",
+	},
+	"organization-team-create": {
+		target: "team-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"team","attributes":{"name":"capture-team","manageWorkspace":true,"manageJob":true,"planJob":true,"approveJob":true,"role":"write"}}}`,
+	},
+	"organization-team-get": {
+		target: "team-query",
+	},
+	"organization-team-patch": {
+		target: "team-query",
+		idFrom: "organization-team-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"team","id":"{id}","attributes":{"role":"admin","manageVcs":true,"destroyJob":false}}}`,
+	},
+	"organization-team-create-missing-name": {
+		target: "team-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"team","attributes":{"role":"read"}}}`,
+	},
+	"organization-team-missing": {
+		target: "team-query",
+	},
+	"organization-team-bad-id": {
+		target: "team-query",
+	},
+	"organization-team-delete": {
+		target: "team-query",
+		idFrom: "organization-team-create",
+		method: http.MethodDelete,
+	},
+	"organization-team-get-after-delete": {
+		target:  "team-query",
+		querier: &stubQuerier{},
+	},
 	"organization-template-list": {
 		target: "template-query",
 	},
@@ -851,6 +888,19 @@ func captureVCSStore(t *testing.T, captures map[string]upstreamCapture) *stubQue
 		workspaces: []store.Workspace{{
 			ID: capturedRelWS, OrganizationID: capturedRelOrg, Name: "capture-rel-workspace",
 			VcsID: strPtr(capturedRelVCS),
+		}},
+	}
+}
+
+func captureTeamStore(t *testing.T, captures map[string]upstreamCapture) *stubQuerier {
+	t.Helper()
+	created := captures["organization-team-create"].resourceID(t)
+
+	return &stubQuerier{
+		teams: []store.Team{{
+			ID: created, Name: "capture-team", ManageWorkspace: true, ManageJob: true,
+			PlanJob: true, ApproveJob: true, DestroyJob: true, Role: strPtr("write"),
+			OrganizationID: capturedRelOrg,
 		}},
 	}
 }
@@ -1131,6 +1181,11 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 				target = strings.TrimPrefix(capture.path, "/api/v1")
 				if querier == nil {
 					querier = captureVCSStore(t, captures)
+				}
+			case "team-query":
+				target = strings.TrimPrefix(capture.path, "/api/v1")
+				if querier == nil {
+					querier = captureTeamStore(t, captures)
 				}
 			case "template-query":
 				target = strings.TrimPrefix(capture.path, "/api/v1")
@@ -1594,6 +1649,64 @@ func (s *stubQuerier) DeleteTemplate(_ context.Context, id string) error {
 	for i := range s.templates {
 		if s.templates[i].ID == id {
 			s.templates = append(s.templates[:i], s.templates[i+1:]...)
+			return s.err
+		}
+	}
+	return s.err
+}
+
+func (s *stubQuerier) ListTeamsByOrganization(context.Context, string) ([]store.Team, error) {
+	return s.teams, s.err
+}
+
+func (s *stubQuerier) GetTeam(_ context.Context, id string) (store.Team, error) {
+	for _, team := range s.teams {
+		if team.ID == id {
+			return team, nil
+		}
+	}
+	return store.Team{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateTeam(_ context.Context, arg store.CreateTeamParams) (store.Team, error) {
+	return store.Team{
+		ID: arg.ID, Name: arg.Name, ManageWorkspace: arg.ManageWorkspace,
+		ManageModule: arg.ManageModule, ManageProvider: arg.ManageProvider,
+		ManageVcs: arg.ManageVcs, ManageTemplate: arg.ManageTemplate,
+		ManageState: arg.ManageState, ManageCollection: arg.ManageCollection,
+		ManageJob: arg.ManageJob, ManagePolicies: arg.ManagePolicies,
+		PlanJob: arg.PlanJob, ApproveJob: arg.ApproveJob, DestroyJob: arg.DestroyJob,
+		Role: arg.Role, OrganizationID: arg.OrganizationID,
+	}, s.err
+}
+
+func (s *stubQuerier) UpdateTeam(_ context.Context, arg store.UpdateTeamParams) (store.Team, error) {
+	for i := range s.teams {
+		if s.teams[i].ID == arg.ID {
+			s.teams[i].Name = arg.Name
+			s.teams[i].ManageWorkspace = arg.ManageWorkspace
+			s.teams[i].ManageModule = arg.ManageModule
+			s.teams[i].ManageProvider = arg.ManageProvider
+			s.teams[i].ManageVcs = arg.ManageVcs
+			s.teams[i].ManageTemplate = arg.ManageTemplate
+			s.teams[i].ManageState = arg.ManageState
+			s.teams[i].ManageCollection = arg.ManageCollection
+			s.teams[i].ManageJob = arg.ManageJob
+			s.teams[i].ManagePolicies = arg.ManagePolicies
+			s.teams[i].PlanJob = arg.PlanJob
+			s.teams[i].ApproveJob = arg.ApproveJob
+			s.teams[i].DestroyJob = arg.DestroyJob
+			s.teams[i].Role = arg.Role
+			return s.teams[i], s.err
+		}
+	}
+	return store.Team{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) DeleteTeam(_ context.Context, id string) error {
+	for i := range s.teams {
+		if s.teams[i].ID == id {
+			s.teams = append(s.teams[:i], s.teams[i+1:]...)
 			return s.err
 		}
 	}

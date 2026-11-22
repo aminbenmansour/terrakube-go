@@ -39,6 +39,7 @@ type stubQuerier struct {
 	workspaceTags   []store.Workspacetag
 	vcs             []store.Vc
 	templates       []store.Template
+	teams           []store.Team
 	err             error
 	created         *store.CreateOrganizationParams
 	createdAction   *store.CreateActionParams

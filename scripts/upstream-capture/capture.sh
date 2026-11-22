@@ -354,6 +354,25 @@ request workspace-get-after-vcs-delete "/api/v1/organization/${rel_org}/workspac
 request organization-vcs-delete "/api/v1/organization/${rel_org}/vcs/${vcs_new}" -X DELETE
 request organization-vcs-get-after-delete "/api/v1/organization/${rel_org}/vcs/${vcs_new}"
 
+# Teams: Settings > Teams. Permissions are booleans on the row, so the create
+# also records the primitive defaults upstream applies.
+pg "delete from team where name like 'capture-team%' and organization_id = '${rel_org}'" >/dev/null
+request organization-team-list "/api/v1/organization/${rel_org}/team"
+request organization-team-create "/api/v1/organization/${rel_org}/team" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"team","attributes":{"name":"capture-team","manageWorkspace":true,"manageJob":true,"planJob":true,"approveJob":true,"role":"write"}}}'
+team_new="$(python3 -c "import json;print(json.load(open('$out/organization-team-create.json'))['data']['id'])")"
+request organization-team-get "/api/v1/organization/${rel_org}/team/${team_new}"
+request organization-team-patch "/api/v1/organization/${rel_org}/team/${team_new}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"team\",\"id\":\"${team_new}\",\"attributes\":{\"role\":\"admin\",\"manageVcs\":true,\"destroyJob\":false}}}"
+request organization-team-create-missing-name "/api/v1/organization/${rel_org}/team" -X POST \
+  -H 'Content-Type: application/vnd.api+json' --data '{"data":{"type":"team","attributes":{"role":"read"}}}'
+request organization-team-missing "/api/v1/organization/${rel_org}/team/00000000-0000-4000-8000-000000000097"
+request organization-team-bad-id "/api/v1/organization/${rel_org}/team/not-a-uuid"
+request organization-team-delete "/api/v1/organization/${rel_org}/team/${team_new}" -X DELETE
+request organization-team-get-after-delete "/api/v1/organization/${rel_org}/team/${team_new}"
+
 # Templates: Settings > Templates and the workspace default template picker.
 # Upstream requires no attribute, so the empty create is part of the contract.
 pg "delete from template where name like 'capture-template%' and organization_id = '${rel_org}'" >/dev/null
@@ -421,6 +440,7 @@ request organization-tag-delete-unnamed "/api/v1/organization/${rel_org}/tag/${t
 # Leave the disposable database as it was: these rows exist only for captures.
 pg "delete from vcs where id = '${rel_vcs}'; delete from ssh where id = '${rel_ssh}'; delete from agent where id = '${rel_agent}'" >/dev/null
 pg "delete from template where name like 'capture-template%' and organization_id = '${rel_org}'" >/dev/null
+pg "delete from team where name like 'capture-team%' and organization_id = '${rel_org}'" >/dev/null
 pg "delete from workspace where name in ('capture-atomic', 'capture-rel-workspace')" >/dev/null
 pg "delete from job where commit_id = 'deaDBEEF'" >/dev/null
 

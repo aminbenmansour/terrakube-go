@@ -238,6 +238,25 @@ type Tag struct {
 	UpdatedBy      *string            `json:"updated_by"`
 }
 
+type Team struct {
+	ID               string  `json:"id"`
+	Name             string  `json:"name"`
+	ManageWorkspace  bool    `json:"manage_workspace"`
+	ManageModule     bool    `json:"manage_module"`
+	ManageProvider   bool    `json:"manage_provider"`
+	ManageVcs        bool    `json:"manage_vcs"`
+	ManageTemplate   bool    `json:"manage_template"`
+	ManageState      bool    `json:"manage_state"`
+	ManageCollection bool    `json:"manage_collection"`
+	ManageJob        bool    `json:"manage_job"`
+	ManagePolicies   bool    `json:"manage_policies"`
+	PlanJob          bool    `json:"plan_job"`
+	ApproveJob       bool    `json:"approve_job"`
+	DestroyJob       bool    `json:"destroy_job"`
+	Role             *string `json:"role"`
+	OrganizationID   string  `json:"organization_id"`
+}
+
 type TempArchive struct {
 	ID        string  `json:"id"`
 	Type      *string `json:"type"`
