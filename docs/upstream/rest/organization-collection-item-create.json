@@ -1,0 +1,1 @@
+{"data":{"type":"item","id":"5db09ce9-5a29-49e2-ae2f-b1eed64d13d8","attributes":{"category":"ENV","description":"capture","hcl":false,"key":"CAPTURE_KEY","sensitive":false,"value":"one"},"relationships":{"collection":{"data":{"type":"collection","id":"4e9aecc0-adf0-40d5-aae7-e7b2f083260a"}}}}}

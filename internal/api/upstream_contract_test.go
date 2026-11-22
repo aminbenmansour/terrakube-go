@@ -370,6 +370,81 @@ var replayedCaptures = map[string]replay{
 		method:  http.MethodDelete,
 		querier: captureActionStore(),
 	},
+	"organization-collection-create": {
+		target: "collection-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"collection","attributes":{"name":"capture-collection","description":"capture","priority":10}}}`,
+	},
+	"organization-collection-list": {
+		target: "collection-query",
+	},
+	"organization-collection-get": {
+		target: "collection-query",
+	},
+	"organization-collection-patch": {
+		target: "collection-query",
+		idFrom: "organization-collection-get",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"collection","id":"{id}","attributes":{"name":"capture-collection-after"}}}`,
+	},
+	"organization-collection-item-create": {
+		target: "collection-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"item","attributes":{"key":"CAPTURE_KEY","value":"one","description":"capture","sensitive":false,"hcl":false,"category":"ENV"}}}`,
+	},
+	"organization-collection-item-list": {
+		target: "collection-query",
+	},
+	"organization-collection-item-patch": {
+		target: "collection-query",
+		idFrom: "organization-collection-item-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"item","id":"{id}","attributes":{"value":"after"}}}`,
+	},
+	"organization-collection-item-invalid-category": {
+		target: "collection-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"item","attributes":{"key":"CAPTURE_BAD","value":"x","category":"env"}}}`,
+	},
+	"organization-collection-item-missing-key": {
+		target: "collection-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"item","attributes":{"value":"x","category":"ENV"}}}`,
+	},
+	"organization-collection-create-missing-name": {
+		target: "collection-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"collection","attributes":{"priority":5}}}`,
+	},
+	"organization-collection-missing": {
+		target: "collection-query",
+	},
+	"organization-collection-reference-create": {
+		target: "collection-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"reference","attributes":{"description":"capture"},"relationships":{"workspace":{"data":{"type":"workspace","id":"` + capturedRelWS + `"}}}}}`,
+	},
+	"organization-collection-reference-list": {
+		target: "collection-query",
+	},
+	"reference-collection": {
+		target: "collection-query",
+	},
+	"organization-workspace-reference": {
+		target: "collection-query",
+	},
+	"organization-collection-item-delete": {
+		target: "collection-query",
+		method: http.MethodDelete,
+	},
+	"organization-collection-reference-delete": {
+		target: "collection-query",
+		method: http.MethodDelete,
+	},
+	"organization-collection-delete": {
+		target: "collection-query",
+		method: http.MethodDelete,
+	},
 }
 
 // deferredCaptures are recorded but cannot be asserted yet. Each needs a reason,
@@ -442,6 +517,32 @@ func captureActionStore() *stubQuerier {
 		{ID: "terrakube.open-ai", Name: "Open AI", Label: "Open AI", Category: "AI", Type: "Workspace/Action", Action: "dGVzdA==", DisplayCriteria: `[{"filter": "true"}]`, Version: "0.1.0", Active: false},
 		{ID: "capture.temp-action", Name: "Capture Temp", Label: "Temp", Category: "General", Type: "Workspace/Action", Action: "dGVzdA==", DisplayCriteria: `[{"filter":"true"}]`, Version: "1.0.0", Active: true},
 	}}
+}
+
+// captureCollectionStore answers whichever collection, item and reference ids
+// the collection captures were taken against; the ids change every run.
+func captureCollectionStore(t *testing.T, captures map[string]upstreamCapture) *stubQuerier {
+	t.Helper()
+	collectionID := captures["organization-collection-get"].resourceID(t)
+	itemID := captures["organization-collection-item-create"].resourceID(t)
+	referenceID := captures["organization-collection-reference-create"].resourceID(t)
+
+	return &stubQuerier{
+		workspaces: []store.Workspace{
+			{ID: capturedRelWS, OrganizationID: capturedRelOrg, Name: "capture-rel-workspace"},
+			{ID: capturedWSID, OrganizationID: capturedOrgID, Name: "sample_cosmosdb"},
+		},
+		collections: []store.Collection{{
+			ID: collectionID, Name: "capture-collection", Priority: 10, OrganizationID: capturedRelOrg,
+		}},
+		collectionItems: []store.Item{{
+			ID: itemID, ItemKey: "CAPTURE_KEY", ItemValue: "after", ItemDescription: strPtr("capture"),
+			ItemCategory: "ENV", CollectionID: collectionID,
+		}},
+		collectionRefs: []store.Reference{{
+			ID: referenceID, Description: strPtr("capture"), WorkspaceID: capturedRelWS, CollectionID: collectionID,
+		}},
+	}
 }
 
 func captureJobs() []store.Job {
@@ -671,6 +772,9 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 				target = "/organization/" + capturedRelOrg + "/globalvar/" + capturedGvID
 			case "globalvar-secret":
 				target = "/organization/" + capturedRelOrg + "/globalvar/" + capturedGvSecret
+			case "collection-query":
+				target = strings.TrimPrefix(capture.path, "/api/v1")
+				querier = captureCollectionStore(t, captures)
 			}
 			if querier == nil {
 				querier = &stubQuerier{}
@@ -809,6 +913,95 @@ func sortedKeys(m map[string]any) []string {
 
 func (s *stubQuerier) ListActions(context.Context) ([]store.Action, error) {
 	return s.actions, s.err
+}
+
+func (s *stubQuerier) ListCollectionsByOrganization(context.Context, string) ([]store.Collection, error) {
+	return s.collections, s.err
+}
+
+func (s *stubQuerier) GetCollection(_ context.Context, id string) (store.Collection, error) {
+	for _, collection := range s.collections {
+		if collection.ID == id {
+			return collection, nil
+		}
+	}
+	return store.Collection{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateCollection(_ context.Context, arg store.CreateCollectionParams) (store.Collection, error) {
+	return store.Collection{ID: arg.ID, Name: arg.Name, Description: arg.Description, Priority: arg.Priority, OrganizationID: arg.OrganizationID}, s.err
+}
+
+func (s *stubQuerier) UpdateCollection(_ context.Context, arg store.UpdateCollectionParams) (store.Collection, error) {
+	return store.Collection{ID: arg.ID, Name: arg.Name, Description: arg.Description, Priority: arg.Priority}, s.err
+}
+
+func (s *stubQuerier) DeleteCollection(context.Context, string) error {
+	return s.err
+}
+
+func (s *stubQuerier) ListItemsByCollection(context.Context, string) ([]store.Item, error) {
+	return s.collectionItems, s.err
+}
+
+func (s *stubQuerier) GetItem(_ context.Context, id string) (store.Item, error) {
+	for _, item := range s.collectionItems {
+		if item.ID == id {
+			return item, nil
+		}
+	}
+	return store.Item{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateItem(_ context.Context, arg store.CreateItemParams) (store.Item, error) {
+	return store.Item{
+		ID: arg.ID, ItemDescription: arg.ItemDescription, ItemKey: arg.ItemKey,
+		ItemValue: arg.ItemValue, Sensitive: arg.Sensitive, Hcl: arg.Hcl,
+		ItemCategory: arg.ItemCategory, CollectionID: arg.CollectionID,
+	}, s.err
+}
+
+func (s *stubQuerier) UpdateItem(_ context.Context, arg store.UpdateItemParams) (store.Item, error) {
+	return store.Item{
+		ID: arg.ID, ItemDescription: arg.ItemDescription, ItemKey: arg.ItemKey,
+		ItemValue: arg.ItemValue, Sensitive: arg.Sensitive, Hcl: arg.Hcl,
+		ItemCategory: arg.ItemCategory,
+	}, s.err
+}
+
+func (s *stubQuerier) DeleteItem(context.Context, string) error {
+	return s.err
+}
+
+func (s *stubQuerier) ListReferencesByCollection(context.Context, string) ([]store.Reference, error) {
+	return s.collectionRefs, s.err
+}
+
+func (s *stubQuerier) ListReferencesByWorkspace(_ context.Context, workspaceID string) ([]store.Reference, error) {
+	var out []store.Reference
+	for _, reference := range s.collectionRefs {
+		if reference.WorkspaceID == workspaceID {
+			out = append(out, reference)
+		}
+	}
+	return out, s.err
+}
+
+func (s *stubQuerier) GetReference(_ context.Context, id string) (store.Reference, error) {
+	for _, reference := range s.collectionRefs {
+		if reference.ID == id {
+			return reference, nil
+		}
+	}
+	return store.Reference{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateReference(_ context.Context, arg store.CreateReferenceParams) (store.Reference, error) {
+	return store.Reference{ID: arg.ID, Description: arg.Description, WorkspaceID: arg.WorkspaceID, CollectionID: arg.CollectionID}, s.err
+}
+
+func (s *stubQuerier) DeleteReference(context.Context, string) error {
+	return s.err
 }
 
 func (s *stubQuerier) GetAction(_ context.Context, id string) (store.Action, error) {
