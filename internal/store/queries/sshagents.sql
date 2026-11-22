@@ -38,3 +38,9 @@ RETURNING *;
 
 -- name: DeleteAgent :exec
 DELETE FROM agent WHERE id = $1;
+
+-- name: CountWorkspacesWithSSHKey :one
+SELECT count(*) FROM workspace WHERE ssh_id = $1;
+
+-- name: CountWorkspacesWithAgent :one
+SELECT count(*) FROM workspace WHERE agent_id = $1;
