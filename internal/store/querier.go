@@ -9,6 +9,7 @@ import (
 )
 
 type Querier interface {
+	AddNotificationConfigurationTemplate(ctx context.Context, arg AddNotificationConfigurationTemplateParams) error
 	ApproveJob(ctx context.Context, arg ApproveJobParams) (Job, error)
 	// Deleting a provider in use unlinks its workspaces instead of failing, which
 	// is what upstream does through the mapped relationship.
@@ -24,6 +25,8 @@ type Querier interface {
 	CreateHistory(ctx context.Context, arg CreateHistoryParams) (History, error)
 	CreateItem(ctx context.Context, arg CreateItemParams) (Item, error)
 	CreateJob(ctx context.Context, arg CreateJobParams) (Job, error)
+	CreateNotificationConfiguration(ctx context.Context, arg CreateNotificationConfigurationParams) (NotificationConfiguration, error)
+	CreateNotificationTrigger(ctx context.Context, arg CreateNotificationTriggerParams) (NotificationTrigger, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateReference(ctx context.Context, arg CreateReferenceParams) (Reference, error)
@@ -42,6 +45,9 @@ type Querier interface {
 	DeleteCollection(ctx context.Context, id string) error
 	DeleteGlobalVariable(ctx context.Context, id string) error
 	DeleteItem(ctx context.Context, id string) error
+	DeleteNotificationConfiguration(ctx context.Context, id string) error
+	DeleteNotificationConfigurationTemplates(ctx context.Context, configurationID string) error
+	DeleteNotificationTrigger(ctx context.Context, id string) error
 	DeleteOrganization(ctx context.Context, id string) error
 	DeleteProject(ctx context.Context, id string) error
 	DeleteReference(ctx context.Context, id string) error
@@ -63,6 +69,8 @@ type Querier interface {
 	GetItem(ctx context.Context, id string) (Item, error)
 	GetJob(ctx context.Context, id int64) (Job, error)
 	GetLatestHistory(ctx context.Context, workspaceID string) (History, error)
+	GetNotificationConfiguration(ctx context.Context, id string) (NotificationConfiguration, error)
+	GetNotificationTrigger(ctx context.Context, id string) (NotificationTrigger, error)
 	GetOrganization(ctx context.Context, id string) (Organization, error)
 	GetOrganizationByName(ctx context.Context, name string) (Organization, error)
 	// "running" is included so an executor that reclaims a crashed job resumes the
@@ -92,6 +100,10 @@ type Querier interface {
 	ListGlobalVariablesByOrganization(ctx context.Context, organizationID string) ([]Globalvar, error)
 	ListItemsByCollection(ctx context.Context, collectionID string) ([]Item, error)
 	ListJobsByOrganization(ctx context.Context, organizationID string) ([]Job, error)
+	ListNotificationConfigurationTemplateIDs(ctx context.Context, configurationID string) ([]string, error)
+	ListNotificationConfigurationsByOrganization(ctx context.Context, organizationID string) ([]NotificationConfiguration, error)
+	ListNotificationConfigurationsByWorkspace(ctx context.Context, workspaceID *string) ([]NotificationConfiguration, error)
+	ListNotificationTriggersByConfiguration(ctx context.Context, configurationID string) ([]NotificationTrigger, error)
 	ListOrganizations(ctx context.Context) ([]Organization, error)
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
 	ListReferencesByCollection(ctx context.Context, collectionID string) ([]Reference, error)
@@ -120,6 +132,7 @@ type Querier interface {
 	UpdateJobOutput(ctx context.Context, arg UpdateJobOutputParams) error
 	UpdateJobPlanChanges(ctx context.Context, arg UpdateJobPlanChangesParams) (Job, error)
 	UpdateJobStatus(ctx context.Context, arg UpdateJobStatusParams) (Job, error)
+	UpdateNotificationConfiguration(ctx context.Context, arg UpdateNotificationConfigurationParams) (NotificationConfiguration, error)
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) (Organization, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 	UpdateSSHKey(ctx context.Context, arg UpdateSSHKeyParams) (Ssh, error)
