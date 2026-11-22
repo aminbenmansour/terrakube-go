@@ -104,6 +104,15 @@ func New(deps Deps) http.Handler {
 			r.Delete("/", a.deleteTag)
 		})
 
+		// VCS providers: Settings > VCS and the workspace source picker.
+		r.Get("/vcs", a.listVCS)
+		r.Post("/vcs", a.createVCS)
+		r.Route("/vcs/{vcsID}", func(r chi.Router) {
+			r.Get("/", a.getVCS)
+			r.Patch("/", a.updateVCS)
+			r.Delete("/", a.deleteVCS)
+		})
+
 		// SSH keys and self-hosted agent pools for workspace connections.
 		r.Get("/ssh", a.listSSHKeys)
 		r.Post("/ssh", a.createSSHKey)
