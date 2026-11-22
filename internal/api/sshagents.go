@@ -167,6 +167,17 @@ func (a *API) deleteSSHKey(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	used, err := a.deps.Store.CountWorkspacesWithSSHKey(r.Context(), strPtr(key.ID))
+	if err != nil {
+		if !a.writeStoreError(w, "count ssh key uses", err) {
+			a.internalError(w, "count ssh key uses", err)
+		}
+		return
+	}
+	if used > 0 {
+		writeInUseConflict(w)
+		return
+	}
 	if err := a.deps.Store.DeleteSSHKey(r.Context(), key.ID); err != nil {
 		if !a.writeStoreError(w, "delete ssh key", err) {
 			a.internalError(w, "delete ssh key", err)
@@ -241,6 +252,17 @@ func (a *API) deleteAgent(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	used, err := a.deps.Store.CountWorkspacesWithAgent(r.Context(), strPtr(agent.ID))
+	if err != nil {
+		if !a.writeStoreError(w, "count agent uses", err) {
+			a.internalError(w, "count agent uses", err)
+		}
+		return
+	}
+	if used > 0 {
+		writeInUseConflict(w)
+		return
+	}
 	if err := a.deps.Store.DeleteAgent(r.Context(), agent.ID); err != nil {
 		if !a.writeStoreError(w, "delete agent", err) {
 			a.internalError(w, "delete agent", err)
@@ -307,6 +329,12 @@ func (a *API) checkAgentRelationship(w http.ResponseWriter, r *http.Request, age
 		return false
 	}
 	return true
+}
+
+// writeInUseConflict is upstream's answer when a foreign key still points at
+// the row: Elide reports the database's data-integrity conflict as 409.
+func writeInUseConflict(w http.ResponseWriter) {
+	jsonapi.WriteError(w, http.StatusConflict, "Conflict", "This operation conflicts with data that already exists.")
 }
 
 // validateWorkspaceLinks refuses an ssh or agent id that does not resolve in

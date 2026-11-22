@@ -1,1 +1,1 @@
-{"data":{"type":"agent","id":"4fd6b9ef-e44a-4e7d-b184-8e9963e810ed","attributes":{"description":"capture","name":"capture-agent-created","url":"http://capture:8090"},"relationships":{"organization":{"data":{"type":"organization","id":"70000000-0000-0000-0000-000000000001"}}}}}
+{"data":{"type":"agent","id":"f69521d8-9e6b-4c2d-acc3-637bf5e1ec73","attributes":{"description":"capture","name":"capture-agent-created","url":"http://capture:8090"},"relationships":{"organization":{"data":{"type":"organization","id":"70000000-0000-0000-0000-000000000001"}}}}}

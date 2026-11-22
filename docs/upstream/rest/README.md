@@ -37,8 +37,8 @@ tools that produced them are in
 | `action` ids | editor slugs (`terrakube.open-ai`), not UUIDs | same |
 | `action` list filter | `filter[action]=active==true;type=in=('A','B')` | same |
 | `action` create / patch / delete | **201** with the resource / **204** / **204**; audit fields set from the PAT's user | same statuses; `createdBy`/`updatedBy` are null (no user in the token) |
-| `ssh` | organization-scoped CRUD; `privateKey` is never returned | same; no team permission check yet (#44) |
-| `agent` | list, create, delete; superuser-only writes | same routes; writes open (no RBAC yet) |
+| `ssh` | organization-scoped CRUD; `privateKey` is never returned; delete in use **409** | same; no team permission check yet (#44) |
+| `agent` | list, create, delete; delete in use **409**; superuser-only writes | same routes and 409; writes open (no RBAC yet) |
 | `collection` / `item` / `reference` | organization-scoped CRUD, `GET /reference/:id/collection?include=item`; writes gated on a team permission; missing required attribute **409**; no `priority` means **0** | same routes and statuses; writes are open (no RBAC yet) |
 | `POST /operations` (atomic) | `add`/`update`; `Content-Type` **and** `Accept` must be the atomic media type or **415**; an unsupported op is a no-op 200 | same shape and 415; an unsupported op is **400** and a failure is one error object, not an array of per-op results |
 | Resources | `type`, `id`, `attributes`, `relationships` | `type`, `id`, `attributes`, and `relationships` for the links that exist |

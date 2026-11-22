@@ -493,6 +493,38 @@ var replayedCaptures = map[string]replay{
 		idFrom: "organization-agent-create",
 		method: http.MethodDelete,
 	},
+	"organization-ssh-link-in-use": {
+		target:  "resource-query",
+		method:  http.MethodPatch,
+		body:    `{"data":{"type":"ssh","id":"` + capturedRelSSH + `"}}`,
+		querier: captureWorkspaceStore(),
+	},
+	"organization-ssh-delete-in-use": {
+		target: "ssh-agent-query",
+		method: http.MethodDelete,
+	},
+	"organization-ssh-unlink-in-use": {
+		target:  "resource-query",
+		method:  http.MethodPatch,
+		body:    `{"data":null}`,
+		querier: captureWorkspaceStore(),
+	},
+	"organization-agent-link-in-use": {
+		target:  "resource-query",
+		method:  http.MethodPatch,
+		body:    `{"data":{"type":"agent","id":"` + capturedRelAgent + `"}}`,
+		querier: captureWorkspaceStore(),
+	},
+	"organization-agent-delete-in-use": {
+		target: "ssh-agent-query",
+		method: http.MethodDelete,
+	},
+	"organization-agent-unlink-in-use": {
+		target:  "resource-query",
+		method:  http.MethodPatch,
+		body:    `{"data":null}`,
+		querier: captureWorkspaceStore(),
+	},
 }
 
 // deferredCaptures are recorded but cannot be asserted yet. Each needs a reason,
@@ -613,6 +645,8 @@ func captureSSHStore(t *testing.T, captures map[string]upstreamCapture) *stubQue
 			{ID: capturedRelAgent, Name: strPtr("capture-agent"), Description: strPtr("capture"), Url: strPtr("http://agent:8090"), OrganizationID: capturedRelOrg},
 			{ID: agent, Name: strPtr("capture-agent-created"), Description: strPtr("capture"), Url: strPtr("http://capture:8090"), OrganizationID: capturedRelOrg},
 		},
+		sshKeyUses: map[string]int64{capturedRelSSH: 1},
+		agentUses:  map[string]int64{capturedRelAgent: 1},
 	}
 }
 
@@ -1105,6 +1139,10 @@ func (s *stubQuerier) UpdateSSHKey(_ context.Context, arg store.UpdateSSHKeyPara
 	}, nil
 }
 
+func (s *stubQuerier) CountWorkspacesWithSSHKey(_ context.Context, id *string) (int64, error) {
+	return s.sshKeyUses[*id], s.err
+}
+
 func (s *stubQuerier) DeleteSSHKey(context.Context, string) error {
 	return nil
 }
@@ -1126,6 +1164,10 @@ func (s *stubQuerier) CreateAgent(_ context.Context, arg store.CreateAgentParams
 	return store.Agent{
 		ID: arg.ID, Name: arg.Name, Url: arg.Url, Description: arg.Description, OrganizationID: arg.OrganizationID,
 	}, nil
+}
+
+func (s *stubQuerier) CountWorkspacesWithAgent(_ context.Context, id *string) (int64, error) {
+	return s.agentUses[*id], s.err
 }
 
 func (s *stubQuerier) DeleteAgent(context.Context, string) error {

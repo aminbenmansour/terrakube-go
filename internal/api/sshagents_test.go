@@ -32,6 +32,8 @@ type sshAgentStub struct {
 	updatedKey *store.UpdateSSHKeyParams
 	deletedKey string
 	deletedAgt string
+	keyUses    int64
+	agentUses  int64
 }
 
 func (s *sshAgentStub) GetOrganization(context.Context, string) (store.Organization, error) {
@@ -59,6 +61,14 @@ func (s *sshAgentStub) CreateSSHKey(_ context.Context, arg store.CreateSSHKeyPar
 func (s *sshAgentStub) UpdateSSHKey(_ context.Context, arg store.UpdateSSHKeyParams) (store.Ssh, error) {
 	s.updatedKey = &arg
 	return store.Ssh{ID: arg.ID, Name: arg.Name, Description: arg.Description, SshType: arg.SshType}, nil
+}
+
+func (s *sshAgentStub) CountWorkspacesWithSSHKey(context.Context, *string) (int64, error) {
+	return s.keyUses, nil
+}
+
+func (s *sshAgentStub) CountWorkspacesWithAgent(context.Context, *string) (int64, error) {
+	return s.agentUses, nil
 }
 
 func (s *sshAgentStub) DeleteSSHKey(_ context.Context, id string) error {
@@ -153,6 +163,19 @@ func TestSSHKeysJSONAPI(t *testing.T) {
 		t.Errorf("delete = %d, deleted %q", rec.Code, q.deletedKey)
 	}
 
+	// A key still attached to a workspace is refused, as upstream's foreign key
+	// does, so a workspace cannot keep a dangling id.
+	inUse := &sshAgentStub{
+		org:     store.Organization{ID: sshOrgID},
+		keys:    []store.Ssh{{ID: sshKeyID, OrganizationID: sshOrgID}},
+		keyUses: 1,
+	}
+	rec = httptest.NewRecorder()
+	sshTestAPI(inUse).ServeHTTP(rec, httptest.NewRequest(http.MethodDelete, "/organization/"+sshOrgID+"/ssh/"+sshKeyID, nil))
+	if rec.Code != http.StatusConflict {
+		t.Errorf("in-use delete = %d, want 409; body = %s", rec.Code, rec.Body.String())
+	}
+
 	// A key from another organization is answered 404, like other resources.
 	other := &sshAgentStub{org: store.Organization{ID: sshOtherID},
 		keys: []store.Ssh{{ID: sshKeyID, OrganizationID: sshOrgID}}}
@@ -187,6 +210,17 @@ func TestAgentsJSONAPI(t *testing.T) {
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodDelete, "/organization/"+sshOrgID+"/agent/"+sshAgentID, nil))
 	if rec.Code != http.StatusNoContent || q.deletedAgt != sshAgentID {
 		t.Errorf("delete = %d, deleted %q", rec.Code, q.deletedAgt)
+	}
+
+	inUse := &sshAgentStub{
+		org:       store.Organization{ID: sshOrgID},
+		agents:    []store.Agent{{ID: sshAgentID, OrganizationID: sshOrgID}},
+		agentUses: 1,
+	}
+	rec = httptest.NewRecorder()
+	sshTestAPI(inUse).ServeHTTP(rec, httptest.NewRequest(http.MethodDelete, "/organization/"+sshOrgID+"/agent/"+sshAgentID, nil))
+	if rec.Code != http.StatusConflict || inUse.deletedAgt != "" {
+		t.Errorf("in-use delete = %d, deleted %q; body = %s", rec.Code, inUse.deletedAgt, rec.Body.String())
 	}
 }
 

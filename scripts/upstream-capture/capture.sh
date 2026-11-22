@@ -311,6 +311,21 @@ request organization-agent-create "/api/v1/organization/${rel_org}/agent" -X POS
 agent_new="$(python3 -c "import json;print(json.load(open('$out/organization-agent-create.json'))['data']['id'])")"
 request organization-agent-delete "/api/v1/organization/${rel_org}/agent/${agent_new}" -X DELETE
 
+# A key or pool that a workspace still points at is refused with Elide's
+# data-integrity 409, so the link is recorded too and cleared afterwards.
+request organization-ssh-link-in-use "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/ssh" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"ssh\",\"id\":\"${rel_ssh}\"}}"
+request organization-ssh-delete-in-use "/api/v1/organization/${rel_org}/ssh/${rel_ssh}" -X DELETE
+request organization-ssh-unlink-in-use "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/ssh" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' --data '{"data":null}'
+request organization-agent-link-in-use "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/agent" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"agent\",\"id\":\"${rel_agent}\"}}"
+request organization-agent-delete-in-use "/api/v1/organization/${rel_org}/agent/${rel_agent}" -X DELETE
+request organization-agent-unlink-in-use "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/agent" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' --data '{"data":null}'
+
 # Leave the disposable database as it was: these rows exist only for captures.
 pg "delete from vcs where id = '${rel_vcs}'; delete from ssh where id = '${rel_ssh}'; delete from agent where id = '${rel_agent}'" >/dev/null
 pg "delete from workspace where name in ('capture-atomic', 'capture-rel-workspace')" >/dev/null
