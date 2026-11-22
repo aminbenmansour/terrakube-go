@@ -259,9 +259,9 @@ object key.
 
 ## Management API — `/api/v1`
 
-Elide-generated JSON:API. This API implements 57 routes (organization, project,
-workspace, variable, globalvar, job, action, collection/item/reference and the
-atomic extension); the 106
+Elide-generated JSON:API. This API implements 65 routes (organization, project,
+workspace, variable, globalvar, job, action, collection/item/reference,
+ssh, agent and the atomic extension); the 106
 REST operations the UI actually sends are listed in
 `docs/upstream/ui-rest-operations.md`, with what is missing. Reference
 specification (upstream, v2.27.0) is at
@@ -381,6 +381,17 @@ yet (#44), so the routes are open behind the same bearer token.
 `included` rows, and workspace resources carry the audit attributes and
 `lastJobDate` upstream serialises.
 
+`ssh` is the Settings > SSH Keys screen and the workspace SSH picker: list, get,
+create, patch and delete under `/organization/:id/ssh`. The private key is
+write-only — requests accept `privateKey`, but no response echoes it, as
+upstream's `read private key` permission hides it. `agent` is the self-hosted
+agent pool the Agents screen and the workspace picker use: list, create and
+delete. Upstream requires no attribute beyond the JSON:API `type` on either, so
+a key without a name is accepted with `name: null`; upstream gates agent writes
+on superuser and ssh writes on a team permission, while this API has no RBAC yet
+(#44). `GET /workspace/:id?include=ssh,agent` now emits both `included` rows. The ssh
+private key is stored plaintext, like variable values, until #54 lands.
+
 `POST /operations` implements the JSON:API atomic operations extension the UI
 uses to create and update workspaces. It supports `op: add` (with `data.lid`,
 attributes and the same relationships as `POST /workspace`) and `op: update`
@@ -396,10 +407,10 @@ Current M1 limitations (tracked for later milestones):
   fine for smoke tests but must become SQL before production use.
 - Authentication is a single static bearer token (`TERRAKUBE_AUTH_TOKEN`).
   PATs, team tokens, executor tokens and Dex JWTs are not implemented yet.
-- `include=` is implemented only for the workspace's `variable`, `organization`
-  and `project`; relationship writes exist only for the workspace's `project`,
-  `vcs`, `ssh` and `agent`, and RSQL beyond `attr==value` / `attr==prefix*` is
-  not implemented.
+- `include=` is implemented only for the workspace's `variable`,
+  `organization`, `project`, `reference`, `ssh` and `agent`; relationship
+  writes exist only for the workspace's `project`, `vcs`, `ssh` and `agent`,
+  and RSQL beyond `attr==value` / `attr==prefix*` is not implemented.
 - Variable values are stored in plaintext. Upstream encrypts them with
   `io.terrakube.encryption.*`; this must land before anything is exposed.
 - `tag` and `workspacetag` are implemented through the TFE tag-binding
