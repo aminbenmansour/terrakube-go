@@ -49,3 +49,6 @@ workspace-relationship-ssh-clear	204	/api/v1/organization/70000000-0000-0000-000
 workspace-relationship-agent-set	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777/relationships/agent
 workspace-relationship-agent-clear	204	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777/relationships/agent
 workspace-relationship-unknown	404	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace/77777777-7777-4777-8777-777777777777/relationships/nope
+organization-atomic-create	200	/api/v1/operations
+organization-atomic-update	200	/api/v1/operations
+organization-atomic-unknown	400	/api/v1/operations
