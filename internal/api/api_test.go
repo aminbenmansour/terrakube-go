@@ -38,6 +38,7 @@ type stubQuerier struct {
 	tags            []store.Tag
 	workspaceTags   []store.Workspacetag
 	vcs             []store.Vc
+	templates       []store.Template
 	err             error
 	created         *store.CreateOrganizationParams
 	createdAction   *store.CreateActionParams

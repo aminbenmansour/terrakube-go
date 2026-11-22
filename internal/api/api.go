@@ -113,6 +113,15 @@ func New(deps Deps) http.Handler {
 			r.Delete("/", a.deleteVCS)
 		})
 
+		// Job-flow templates: Settings > Templates and the workspace default.
+		r.Get("/template", a.listTemplates)
+		r.Post("/template", a.createTemplate)
+		r.Route("/template/{templateID}", func(r chi.Router) {
+			r.Get("/", a.getTemplate)
+			r.Patch("/", a.updateTemplate)
+			r.Delete("/", a.deleteTemplate)
+		})
+
 		// SSH keys and self-hosted agent pools for workspace connections.
 		r.Get("/ssh", a.listSSHKeys)
 		r.Post("/ssh", a.createSSHKey)
