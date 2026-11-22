@@ -30,6 +30,7 @@ type Querier interface {
 	CreateSSHKey(ctx context.Context, arg CreateSSHKeyParams) (Ssh, error)
 	CreateStep(ctx context.Context, arg CreateStepParams) (Step, error)
 	CreateTag(ctx context.Context, arg CreateTagParams) (Tag, error)
+	CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error)
 	CreateTemplate(ctx context.Context, arg CreateTemplateParams) (Template, error)
 	CreateVCS(ctx context.Context, arg CreateVCSParams) (Vc, error)
 	CreateVariable(ctx context.Context, arg CreateVariableParams) (Variable, error)
@@ -46,6 +47,7 @@ type Querier interface {
 	DeleteReference(ctx context.Context, id string) error
 	DeleteSSHKey(ctx context.Context, id string) error
 	DeleteTag(ctx context.Context, id string) error
+	DeleteTeam(ctx context.Context, id string) error
 	DeleteTemplate(ctx context.Context, id string) error
 	DeleteVCS(ctx context.Context, id string) error
 	DeleteVariable(ctx context.Context, id string) error
@@ -74,6 +76,7 @@ type Querier interface {
 	GetStepByJobAndNumber(ctx context.Context, arg GetStepByJobAndNumberParams) (Step, error)
 	GetTag(ctx context.Context, id string) (Tag, error)
 	GetTagByName(ctx context.Context, arg GetTagByNameParams) (Tag, error)
+	GetTeam(ctx context.Context, id string) (Team, error)
 	GetTemplate(ctx context.Context, id string) (Template, error)
 	GetVCS(ctx context.Context, id string) (Vc, error)
 	GetVariable(ctx context.Context, id string) (Variable, error)
@@ -96,6 +99,7 @@ type Querier interface {
 	ListSSHKeysByOrganization(ctx context.Context, organizationID string) ([]Ssh, error)
 	ListStepsByJob(ctx context.Context, jobID int64) ([]Step, error)
 	ListTagsByOrganization(ctx context.Context, organizationID string) ([]Tag, error)
+	ListTeamsByOrganization(ctx context.Context, organizationID string) ([]Team, error)
 	ListTemplatesByOrganization(ctx context.Context, organizationID string) ([]Template, error)
 	ListVCSByOrganization(ctx context.Context, organizationID string) ([]Vc, error)
 	ListVariablesByWorkspace(ctx context.Context, workspaceID string) ([]Variable, error)
@@ -122,6 +126,7 @@ type Querier interface {
 	UpdateStepOutput(ctx context.Context, arg UpdateStepOutputParams) error
 	UpdateStepStatus(ctx context.Context, arg UpdateStepStatusParams) (Step, error)
 	UpdateTag(ctx context.Context, arg UpdateTagParams) (Tag, error)
+	UpdateTeam(ctx context.Context, arg UpdateTeamParams) (Team, error)
 	UpdateTemplate(ctx context.Context, arg UpdateTemplateParams) (Template, error)
 	UpdateVCS(ctx context.Context, arg UpdateVCSParams) (Vc, error)
 	UpdateVariable(ctx context.Context, arg UpdateVariableParams) (Variable, error)
