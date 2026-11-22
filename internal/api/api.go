@@ -113,6 +113,15 @@ func New(deps Deps) http.Handler {
 			r.Delete("/", a.deleteVCS)
 		})
 
+		// Teams: Settings > Teams and the access pickers.
+		r.Get("/team", a.listTeams)
+		r.Post("/team", a.createTeam)
+		r.Route("/team/{teamID}", func(r chi.Router) {
+			r.Get("/", a.getTeam)
+			r.Patch("/", a.updateTeam)
+			r.Delete("/", a.deleteTeam)
+		})
+
 		// Job-flow templates: Settings > Templates and the workspace default.
 		r.Get("/template", a.listTemplates)
 		r.Post("/template", a.createTemplate)
