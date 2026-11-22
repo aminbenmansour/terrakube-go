@@ -259,8 +259,9 @@ object key.
 
 ## Management API — `/api/v1`
 
-Elide-generated JSON:API. This API implements 22 routes (organization, project,
-workspace, variable); the 106 REST operations the UI actually sends are listed in
+Elide-generated JSON:API. This API implements 44 routes (organization, project,
+workspace, variable, globalvar, job, action and the atomic extension); the 106
+REST operations the UI actually sends are listed in
 `docs/upstream/ui-rest-operations.md`, with what is missing. Reference
 specification (upstream, v2.27.0) is at
 `openapi-spec/v2_27_0.yml`; resources include organization, project, workspace,
@@ -356,6 +357,14 @@ which is upstream's `putIfAbsent` order. A sensitive global's value is omitted
 from every response, including the create response, as upstream does. Duplicate
 keys are `409`; upstream's lifecycle hook throws and Spring answers `500`, a
 bug recorded in the captures rather than copied.
+
+`action` is the catalog behind the workspace resource drawer and Settings >
+Actions. Ids are the editor's slugs (`terrakube.open-ai`), not UUIDs; the list
+answers the UI's `filter[action]=active==true;type=in=(...)` expression, reads
+are open, and writes exist because the UI's editor sends them (upstream
+restricts writes to superusers; this API has no RBAC yet). Creating does not
+set `createdBy`/`updatedBy` because a static token carries no user identity, so
+they are null; timestamps are set.
 
 `POST /operations` implements the JSON:API atomic operations extension the UI
 uses to create and update workspaces. It supports `op: add` (with `data.lid`,

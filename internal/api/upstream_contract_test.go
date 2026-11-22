@@ -333,6 +333,43 @@ var replayedCaptures = map[string]replay{
 		body:    `{"data":{"type":"globalvar","attributes":{"value":"x","description":"d","sensitive":false,"hcl":false,"category":"ENV"}}}`,
 		querier: captureGlobalVarStore(),
 	},
+	"action-list": {
+		target:  "resource-query",
+		querier: captureActionStore(),
+	},
+	"action-list-filtered": {
+		target:  "resource-query",
+		querier: captureActionStore(),
+	},
+	"action-get": {
+		target:  "resource-query",
+		querier: captureActionStore(),
+	},
+	"action-fields": {
+		target:  "resource-query",
+		querier: captureActionStore(),
+	},
+	"action-missing": {
+		target:  "resource-query",
+		querier: &stubQuerier{},
+	},
+	"action-create": {
+		target:  "resource-query",
+		method:  http.MethodPost,
+		body:    `{"data":{"type":"action","id":"capture.temp-action","attributes":{"name":"Capture Temp","label":"Temp","category":"General","description":"capture","type":"Workspace/Action","action":"dGVzdA==","displayCriteria":"[{\"filter\":\"true\"}]","version":"1.0.0","active":true}}}`,
+		querier: captureActionStore(),
+	},
+	"action-patch": {
+		target:  "resource-query",
+		method:  http.MethodPatch,
+		body:    `{"data":{"type":"action","id":"capture.temp-action","attributes":{"label":"Temp after","active":false}}}`,
+		querier: captureActionStore(),
+	},
+	"action-delete": {
+		target:  "resource-query",
+		method:  http.MethodDelete,
+		querier: captureActionStore(),
+	},
 }
 
 // deferredCaptures are recorded but cannot be asserted yet. Each needs a reason,
@@ -398,6 +435,15 @@ func captureGlobalVarStore() *stubQuerier {
 	}
 }
 
+func captureActionStore() *stubQuerier {
+	return &stubQuerier{actions: []store.Action{
+		{ID: "terrakube.open-documentation", Name: "Open Documentation", Label: "Open Documentation", Category: "General", Type: "Workspace/ResourceDrawer/Action", Action: "dGVzdA==", DisplayCriteria: `[{"filter": "true"}]`, Version: "1.0.0", Active: true},
+		{ID: "terrakube.resource-details", Name: "Resource Details", Label: "Details", Category: "General", Type: "Workspace/ResourceDrawer/Tab", Action: "dGVzdA==", DisplayCriteria: `[{"filter": "true"}]`, Version: "1.0.0", Active: true},
+		{ID: "terrakube.open-ai", Name: "Open AI", Label: "Open AI", Category: "AI", Type: "Workspace/Action", Action: "dGVzdA==", DisplayCriteria: `[{"filter": "true"}]`, Version: "0.1.0", Active: false},
+		{ID: "capture.temp-action", Name: "Capture Temp", Label: "Temp", Category: "General", Type: "Workspace/Action", Action: "dGVzdA==", DisplayCriteria: `[{"filter":"true"}]`, Version: "1.0.0", Active: true},
+	}}
+}
+
 func captureJobs() []store.Job {
 	return []store.Job{{
 		ID:             2,
@@ -406,6 +452,30 @@ func captureJobs() []store.Job {
 		Status:         "completed",
 		Via:            "UI",
 	}}
+}
+
+// captureJobStore answers for whichever job id the job capture was taken
+// against; the serial changes on every capture run.
+func captureJobStore(id string) *stubQuerier {
+	jobID, _ := strconv.ParseInt(id, 10, 64)
+	return &stubQuerier{
+		jobs: []store.Job{{
+			ID:             jobID,
+			OrganizationID: capturedOrgID,
+			WorkspaceID:    capturedWSID,
+			Status:         "completed",
+			Via:            "UI",
+		}},
+		steps: []store.Step{{
+			ID:         capturedStepID,
+			JobID:      jobID,
+			StepNumber: 1,
+			Name:       strPtr("Plan"),
+			Status:     strPtr("completed"),
+			Output:     strPtr("ok"),
+		}},
+		workspaces: captureWorkspaces(),
+	}
 }
 
 func captureSteps() []store.Step {
@@ -587,8 +657,10 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 				target = "/organization/" + idCapture.resourceID(t) + "/project"
 			case "job":
 				target = "/organization/" + capturedOrgID + "/job/" + idCapture.resourceID(t)
+				querier = captureJobStore(idCapture.resourceID(t))
 			case "job-include":
 				target = "/organization/" + capturedOrgID + "/job/" + idCapture.resourceID(t) + "?include=step,workspace"
+				querier = captureJobStore(idCapture.resourceID(t))
 			case "workspace":
 				target = "/organization/" + capturedRelOrg + "/workspace/" + capturedRelWS
 			case "workspace-collection":
@@ -733,4 +805,38 @@ func sortedKeys(m map[string]any) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+func (s *stubQuerier) ListActions(context.Context) ([]store.Action, error) {
+	return s.actions, s.err
+}
+
+func (s *stubQuerier) GetAction(_ context.Context, id string) (store.Action, error) {
+	for _, action := range s.actions {
+		if action.ID == id {
+			return action, nil
+		}
+	}
+	return store.Action{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateAction(_ context.Context, arg store.CreateActionParams) (store.Action, error) {
+	return store.Action{
+		ID: arg.ID, Name: arg.Name, Label: arg.Label, Category: arg.Category,
+		Description: arg.Description, Type: arg.Type, Action: arg.Action,
+		DisplayCriteria: arg.DisplayCriteria, Version: arg.Version, Active: arg.Active,
+	}, s.err
+}
+
+func (s *stubQuerier) UpdateAction(_ context.Context, arg store.UpdateActionParams) (store.Action, error) {
+	for _, action := range s.actions {
+		if action.ID == arg.ID {
+			return action, s.err
+		}
+	}
+	return store.Action{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) DeleteAction(context.Context, string) error {
+	return s.err
 }

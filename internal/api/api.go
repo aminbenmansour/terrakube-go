@@ -64,6 +64,16 @@ func New(deps Deps) http.Handler {
 	// JSON:API atomic operations; the UI creates and updates workspaces here.
 	r.Post("/operations", a.atomicOperations)
 
+	// The action catalog fills the workspace resource drawer and the Settings >
+	// Actions editor.
+	r.Get("/action", a.listActions)
+	r.Post("/action", a.createAction)
+	r.Route("/action/{actionID}", func(r chi.Router) {
+		r.Get("/", a.getAction)
+		r.Patch("/", a.updateAction)
+		r.Delete("/", a.deleteAction)
+	})
+
 	// Organizations
 	r.Get("/organization", a.listOrganizations)
 	r.Post("/organization", a.createOrganization)
@@ -173,6 +183,11 @@ func requireUUIDParams(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, MountPrefix)
 		segments := strings.Split(strings.Trim(path, "/"), "/")
+		// Actions are keyed by the editor's slug ("terrakube.open-ai"), not a UUID.
+		if len(segments) > 0 && segments[0] == "action" {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if len(segments) > 1 && segments[1] != "" {
 			if _, err := uuid.Parse(segments[1]); err != nil {
 				jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Value", "Invalid value: "+segments[1])

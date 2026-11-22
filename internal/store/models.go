@@ -21,6 +21,23 @@ type Access struct {
 	WorkspaceID     string  `json:"workspace_id"`
 }
 
+type Action struct {
+	ID              string             `json:"id"`
+	Name            string             `json:"name"`
+	Label           string             `json:"label"`
+	Category        string             `json:"category"`
+	Description     *string            `json:"description"`
+	Type            string             `json:"type"`
+	Action          string             `json:"action"`
+	DisplayCriteria string             `json:"display_criteria"`
+	Version         string             `json:"version"`
+	Active          bool               `json:"active"`
+	CreatedDate     pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate     pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy       *string            `json:"created_by"`
+	UpdatedBy       *string            `json:"updated_by"`
+}
+
 type Content struct {
 	ID            string  `json:"id"`
 	AutoQueueRuns bool    `json:"auto_queue_runs"`

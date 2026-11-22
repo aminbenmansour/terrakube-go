@@ -1,3 +1,4 @@
+DELETE /action/{actionID}/
 DELETE /organization/{organizationID}/
 DELETE /organization/{organizationID}/globalvar/{globalVarID}/
 DELETE /organization/{organizationID}/workspace/{workspaceID}/
@@ -5,6 +6,8 @@ DELETE /organization/{organizationID}/workspace/{workspaceID}/variable/{variable
 DELETE /project/{projectID}/
 DELETE /variable/{variableID}/
 DELETE /workspace/{workspaceID}/
+GET /action
+GET /action/{actionID}/
 GET /organization
 GET /organization/{organizationID}/
 GET /organization/{organizationID}/globalvar
@@ -21,6 +24,7 @@ GET /project/{projectID}/workspace
 GET /variable/{variableID}/
 GET /workspace/{workspaceID}/
 GET /workspace/{workspaceID}/variable
+PATCH /action/{actionID}/
 PATCH /organization/{organizationID}/
 PATCH /organization/{organizationID}/globalvar/{globalVarID}/
 PATCH /organization/{organizationID}/job/{jobID}/
@@ -30,6 +34,7 @@ PATCH /organization/{organizationID}/workspace/{workspaceID}/variable/{variableI
 PATCH /project/{projectID}/
 PATCH /variable/{variableID}/
 PATCH /workspace/{workspaceID}/
+POST /action
 POST /operations
 POST /organization
 POST /organization/{organizationID}/globalvar
