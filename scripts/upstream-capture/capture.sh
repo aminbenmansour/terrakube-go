@@ -326,6 +326,34 @@ request organization-agent-delete-in-use "/api/v1/organization/${rel_org}/agent/
 request organization-agent-unlink-in-use "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/agent" -X PATCH \
   -H 'Content-Type: application/vnd.api+json' --data '{"data":null}'
 
+# VCS providers: Settings > VCS and the workspace source picker. The seeded
+# vcs row is used for the link/include/delete-in-use captures, then removed by
+# the delete itself (the cleanup at the end tolerates the missing row).
+request organization-vcs-list "/api/v1/organization/${rel_org}/vcs"
+request organization-vcs-create "/api/v1/organization/${rel_org}/vcs" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"vcs","attributes":{"name":"capture-vcs-created","description":"capture","vcsType":"GITLAB","connectionType":"STANDALONE","clientId":"client","clientSecret":"secret","privateKey":"key","callback":"callback","endpoint":"https://gitlab.example.com","apiUrl":"https://gitlab.example.com/api/v4","redirectUrl":"https://ui.example.com/settings/vcs","status":"PENDING"}}}'
+vcs_new="$(python3 -c "import json;print(json.load(open('$out/organization-vcs-create.json'))['data']['id'])")"
+request organization-vcs-get "/api/v1/organization/${rel_org}/vcs/${vcs_new}"
+request organization-vcs-patch "/api/v1/organization/${rel_org}/vcs/${vcs_new}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"vcs\",\"id\":\"${vcs_new}\",\"attributes\":{\"description\":\"after\",\"status\":\"COMPLETED\"}}}"
+request organization-vcs-create-missing-required "/api/v1/organization/${rel_org}/vcs" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"vcs","attributes":{"name":"capture-vcs-incomplete"}}}'
+request organization-vcs-create-invalid-type "/api/v1/organization/${rel_org}/vcs" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"vcs","attributes":{"name":"capture-vcs-bad","description":"capture","vcsType":"NOPE"}}}'
+request organization-vcs-missing "/api/v1/organization/${rel_org}/vcs/00000000-0000-4000-8000-000000000095"
+request workspace-relationship-vcs-link-in-use "/api/v1/organization/${rel_org}/workspace/${rel_ws}/relationships/vcs" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"vcs\",\"id\":\"${rel_vcs}\"}}"
+request workspace-include-vcs "/api/v1/organization/${rel_org}/workspace/${rel_ws}?include=vcs"
+request organization-vcs-delete-in-use "/api/v1/organization/${rel_org}/vcs/${rel_vcs}" -X DELETE
+request workspace-get-after-vcs-delete "/api/v1/organization/${rel_org}/workspace/${rel_ws}"
+request organization-vcs-delete "/api/v1/organization/${rel_org}/vcs/${vcs_new}" -X DELETE
+request organization-vcs-get-after-delete "/api/v1/organization/${rel_org}/vcs/${vcs_new}"
+
 # Tags: Settings > Tags and the workspace tag editor. The tag delete cascades
 # its bindings, so the workspace rows go with it.
 pg "delete from workspacetag where tag_id in (select id from tag where name like 'capture-tag%');
