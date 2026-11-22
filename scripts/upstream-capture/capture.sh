@@ -354,6 +354,27 @@ request workspace-get-after-vcs-delete "/api/v1/organization/${rel_org}/workspac
 request organization-vcs-delete "/api/v1/organization/${rel_org}/vcs/${vcs_new}" -X DELETE
 request organization-vcs-get-after-delete "/api/v1/organization/${rel_org}/vcs/${vcs_new}"
 
+# Templates: Settings > Templates and the workspace default template picker.
+# Upstream requires no attribute, so the empty create is part of the contract.
+pg "delete from template where name like 'capture-template%' and organization_id = '${rel_org}'" >/dev/null
+request organization-template-list "/api/v1/organization/${rel_org}/template"
+request organization-template-create "/api/v1/organization/${rel_org}/template" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"template","attributes":{"name":"capture-template","description":"capture","version":"9.9.9","tcl":"ZmxvdzoK"}}}'
+template_new="$(python3 -c "import json;print(json.load(open('$out/organization-template-create.json'))['data']['id'])")"
+request organization-template-get "/api/v1/organization/${rel_org}/template/${template_new}"
+request organization-template-patch "/api/v1/organization/${rel_org}/template/${template_new}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"template\",\"id\":\"${template_new}\",\"attributes\":{\"description\":\"after\",\"version\":\"10.0.0\",\"tcl\":\"ZmxvdzoKICAtIHR5cGU6ICJ0ZXJyYWZvcm1QbGFuIg==\"}}}"
+request organization-template-create-empty "/api/v1/organization/${rel_org}/template" -X POST \
+  -H 'Content-Type: application/vnd.api+json' --data '{"data":{"type":"template","attributes":{}}}'
+template_empty="$(python3 -c "import json;print(json.load(open('$out/organization-template-create-empty.json'))['data']['id'])")"
+request organization-template-missing "/api/v1/organization/${rel_org}/template/00000000-0000-4000-8000-000000000096"
+request organization-template-bad-id "/api/v1/organization/${rel_org}/template/not-a-uuid"
+request organization-template-delete "/api/v1/organization/${rel_org}/template/${template_new}" -X DELETE
+request organization-template-get-after-delete "/api/v1/organization/${rel_org}/template/${template_new}"
+request organization-template-delete-empty "/api/v1/organization/${rel_org}/template/${template_empty}" -X DELETE
+
 # Tags: Settings > Tags and the workspace tag editor. The tag delete cascades
 # its bindings, so the workspace rows go with it.
 pg "delete from workspacetag where tag_id in (select id from tag where name like 'capture-tag%');
@@ -399,6 +420,7 @@ request organization-tag-delete-unnamed "/api/v1/organization/${rel_org}/tag/${t
 
 # Leave the disposable database as it was: these rows exist only for captures.
 pg "delete from vcs where id = '${rel_vcs}'; delete from ssh where id = '${rel_ssh}'; delete from agent where id = '${rel_agent}'" >/dev/null
+pg "delete from template where name like 'capture-template%' and organization_id = '${rel_org}'" >/dev/null
 pg "delete from workspace where name in ('capture-atomic', 'capture-rel-workspace')" >/dev/null
 pg "delete from job where commit_id = 'deaDBEEF'" >/dev/null
 

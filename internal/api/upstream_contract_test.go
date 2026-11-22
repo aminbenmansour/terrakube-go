@@ -576,6 +576,48 @@ var replayedCaptures = map[string]replay{
 		target:  "vcs-query",
 		querier: &stubQuerier{},
 	},
+	"organization-template-list": {
+		target: "template-query",
+	},
+	"organization-template-create": {
+		target: "template-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"template","attributes":{"name":"capture-template","description":"capture","version":"9.9.9","tcl":"ZmxvdzoK"}}}`,
+	},
+	"organization-template-get": {
+		target: "template-query",
+	},
+	"organization-template-patch": {
+		target: "template-query",
+		idFrom: "organization-template-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"template","id":"{id}","attributes":{"description":"after","version":"10.0.0","tcl":"ZmxvdzoKICAtIHR5cGU6ICJ0ZXJyYWZvcm1QbGFuIg=="}}}`,
+	},
+	"organization-template-create-empty": {
+		target: "template-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"template","attributes":{}}}`,
+	},
+	"organization-template-missing": {
+		target: "template-query",
+	},
+	"organization-template-bad-id": {
+		target: "template-query",
+	},
+	"organization-template-delete": {
+		target: "template-query",
+		idFrom: "organization-template-create",
+		method: http.MethodDelete,
+	},
+	"organization-template-get-after-delete": {
+		target:  "template-query",
+		querier: &stubQuerier{},
+	},
+	"organization-template-delete-empty": {
+		target: "template-query",
+		idFrom: "organization-template-create-empty",
+		method: http.MethodDelete,
+	},
 	"organization-tag-list": {
 		target: "tag-query",
 		// The recording predates the create, so the list is empty.
@@ -810,6 +852,22 @@ func captureVCSStore(t *testing.T, captures map[string]upstreamCapture) *stubQue
 			ID: capturedRelWS, OrganizationID: capturedRelOrg, Name: "capture-rel-workspace",
 			VcsID: strPtr(capturedRelVCS),
 		}},
+	}
+}
+
+func captureTemplateStore(t *testing.T, captures map[string]upstreamCapture) *stubQuerier {
+	t.Helper()
+	created := captures["organization-template-create"].resourceID(t)
+	empty := captures["organization-template-create-empty"].resourceID(t)
+
+	return &stubQuerier{
+		templates: []store.Template{
+			{
+				ID: created, Name: strPtr("capture-template"), Description: strPtr("capture"),
+				Version: strPtr("9.9.9"), Tcl: strPtr("ZmxvdzoK"), OrganizationID: capturedRelOrg,
+			},
+			{ID: empty, OrganizationID: capturedRelOrg},
+		},
 	}
 }
 
@@ -1073,6 +1131,11 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 				target = strings.TrimPrefix(capture.path, "/api/v1")
 				if querier == nil {
 					querier = captureVCSStore(t, captures)
+				}
+			case "template-query":
+				target = strings.TrimPrefix(capture.path, "/api/v1")
+				if querier == nil {
+					querier = captureTemplateStore(t, captures)
 				}
 			}
 			if querier == nil {
@@ -1492,6 +1555,49 @@ func (s *stubQuerier) ListWorkspaceIDsByVCS(_ context.Context, id *string) ([]st
 		}
 	}
 	return ids, s.err
+}
+
+func (s *stubQuerier) ListTemplatesByOrganization(context.Context, string) ([]store.Template, error) {
+	return s.templates, s.err
+}
+
+func (s *stubQuerier) GetTemplate(_ context.Context, id string) (store.Template, error) {
+	for _, template := range s.templates {
+		if template.ID == id {
+			return template, nil
+		}
+	}
+	return store.Template{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateTemplate(_ context.Context, arg store.CreateTemplateParams) (store.Template, error) {
+	return store.Template{
+		ID: arg.ID, Name: arg.Name, Description: arg.Description, Version: arg.Version,
+		Tcl: arg.Tcl, OrganizationID: arg.OrganizationID,
+	}, s.err
+}
+
+func (s *stubQuerier) UpdateTemplate(_ context.Context, arg store.UpdateTemplateParams) (store.Template, error) {
+	for i := range s.templates {
+		if s.templates[i].ID == arg.ID {
+			s.templates[i].Name = arg.Name
+			s.templates[i].Description = arg.Description
+			s.templates[i].Version = arg.Version
+			s.templates[i].Tcl = arg.Tcl
+			return s.templates[i], s.err
+		}
+	}
+	return store.Template{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) DeleteTemplate(_ context.Context, id string) error {
+	for i := range s.templates {
+		if s.templates[i].ID == id {
+			s.templates = append(s.templates[:i], s.templates[i+1:]...)
+			return s.err
+		}
+	}
+	return s.err
 }
 
 func (s *stubQuerier) GetAction(_ context.Context, id string) (store.Action, error) {

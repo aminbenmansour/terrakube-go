@@ -40,6 +40,7 @@ tools that produced them are in
 | `ssh` | organization-scoped CRUD; `privateKey` is never returned; delete in use **409** | same; no team permission check yet (#44) |
 | `agent` | list, create, delete; delete in use **409**; superuser-only writes | same routes and 409; writes open (no RBAC yet) |
 | `vcs` | organization-scoped CRUD; `name`/`description`/`vcsType` required; invalid enum **400**; secrets never returned; delete unlinks its workspaces | same routes and statuses; secrets plaintext until #54 |
+| `template` | organization-scoped CRUD; no required attributes, so an empty create is **201**; unknown id **404**, malformed **400**; unknown PATCH attribute **404** | same routes and statuses; an unknown PATCH attribute is ignored |
 | `tag` | organization-scoped CRUD; optional name; duplicate name **500** | same routes and optional name; duplicate **409** (unique index) |
 | `workspacetag` | list/create/patch/delete under the workspace; missing/unknown `tagId` **409**; duplicate binding **500** | same routes and 409; duplicate binding **409** |
 | `collection` / `item` / `reference` | organization-scoped CRUD, `GET /reference/:id/collection?include=item`; writes gated on a team permission; missing required attribute **409**; no `priority` means **0** | same routes and statuses; writes are open (no RBAC yet) |
@@ -50,7 +51,7 @@ tools that produced them are in
 The differences that matter are deliberate: we are a superset where upstream is
 stricter (paging on `organization`, extra error members), and leaving a
 relationship out is honest — the tables behind most of them (`team`,
-`policySet`, `template`, `provider`, …) do not exist yet.
+`policySet`, `provider`, …) do not exist yet.
 Workspace `vcs`, `ssh` and `agent` ids are validated against their tables now.
 See `docs/upstream/ui-rest-operations.md`.
 
