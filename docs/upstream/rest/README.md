@@ -34,6 +34,9 @@ tools that produced them are in
 | `relationships.vcs`/`.ssh`/`.agent` on workspace | stored, validated against their tables | ids stored; the tables do not exist yet (#48, #120), so an id is not validated |
 | `PATCH /relationships/{relation}` | `204`, project validated; vcs/ssh/agent must exist | workspace project/vcs/ssh/agent only; project validated, the others not |
 | Duplicate `globalvar` key | **500** (a lifecycle hook throws) | **409** — the unique constraint, not upstream's bug |
+| `action` ids | editor slugs (`terrakube.open-ai`), not UUIDs | same |
+| `action` list filter | `filter[action]=active==true;type=in=('A','B')` | same |
+| `action` create / patch / delete | **201** with the resource / **204** / **204**; audit fields set from the PAT's user | same statuses; `createdBy`/`updatedBy` are null (no user in the token) |
 | `POST /operations` (atomic) | `add`/`update`; `Content-Type` **and** `Accept` must be the atomic media type or **415**; an unsupported op is a no-op 200 | same shape and 415; an unsupported op is **400** and a failure is one error object, not an array of per-op results |
 | Resources | `type`, `id`, `attributes`, `relationships` | `type`, `id`, `attributes`, and `relationships` for the links that exist |
 | Error objects | `detail` only | `detail`, `status`, `title` |

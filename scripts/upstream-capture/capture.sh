@@ -66,7 +66,7 @@ request delete-method-not-allowed    '/api/v1/organization' -X PATCH \
 # and one step in the disposable upstream database. The ids are read back rather
 # than guessed.
 pg() { podman exec -i tk-upstream-postgres psql -p 5433 -U terrakube -d terrakubedb -tAq -c "$1"; }
-IFS='|' read -r job_org job_ws <<< "$(pg "select organization_id, id from workspace where deleted = false order by id limit 1")"
+IFS='|' read -r job_org job_ws <<< "$(pg "select organization_id, id from workspace where deleted = false and name not like 'capture%' order by id limit 1")"
 # Repeatable: drop the row a previous run seeded, or its NULL booleans poison
 # every organization read (steps go with it via ON DELETE CASCADE).
 pg "delete from job where commit_id = 'deaDBEEF'" >/dev/null
@@ -103,6 +103,7 @@ IFS='|' read -r rel_org rel_p1 rel_p2 <<< "$(pg "select organization_id, min(id)
   group by organization_id having count(*) > 1 order by organization_id limit 1")"
 rel_foreign="$(pg "select id from project where organization_id <> '${rel_org}' order by id limit 1")"
 rel_ws='77777777-7777-4777-8777-777777777777'
+pg "delete from job where workspace_id in (select id from workspace where name like 'capture%')" >/dev/null
 pg "delete from workspace where id = '${rel_ws}' or name = 'capture-rel-workspace'" >/dev/null
 pg "insert into workspace (id, name, source, branch, terraform_version, organization_id)
     values ('${rel_ws}', 'capture-rel-workspace',
@@ -220,5 +221,26 @@ request organization-globalvar-duplicate "/api/v1/organization/${gv_org}/globalv
   --data '{"data":{"type":"globalvar","attributes":{"key":"CAPTURE_ONE","value":"dup","description":"d","sensitive":false,"hcl":false,"category":"ENV"}}}'
 pg "delete from globalvar where variable_key like 'CAPTURE\_%'" >/dev/null
 pg "delete from vcs where id = '${rel_vcs}'; delete from ssh where id = '${rel_ssh}'; delete from agent where id = '${rel_agent}'" >/dev/null
+
+# The action catalog. Ids are the editor's slugs, not UUIDs, and only a
+# superuser may write; the demo PAT is one. The temp row is removed at the end.
+pg "delete from action where id = 'capture.temp-action'" >/dev/null
+request action-list              '/api/v1/action'
+request action-list-filtered     "/api/v1/action?filter[action]=active==true%3Btype=in=('Workspace/ResourceDrawer/Action','Workspace/ResourceDrawer/Tab')"
+request action-get               '/api/v1/action/terrakube.open-documentation'
+request action-fields            '/api/v1/action?fields[action]=name,active'
+request action-missing           '/api/v1/action/nope'
+request action-create            '/api/v1/action' -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"action","id":"capture.temp-action","attributes":{"name":"Capture Temp","label":"Temp","category":"General","description":"capture","type":"Workspace/Action","action":"dGVzdA==","displayCriteria":"[{\"filter\":\"true\"}]","version":"1.0.0","active":true}}}'
+request action-patch             '/api/v1/action/capture.temp-action' -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"action","id":"capture.temp-action","attributes":{"label":"Temp after","active":false}}}'
+request action-delete            '/api/v1/action/capture.temp-action' -X DELETE
+pg "delete from action where id = 'capture.temp-action'" >/dev/null
+
+# Leave the disposable database as it was: these rows exist only for captures.
+pg "delete from workspace where name in ('capture-atomic', 'capture-rel-workspace')" >/dev/null
+pg "delete from job where commit_id = 'deaDBEEF'" >/dev/null
 
 echo "wrote $(wc -l < "$out/index.tsv") captures to $out"
