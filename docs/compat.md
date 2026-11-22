@@ -259,9 +259,9 @@ object key.
 
 ## Management API — `/api/v1`
 
-Elide-generated JSON:API. This API implements 84 routes (organization, project,
+Elide-generated JSON:API. This API implements 89 routes (organization, project,
 workspace, variable, globalvar, job, action, collection/item/reference,
-ssh, agent, vcs, template, tag/workspacetag and the atomic extension); the 106
+ssh, agent, vcs, template, team, tag/workspacetag and the atomic extension); the 106
 REST operations the UI actually sends are listed in
 `docs/upstream/ui-rest-operations.md`, with what is missing. Reference
 specification (upstream, v2.27.0) is at
@@ -393,6 +393,15 @@ on superuser and ssh writes on a team permission, while this API has no RBAC yet
 a key or pool a workspace still points at answers upstream's data-integrity
 `409` rather than leaving a dangling id. The ssh private key is stored
 plaintext, like variable values, until #54 lands.
+
+`team` is the Settings > Teams screen and the name the access and project-access
+entries carry: list, get, create, patch and delete under
+`/organization/:id/team`. `name` is the only required attribute (missing or null
+answers upstream's `409`); every permission is a boolean, missing ones default to
+false except `destroyJob`, which defaults to true as upstream does. `role` is a
+free string upstream does not validate, and null is accepted. Upstream gates
+team writes on superuser; this API has no RBAC yet (#44), so the routes are open
+behind the bearer token and nothing enforces the permissions stored on the row.
 
 `template` is the Settings > Templates screen and the source of the workspace's
 `defaultTemplate`: list, get, create, patch and delete under
@@ -581,8 +590,8 @@ Differences from upstream at this stage:
 - UUID primary keys stay `varchar(36)` as upstream.
 - Audit columns use upstream names (`created_date`, `created_by`,
   `updated_date`, `updated_by`).
-- Additional upstream tables (VCS, teams, tokens, registry, policies) arrive in
-  later migrations rather than all at once.
+- Additional upstream tables (tokens, registry, policies) arrive in later
+  migrations rather than all at once.
 
 ## UI contract
 
