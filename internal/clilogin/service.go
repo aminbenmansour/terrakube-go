@@ -49,8 +49,8 @@ type Service struct {
 	maxDays     int
 }
 
-// New builds the service.
-func New(store Store, dex Exchanger, pats TokenIssuer, defaultDays, maxDays int) *Service {
+// NewService builds the service.
+func NewService(store Store, dex Exchanger, pats TokenIssuer, defaultDays, maxDays int) *Service {
 	if maxDays > 365 {
 		maxDays = 365
 	}

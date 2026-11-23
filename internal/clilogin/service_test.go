@@ -159,7 +159,7 @@ func newTestService(t *testing.T) (*Service, *fakeStore, *fakeDex, *fakeIssuer) 
 		Groups: []string{"developers"},
 	}}
 	pats := &fakeIssuer{token: "signed-token"}
-	return New(store, dex, pats, 30, 365), store, dex, pats
+	return NewService(store, dex, pats, 30, 365), store, dex, pats
 }
 
 const goodVerifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
@@ -381,7 +381,7 @@ func TestConsentDaysAreClamped(t *testing.T) {
 		t.Errorf("Authorize(366 days) = %v, want ErrBadRequest", err)
 	}
 
-	clamped := New(newFakeStore(), &fakeDex{}, &fakeIssuer{}, 30, 999)
+	clamped := NewService(newFakeStore(), &fakeDex{}, &fakeIssuer{}, 30, 999)
 	if clamped.MaxDays() != 365 || clamped.DefaultDays() != 30 {
 		t.Errorf("MaxDays/DefaultDays = %d/%d, want 365/30", clamped.MaxDays(), clamped.DefaultDays())
 	}
