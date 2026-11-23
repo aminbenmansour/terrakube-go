@@ -28,6 +28,7 @@ type Querier interface {
 	CreateNotificationConfiguration(ctx context.Context, arg CreateNotificationConfigurationParams) (NotificationConfiguration, error)
 	CreateNotificationTrigger(ctx context.Context, arg CreateNotificationTriggerParams) (NotificationTrigger, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
+	CreatePat(ctx context.Context, arg CreatePatParams) (Pat, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateReference(ctx context.Context, arg CreateReferenceParams) (Reference, error)
 	CreateSSHKey(ctx context.Context, arg CreateSSHKeyParams) (Ssh, error)
@@ -73,6 +74,7 @@ type Querier interface {
 	GetNotificationTrigger(ctx context.Context, id string) (NotificationTrigger, error)
 	GetOrganization(ctx context.Context, id string) (Organization, error)
 	GetOrganizationByName(ctx context.Context, name string) (Organization, error)
+	GetPat(ctx context.Context, id string) (Pat, error)
 	// "running" is included so an executor that reclaims a crashed job resumes the
 	// interrupted step instead of treating the job as finished.
 	GetPendingStepByJob(ctx context.Context, jobID int64) (Step, error)
@@ -105,6 +107,7 @@ type Querier interface {
 	ListNotificationConfigurationsByWorkspace(ctx context.Context, workspaceID *string) ([]NotificationConfiguration, error)
 	ListNotificationTriggersByConfiguration(ctx context.Context, configurationID string) ([]NotificationTrigger, error)
 	ListOrganizations(ctx context.Context) ([]Organization, error)
+	ListPatsByCreator(ctx context.Context, createdBy *string) ([]Pat, error)
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
 	ListReferencesByCollection(ctx context.Context, collectionID string) ([]Reference, error)
 	ListReferencesByWorkspace(ctx context.Context, workspaceID string) ([]Reference, error)
@@ -122,7 +125,9 @@ type Querier interface {
 	SetJobOverrideSource(ctx context.Context, arg SetJobOverrideSourceParams) (Job, error)
 	SetWorkspaceLastJob(ctx context.Context, arg SetWorkspaceLastJobParams) error
 	SetWorkspaceLock(ctx context.Context, arg SetWorkspaceLockParams) (Workspace, error)
+	SoftDeletePat(ctx context.Context, arg SoftDeletePatParams) error
 	SoftDeleteWorkspace(ctx context.Context, id string) error
+	StampPatLastUsed(ctx context.Context, id string) error
 	UpdateAction(ctx context.Context, arg UpdateActionParams) (Action, error)
 	UpdateCollection(ctx context.Context, arg UpdateCollectionParams) (Collection, error)
 	UpdateContentStatus(ctx context.Context, arg UpdateContentStatusParams) (Content, error)

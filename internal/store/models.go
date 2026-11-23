@@ -174,6 +174,19 @@ type Organization struct {
 	Icon          *string `json:"icon"`
 }
 
+type Pat struct {
+	ID          string             `json:"id"`
+	Days        *int32             `json:"days"`
+	Description *string            `json:"description"`
+	Deleted     bool               `json:"deleted"`
+	Source      string             `json:"source"`
+	LastUsedAt  pgtype.Timestamptz `json:"last_used_at"`
+	CreatedDate pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy   *string            `json:"created_by"`
+	UpdatedBy   *string            `json:"updated_by"`
+}
+
 type Project struct {
 	ID             string  `json:"id"`
 	Name           string  `json:"name"`
