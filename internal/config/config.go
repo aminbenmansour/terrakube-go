@@ -32,10 +32,15 @@ type Config struct {
 	AuthToken           string
 	InternalTokenSecret string
 	UploadTicketSecret  string
-	StateMaxSizeBytes   int64
-	ShutdownTimeout     time.Duration
-	DexClientID         string
-	DexIssuerURL        string
+	// PATSecret signs personal access tokens; empty leaves /pat/v1 disabled.
+	PATSecret string
+	// AdminGroup is the group (or email) allowed to act as instance owner,
+	// upstream's io.terrakube.owner.
+	AdminGroup        string
+	StateMaxSizeBytes int64
+	ShutdownTimeout   time.Duration
+	DexClientID       string
+	DexIssuerURL      string
 	// DexEnabled accepts Dex JWTs as bearer credentials. Off by default so a
 	// development stack with no identity provider keeps working.
 	DexEnabled bool
@@ -99,6 +104,8 @@ func Load() (Config, error) {
 		AuthToken:             env("TERRAKUBE_AUTH_TOKEN", ""),
 		InternalTokenSecret:   envFirst([]string{"TERRAKUBE_INTERNAL_TOKEN_SECRET", "IO_TERRAKUBE_TOKEN_INTERNAL"}, ""),
 		UploadTicketSecret:    env("TERRAKUBE_UPLOAD_TICKET_SECRET", ""),
+		PATSecret:             env("TERRAKUBE_PAT_SECRET", ""),
+		AdminGroup:            env("TERRAKUBE_ADMIN_GROUP", "TERRAKUBE_ADMIN"),
 		StateMaxSizeBytes:     envInt64([]string{"TERRAKUBE_STATE_MAX_SIZE_BYTES", "IO_TERRAKUBE_STATE_MAX_SIZE_BYTES"}, 104857600),
 		ShutdownTimeout:       envDuration("TERRAKUBE_SHUTDOWN_TIMEOUT", 15*time.Second),
 		DexClientID:           env("TERRAKUBE_DEX_CLIENT_ID", "terrakube"),

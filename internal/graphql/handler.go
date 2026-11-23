@@ -5,11 +5,9 @@ package graphql
 
 import (
 	"context"
-	"crypto/subtle"
 	"errors"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 
 	gql "github.com/99designs/gqlgen/graphql"
@@ -33,8 +31,8 @@ type Deps struct {
 	Events    EventSource
 	Logger    *slog.Logger
 	AuthToken string
-	// Dex verifies the UI's Dex bearer token. Nil disables Dex authentication.
-	Dex auth.Verifier
+	// Verifiers accept user bearer tokens (Dex, PATs).
+	Verifiers []auth.Verifier
 }
 
 // New builds the /graphql/api/v1 handler.
@@ -47,17 +45,18 @@ func New(deps Deps) http.Handler {
 	srv.AddTransport(transport.POST{})
 	srv.SetErrorPresenter(deps.errorPresenter)
 
-	if deps.AuthToken == "" && deps.Dex == nil {
+	if deps.AuthToken == "" && len(deps.Verifiers) == 0 {
 		deps.Logger.Warn("GraphQL authentication is disabled: set TERRAKUBE_AUTH_TOKEN or TERRAKUBE_DEX_ENABLED to require a bearer token")
 		return srv
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !deps.authorized(r.Context(), r.Header.Get("Authorization")) {
+		identity, ok := auth.Authenticate(r.Context(), r.Header.Get("Authorization"), deps.AuthToken, deps.Verifiers...)
+		if !ok {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			jsonapi.WriteError(w, http.StatusUnauthorized, "Unauthorized", "A valid bearer token is required.")
 			return
 		}
-		srv.ServeHTTP(w, r)
+		srv.ServeHTTP(w, r.WithContext(auth.WithIdentity(r.Context(), identity)))
 	})
 }
 
@@ -87,27 +86,15 @@ func NewSubscriptions(deps Deps) http.Handler {
 	srv.AddTransport(&transport.Websocket{
 		KeepAlivePingInterval: 10 * time.Second,
 		InitFunc: func(ctx context.Context, payload transport.InitPayload) (context.Context, *transport.InitPayload, error) {
-			if deps.AuthToken == "" && deps.Dex == nil {
+			if deps.AuthToken == "" && len(deps.Verifiers) == 0 {
 				return ctx, nil, nil
 			}
-			if !deps.authorized(ctx, payload.Authorization()) {
+			identity, ok := auth.Authenticate(ctx, payload.Authorization(), deps.AuthToken, deps.Verifiers...)
+			if !ok {
 				return nil, nil, errors.New("unauthorized")
 			}
-			return ctx, nil, nil
+			return auth.WithIdentity(ctx, identity), nil, nil
 		},
 	})
 	return srv
-}
-
-// authorized accepts the development bearer token or a Dex JWT.
-func (deps Deps) authorized(ctx context.Context, header string) bool {
-	raw, ok := strings.CutPrefix(header, "Bearer ")
-	if !ok {
-		return false
-	}
-	raw = strings.TrimSpace(raw)
-	if deps.AuthToken != "" && subtle.ConstantTimeCompare([]byte(raw), []byte(deps.AuthToken)) == 1 {
-		return true
-	}
-	return deps.Dex != nil && deps.Dex.Verify(ctx, raw) == nil
 }

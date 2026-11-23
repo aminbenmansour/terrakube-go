@@ -107,12 +107,14 @@ func signDexToken(t *testing.T, key *rsa.PrivateKey, kid string, claims jwt.MapC
 
 func dexClaims(issuer, audience string, expires time.Time) jwt.MapClaims {
 	return jwt.MapClaims{
-		"iss":   issuer,
-		"sub":   "user-123",
-		"aud":   audience,
-		"exp":   expires.Unix(),
-		"iat":   time.Now().Add(-time.Minute).Unix(),
-		"email": "user@example.com",
+		"iss":    issuer,
+		"sub":    "user-123",
+		"aud":    audience,
+		"exp":    expires.Unix(),
+		"iat":    time.Now().Add(-time.Minute).Unix(),
+		"email":  "user@example.com",
+		"name":   "Example User",
+		"groups": []string{"terrakube-admins", "developers"},
 	}
 }
 
@@ -122,8 +124,12 @@ func TestDexValidatorAcceptsAValidToken(t *testing.T) {
 	validator := NewDexValidator(srv.issuer(), []string{"terrakube"}, false)
 
 	raw := signDexToken(t, key, "key-a", dexClaims(srv.issuer(), "terrakube", time.Now().Add(time.Hour)))
-	if err := validator.Verify(context.Background(), raw); err != nil {
+	identity, err := validator.Verify(context.Background(), raw)
+	if err != nil {
 		t.Fatalf("Verify(valid) = %v, want nil", err)
+	}
+	if identity.Email != "user@example.com" || identity.Name != "Example User" || len(identity.Groups) != 2 {
+		t.Errorf("identity = %+v, want the Dex claims", identity)
 	}
 
 	discovery, jwks := srv.fetchCounts()
@@ -138,12 +144,12 @@ func TestDexValidatorRejectsExpiredAndWrongIssuer(t *testing.T) {
 	validator := NewDexValidator(srv.issuer(), []string{"terrakube"}, false)
 
 	expired := signDexToken(t, key, "key-a", dexClaims(srv.issuer(), "terrakube", time.Now().Add(-time.Hour)))
-	if err := validator.Verify(context.Background(), expired); err == nil {
+	if _, err := validator.Verify(context.Background(), expired); err == nil {
 		t.Error("Verify(expired) = nil, want an error")
 	}
 
 	wrongIssuer := signDexToken(t, key, "key-a", dexClaims("https://evil.example", "terrakube", time.Now().Add(time.Hour)))
-	if err := validator.Verify(context.Background(), wrongIssuer); err == nil {
+	if _, err := validator.Verify(context.Background(), wrongIssuer); err == nil {
 		t.Error("Verify(wrong issuer) = nil, want an error")
 	}
 }
@@ -154,17 +160,17 @@ func TestDexValidatorAudienceValidationIsOptIn(t *testing.T) {
 	raw := signDexToken(t, key, "key-a", dexClaims(srv.issuer(), "another-client", time.Now().Add(time.Hour)))
 
 	lenient := NewDexValidator(srv.issuer(), []string{"terrakube"}, false)
-	if err := lenient.Verify(context.Background(), raw); err != nil {
+	if _, err := lenient.Verify(context.Background(), raw); err != nil {
 		t.Fatalf("Verify(unchecked audience) = %v, want nil", err)
 	}
 
 	strict := NewDexValidator(srv.issuer(), []string{"terrakube"}, true)
-	if err := strict.Verify(context.Background(), raw); err == nil {
+	if _, err := strict.Verify(context.Background(), raw); err == nil {
 		t.Error("Verify(wrong audience) = nil, want an error")
 	}
 
 	extra := NewDexValidator(srv.issuer(), []string{"terrakube", "another-client"}, true)
-	if err := extra.Verify(context.Background(), raw); err != nil {
+	if _, err := extra.Verify(context.Background(), raw); err != nil {
 		t.Errorf("Verify(extra audience) = %v, want nil", err)
 	}
 }
@@ -176,13 +182,13 @@ func TestDexValidatorRefreshesKeysForANewKid(t *testing.T) {
 	validator.refreshInterval = 0
 
 	oldToken := signDexToken(t, oldKey, "old", dexClaims(srv.issuer(), "terrakube", time.Now().Add(time.Hour)))
-	if err := validator.Verify(context.Background(), oldToken); err != nil {
+	if _, err := validator.Verify(context.Background(), oldToken); err != nil {
 		t.Fatalf("Verify(old key) = %v, want nil", err)
 	}
 
 	srv.setKeys(map[string]*rsa.PrivateKey{"new": newKey})
 	newToken := signDexToken(t, newKey, "new", dexClaims(srv.issuer(), "terrakube", time.Now().Add(time.Hour)))
-	if err := validator.Verify(context.Background(), newToken); err != nil {
+	if _, err := validator.Verify(context.Background(), newToken); err != nil {
 		t.Fatalf("Verify(rotated key) = %v, want nil after a JWKS refresh", err)
 	}
 }
@@ -194,7 +200,7 @@ func TestDexValidatorRejectsAnUnknownKid(t *testing.T) {
 	validator.refreshInterval = 0
 
 	raw := signDexToken(t, stranger, "missing", dexClaims(srv.issuer(), "terrakube", time.Now().Add(time.Hour)))
-	if err := validator.Verify(context.Background(), raw); err == nil {
+	if _, err := validator.Verify(context.Background(), raw); err == nil {
 		t.Error("Verify(unknown kid) = nil, want an error")
 	}
 }
@@ -205,7 +211,7 @@ func TestDexValidatorRejectsATokenSignedByAnotherKey(t *testing.T) {
 	validator := NewDexValidator(srv.issuer(), []string{"terrakube"}, false)
 
 	raw := signDexToken(t, impostor, "key-a", dexClaims(srv.issuer(), "terrakube", time.Now().Add(time.Hour)))
-	if err := validator.Verify(context.Background(), raw); err == nil {
+	if _, err := validator.Verify(context.Background(), raw); err == nil {
 		t.Error("Verify(bad signature) = nil, want an error")
 	}
 }
@@ -217,7 +223,7 @@ func TestDexValidatorReportsDiscoveryFailures(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	validator := NewDexValidator(srv.URL+"/dex", []string{"terrakube"}, false)
-	if err := validator.Verify(context.Background(), "not-a-jwt"); err == nil {
+	if _, err := validator.Verify(context.Background(), "not-a-jwt"); err == nil {
 		t.Error("Verify with unreachable discovery = nil, want an error")
 	}
 }

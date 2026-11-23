@@ -83,6 +83,9 @@ func TestLoadDefaults(t *testing.T) {
 		t.Errorf("Dex settings = %v/%v/%v, want disabled with no audience checks",
 			cfg.DexEnabled, cfg.DexAudienceValidation, cfg.DexExtraAudiences)
 	}
+	if cfg.PATSecret != "" || cfg.AdminGroup != "TERRAKUBE_ADMIN" {
+		t.Errorf("PAT settings = %q/%q, want empty/TERRAKUBE_ADMIN", cfg.PATSecret, cfg.AdminGroup)
+	}
 }
 
 func TestLoadOverrides(t *testing.T) {
@@ -97,6 +100,8 @@ func TestLoadOverrides(t *testing.T) {
 	t.Setenv("TERRAKUBE_DEX_ENABLED", "true")
 	t.Setenv("TERRAKUBE_DEX_AUDIENCE_VALIDATION", "true")
 	t.Setenv("TERRAKUBE_DEX_EXTRA_AUDIENCES", "terrakube, second-client")
+	t.Setenv("TERRAKUBE_PAT_SECRET", "secret")
+	t.Setenv("TERRAKUBE_ADMIN_GROUP", "platform-admins")
 
 	cfg, err := Load()
 	if err != nil {
@@ -123,6 +128,9 @@ func TestLoadOverrides(t *testing.T) {
 	}
 	if len(cfg.DexExtraAudiences) != 2 || cfg.DexExtraAudiences[1] != "second-client" {
 		t.Errorf("DexExtraAudiences = %v, want [terrakube second-client]", cfg.DexExtraAudiences)
+	}
+	if cfg.PATSecret != "secret" || cfg.AdminGroup != "platform-admins" {
+		t.Errorf("PATSecret/AdminGroup = %q/%q, want secret/platform-admins", cfg.PATSecret, cfg.AdminGroup)
 	}
 }
 

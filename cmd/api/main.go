@@ -19,6 +19,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/httpapi"
 	"github.com/aminbenmansour/terrakube-go/internal/jobstatus"
 	"github.com/aminbenmansour/terrakube-go/internal/logging"
+	"github.com/aminbenmansour/terrakube-go/internal/pat"
 	"github.com/aminbenmansour/terrakube-go/internal/queue"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
@@ -100,11 +101,20 @@ func run() error {
 	// see it, whether the change came from the management API or the executor.
 	querier := jobstatus.Wrap(store.New(pool), events.Publish)
 
-	var dexAuth *internalauth.DexValidator
+	var verifiers []internalauth.Verifier
 	if cfg.DexEnabled {
-		dexAuth = internalauth.NewDexValidator(cfg.DexIssuerURL,
-			append([]string{cfg.DexClientID}, cfg.DexExtraAudiences...), cfg.DexAudienceValidation)
+		verifiers = append(verifiers, internalauth.NewDexValidator(cfg.DexIssuerURL,
+			append([]string{cfg.DexClientID}, cfg.DexExtraAudiences...), cfg.DexAudienceValidation))
 		logger.Info("dex token validation enabled", "issuer", cfg.DexIssuerURL)
+	}
+	var pats *pat.Service
+	if cfg.PATSecret != "" {
+		pats, err = pat.New(querier, cfg.PATSecret, cfg.AdminGroup)
+		if err != nil {
+			return fmt.Errorf("configure personal access tokens: %w", err)
+		}
+		verifiers = append(verifiers, pats)
+		logger.Info("personal access tokens enabled")
 	}
 
 	handler := httpapi.New(httpapi.Deps{
@@ -120,8 +130,15 @@ func run() error {
 		Logger:      logger,
 		PublicURL:   cfg.PublicURL,
 		AuthToken:   cfg.AuthToken,
-		Dex:         dexAuth,
+		Verifiers:   verifiers,
+		PATs:        pats,
 		CORSOrigins: cfg.CORSOrigins,
+	}))
+	handler.Mount("/pat/v1", api.NewPAT(api.Deps{
+		Logger:    logger,
+		AuthToken: cfg.AuthToken,
+		Verifiers: verifiers,
+		PATs:      pats,
 	}))
 	tfeDeps := tfe.Deps{
 		Store:              querier,
@@ -142,7 +159,7 @@ func run() error {
 		Events:    events,
 		Logger:    logger,
 		AuthToken: cfg.AuthToken,
-		Dex:       dexAuth,
+		Verifiers: verifiers,
 	}
 	// The UI calls these cross-origin when it is served from another host, and
 	// browsers enforce CORS on the HTTP query endpoint just like any other.

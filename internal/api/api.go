@@ -5,7 +5,6 @@
 package api
 
 import (
-	"crypto/subtle"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -30,8 +29,11 @@ type Deps struct {
 	Logger    *slog.Logger
 	PublicURL string
 	AuthToken string
-	// Dex verifies the UI's Dex bearer token. Nil disables Dex authentication.
-	Dex auth.Verifier
+	// Verifiers accept user bearer tokens (Dex, PATs). Empty leaves only the
+	// development token, or no authentication at all when that is empty too.
+	Verifiers []auth.Verifier
+	// PATs backs /pat/v1. Nil answers 503 there.
+	PATs PATService
 	// CORSOrigins lists the origins allowed to call the API from a browser.
 	// Empty allows any origin, which is the historical behaviour; a UI served
 	// by this API shares its origin and needs no entry.
@@ -53,7 +55,7 @@ func New(deps Deps) http.Handler {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
-	if deps.AuthToken == "" && deps.Dex == nil {
+	if deps.AuthToken == "" && len(deps.Verifiers) == 0 {
 		deps.Logger.Warn("management API authentication is disabled: set TERRAKUBE_AUTH_TOKEN or TERRAKUBE_DEX_ENABLED to require a bearer token")
 	}
 
@@ -296,30 +298,18 @@ func requireUUIDParams(next http.Handler) http.Handler {
 }
 
 func (a *API) authenticate(next http.Handler) http.Handler {
-	if a.deps.AuthToken == "" && a.deps.Dex == nil {
+	if a.deps.AuthToken == "" && len(a.deps.Verifiers) == 0 {
 		return next
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !a.authorized(r) {
+		identity, ok := auth.Authenticate(r.Context(), r.Header.Get("Authorization"), a.deps.AuthToken, a.deps.Verifiers...)
+		if !ok {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			jsonapi.WriteError(w, http.StatusUnauthorized, "Unauthorized", "A valid bearer token is required.")
 			return
 		}
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(auth.WithIdentity(r.Context(), identity)))
 	})
-}
-
-// authorized accepts the development bearer token or a Dex JWT.
-func (a *API) authorized(r *http.Request) bool {
-	raw, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if !ok {
-		return false
-	}
-	raw = strings.TrimSpace(raw)
-	if a.deps.AuthToken != "" && subtle.ConstantTimeCompare([]byte(raw), []byte(a.deps.AuthToken)) == 1 {
-		return true
-	}
-	return a.deps.Dex != nil && a.deps.Dex.Verify(r.Context(), raw) == nil
 }
 
 // writeStoreError maps common PostgreSQL errors onto JSON:API responses. It
