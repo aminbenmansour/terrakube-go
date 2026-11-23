@@ -55,7 +55,10 @@ the executor to plan, apply and destroy it. It needs `tofu` (or a
 The management API lives at `/api/v1` and is exercised by `scripts/smoke.sh`
 (organizations, projects, workspaces and variables). The API accepts a static
 bearer token from `TERRAKUBE_AUTH_TOKEN`; leave it empty to disable the check
-during development. PATs and Dex OIDC replace this in M3/M5.
+during development. With `TERRAKUBE_PAT_SECRET` set it also issues personal
+access tokens at `/pat/v1` (the UI's Settings > Tokens screen and
+`terraform login`), and with `TERRAKUBE_DEX_ENABLED=true` it accepts the Dex JWT
+the UI sends.
 
 Configuration upload tickets and log-read URLs are signed with
 `TERRAKUBE_UPLOAD_TICKET_SECRET`, falling back to

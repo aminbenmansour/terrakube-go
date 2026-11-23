@@ -285,6 +285,28 @@ Query conventions:
 Our initial implementation targets the resources needed by the CLI workflow and
 the UI's core screens. Anything missing is filled in against the upstream spec.
 
+### Personal access tokens — `/pat/v1`
+
+Captured from `azbuilder/api-server:2.34.3`. This surface is plain JSON, not
+JSON:API, and is served outside `/api/v1`:
+
+- `POST /pat/v1` `{"days":1,"description":"…"}` → `201 {"token":"<jwt>"}`. The
+  token is shown once and never stored.
+- `GET /pat/v1` → `202` with an array of
+  `{id, days, description, deleted, source, lastUsedAt, createdDate,
+  updatedDate, createdBy, updatedBy}` for the caller only.
+- `DELETE /pat/v1/{id}` → `202` with no body; `404` unknown, `403` another
+  user's token. Revocation is a soft delete and takes effect immediately.
+- The token is an HMAC JWT with `iss`/`aud` `Terrakube`, `jti` = the `pat` row
+  id, `sub`/`name` `"<name> (Token)"`, `email`, `email_verified`, `groups`,
+  `iat`, and `exp` only when `days > 0`. Verification checks the signature,
+  issuer, expiry and a live non-deleted row; `last_used_at` is stamped at most
+  hourly.
+- Only an interactive user may mint one. A PAT cannot mint another PAT.
+- The signing secret is `TERRAKUBE_PAT_SECRET` (base64, ≥ 32 bytes) and the
+  instance owner is `TERRAKUBE_ADMIN_GROUP` (default `TERRAKUBE_ADMIN`), which
+  may revoke any token.
+
 ### Verified against a live upstream (2026-11-20)
 
 Captured from `azbuilder/api-server:2.34.3`; the responses are in
@@ -448,9 +470,9 @@ Current M1 limitations (tracked for later milestones):
 
 - Filters, sorting and paging run in memory over the full collection. This is
   fine for smoke tests but must become SQL before production use.
-- Authentication is a static bearer token (`TERRAKUBE_AUTH_TOKEN`) or, with
-  `TERRAKUBE_DEX_ENABLED=true`, a Dex JWT (see the UI contract below). PATs,
-  team tokens and executor tokens are not implemented yet.
+- Authentication is a static bearer token (`TERRAKUBE_AUTH_TOKEN`), a Dex JWT
+  with `TERRAKUBE_DEX_ENABLED=true`, or a personal access token issued at
+  `/pat/v1` (see above). Team and executor tokens are not implemented yet.
 - `include=` is implemented only for the workspace's `variable`,
   `organization`, `project`, `reference`, `vcs`, `ssh` and `agent`; relationship
   writes exist only for the workspace's `project`, `vcs`, `ssh` and `agent`,
