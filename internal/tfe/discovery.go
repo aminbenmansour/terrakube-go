@@ -3,6 +3,8 @@ package tfe
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/aminbenmansour/terrakube-go/internal/clilogin"
 )
 
 // Discovery returns the /.well-known/terraform.json document. The state.v2
@@ -12,12 +14,14 @@ func Discovery(deps Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		var login map[string]any
 		if deps.TerraformLogin {
+			// Upstream advertises the broker's own client and the whole
+			// 10000-10010 loopback range, not the Dex client and two ports.
 			login = map[string]any{
-				"client":      "terraform",
+				"client":      clilogin.ClientID,
 				"grant_types": []string{"authz_code"},
 				"authz":       deps.PublicURL + "/oauth/authorize",
 				"token":       deps.PublicURL + "/oauth/token",
-				"ports":       []int{10000, 10001},
+				"ports":       []int{clilogin.PortLow, clilogin.PortHigh},
 			}
 		} else {
 			login = map[string]any{
