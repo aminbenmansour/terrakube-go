@@ -46,6 +46,27 @@ type Agent struct {
 	OrganizationID string  `json:"organization_id"`
 }
 
+type CliAuthSession struct {
+	ID               string             `json:"id"`
+	Status           string             `json:"status"`
+	CliRedirectUri   string             `json:"cli_redirect_uri"`
+	CliCodeChallenge string             `json:"cli_code_challenge"`
+	CliState         string             `json:"cli_state"`
+	DexCodeVerifier  *string            `json:"dex_code_verifier"`
+	IdentityEmail    *string            `json:"identity_email"`
+	IdentityName     *string            `json:"identity_name"`
+	IdentityGroups   *string            `json:"identity_groups"`
+	ChosenDays       *int32             `json:"chosen_days"`
+	ChosenName       *string            `json:"chosen_name"`
+	AuthCodeHash     *string            `json:"auth_code_hash"`
+	CodeExpiresAt    pgtype.Timestamptz `json:"code_expires_at"`
+	ExpiresAt        pgtype.Timestamptz `json:"expires_at"`
+	CreatedDate      pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate      pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy        *string            `json:"created_by"`
+	UpdatedBy        *string            `json:"updated_by"`
+}
+
 type Collection struct {
 	ID             string             `json:"id"`
 	Name           string             `json:"name"`

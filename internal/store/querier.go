@@ -11,6 +11,7 @@ import (
 type Querier interface {
 	AddNotificationConfigurationTemplate(ctx context.Context, arg AddNotificationConfigurationTemplateParams) error
 	ApproveJob(ctx context.Context, arg ApproveJobParams) (Job, error)
+	ClaimCliAuthCode(ctx context.Context, id string) (int64, error)
 	// Deleting a provider in use unlinks its workspaces instead of failing, which
 	// is what upstream does through the mapped relationship.
 	ClearWorkspaceVCS(ctx context.Context, vcsID *string) error
@@ -19,6 +20,7 @@ type Querier interface {
 	CreateAction(ctx context.Context, arg CreateActionParams) (Action, error)
 	CreateAgent(ctx context.Context, arg CreateAgentParams) (Agent, error)
 	CreateArchive(ctx context.Context, arg CreateArchiveParams) (TempArchive, error)
+	CreateCliAuthSession(ctx context.Context, arg CreateCliAuthSessionParams) (CliAuthSession, error)
 	CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error)
 	CreateContent(ctx context.Context, arg CreateContentParams) (Content, error)
 	CreateGlobalVariable(ctx context.Context, arg CreateGlobalVariableParams) (Globalvar, error)
@@ -44,6 +46,7 @@ type Querier interface {
 	DeleteAgent(ctx context.Context, id string) error
 	DeleteArchive(ctx context.Context, id string) error
 	DeleteCollection(ctx context.Context, id string) error
+	DeleteExpiredCliAuthSessions(ctx context.Context) (int64, error)
 	DeleteGlobalVariable(ctx context.Context, id string) error
 	DeleteItem(ctx context.Context, id string) error
 	DeleteNotificationConfiguration(ctx context.Context, id string) error
@@ -59,9 +62,13 @@ type Querier interface {
 	DeleteVCS(ctx context.Context, id string) error
 	DeleteVariable(ctx context.Context, id string) error
 	DeleteWorkspaceTag(ctx context.Context, id string) error
+	DenyCliAuthSession(ctx context.Context, id string) error
+	FailCliAuthSession(ctx context.Context, id string) error
 	GetAction(ctx context.Context, id string) (Action, error)
 	GetAgent(ctx context.Context, id string) (Agent, error)
 	GetArchive(ctx context.Context, id string) (GetArchiveRow, error)
+	GetCliAuthSession(ctx context.Context, id string) (CliAuthSession, error)
+	GetCliAuthSessionByCodeHash(ctx context.Context, authCodeHash *string) (CliAuthSession, error)
 	GetCollection(ctx context.Context, id string) (Collection, error)
 	GetContent(ctx context.Context, id string) (Content, error)
 	GetGlobalVariable(ctx context.Context, id string) (Globalvar, error)
@@ -93,6 +100,7 @@ type Querier interface {
 	GetWorkspace(ctx context.Context, id string) (Workspace, error)
 	GetWorkspaceByName(ctx context.Context, arg GetWorkspaceByNameParams) (Workspace, error)
 	GetWorkspaceTag(ctx context.Context, id string) (Workspacetag, error)
+	IssueCliAuthCode(ctx context.Context, arg IssueCliAuthCodeParams) error
 	ListActions(ctx context.Context) ([]Action, error)
 	ListActiveJobsByOrganization(ctx context.Context, name string) ([]Job, error)
 	ListActiveJobsByWorkspace(ctx context.Context, workspaceID string) ([]Job, error)
@@ -122,6 +130,7 @@ type Querier interface {
 	ListWorkspaceTagsByWorkspace(ctx context.Context, workspaceID string) ([]Workspacetag, error)
 	ListWorkspacesByOrganization(ctx context.Context, organizationID string) ([]Workspace, error)
 	ListWorkspacesByProject(ctx context.Context, projectID *string) ([]Workspace, error)
+	SetCliAuthSessionIdentity(ctx context.Context, arg SetCliAuthSessionIdentityParams) error
 	SetJobOverrideSource(ctx context.Context, arg SetJobOverrideSourceParams) (Job, error)
 	SetWorkspaceLastJob(ctx context.Context, arg SetWorkspaceLastJobParams) error
 	SetWorkspaceLock(ctx context.Context, arg SetWorkspaceLockParams) (Workspace, error)
