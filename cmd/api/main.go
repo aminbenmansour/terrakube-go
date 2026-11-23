@@ -19,6 +19,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/httpapi"
 	"github.com/aminbenmansour/terrakube-go/internal/jobstatus"
 	"github.com/aminbenmansour/terrakube-go/internal/logging"
+	"github.com/aminbenmansour/terrakube-go/internal/pat"
 	"github.com/aminbenmansour/terrakube-go/internal/queue"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
@@ -106,6 +107,15 @@ func run() error {
 			append([]string{cfg.DexClientID}, cfg.DexExtraAudiences...), cfg.DexAudienceValidation))
 		logger.Info("dex token validation enabled", "issuer", cfg.DexIssuerURL)
 	}
+	var pats *pat.Service
+	if cfg.PATSecret != "" {
+		pats, err = pat.New(querier, cfg.PATSecret, cfg.AdminGroup)
+		if err != nil {
+			return fmt.Errorf("configure personal access tokens: %w", err)
+		}
+		verifiers = append(verifiers, pats)
+		logger.Info("personal access tokens enabled")
+	}
 
 	handler := httpapi.New(httpapi.Deps{
 		Logger:  logger,
@@ -121,7 +131,14 @@ func run() error {
 		PublicURL:   cfg.PublicURL,
 		AuthToken:   cfg.AuthToken,
 		Verifiers:   verifiers,
+		PATs:        pats,
 		CORSOrigins: cfg.CORSOrigins,
+	}))
+	handler.Mount("/pat/v1", api.NewPAT(api.Deps{
+		Logger:    logger,
+		AuthToken: cfg.AuthToken,
+		Verifiers: verifiers,
+		PATs:      pats,
 	}))
 	tfeDeps := tfe.Deps{
 		Store:              querier,

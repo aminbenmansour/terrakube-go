@@ -32,6 +32,8 @@ type Deps struct {
 	// Verifiers accept user bearer tokens (Dex, PATs). Empty leaves only the
 	// development token, or no authentication at all when that is empty too.
 	Verifiers []auth.Verifier
+	// PATs backs /pat/v1. Nil answers 503 there.
+	PATs PATService
 	// CORSOrigins lists the origins allowed to call the API from a browser.
 	// Empty allows any origin, which is the historical behaviour; a UI served
 	// by this API shares its origin and needs no entry.

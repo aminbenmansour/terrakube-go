@@ -76,16 +76,16 @@ func New(store Store, secret, owner string) (*Service, error) {
 
 // Token is the metadata the UI lists. The signed token is never stored.
 type Token struct {
-	ID          string
-	Days        *int32
-	Description *string
-	Deleted     bool
-	Source      string
-	LastUsedAt  *time.Time
-	CreatedDate *time.Time
-	UpdatedDate *time.Time
-	CreatedBy   *string
-	UpdatedBy   *string
+	ID          string     `json:"id"`
+	Days        *int32     `json:"days"`
+	Description *string    `json:"description"`
+	Deleted     bool       `json:"deleted"`
+	Source      string     `json:"source"`
+	LastUsedAt  *time.Time `json:"lastUsedAt"`
+	CreatedDate *time.Time `json:"createdDate"`
+	UpdatedDate *time.Time `json:"updatedDate"`
+	CreatedBy   *string    `json:"createdBy"`
+	UpdatedBy   *string    `json:"updatedBy"`
 }
 
 // Create stores the metadata row and returns the signed token.
