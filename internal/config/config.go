@@ -36,7 +36,13 @@ type Config struct {
 	ShutdownTimeout     time.Duration
 	DexClientID         string
 	DexIssuerURL        string
-	TerraformLogin      bool
+	// DexEnabled accepts Dex JWTs as bearer credentials. Off by default so a
+	// development stack with no identity provider keeps working.
+	DexEnabled bool
+	// DexAudienceValidation opts into checking aud, as upstream does.
+	DexAudienceValidation bool
+	DexExtraAudiences     []string
+	TerraformLogin        bool
 	// UIDir is the built upstream React UI to serve at /. Empty disables it.
 	UIDir string
 	// CORSOrigins restricts browser access to the management API. Empty allows
@@ -84,28 +90,31 @@ func Load() (Config, error) {
 	}
 
 	cfg := Config{
-		Env:                 env("TERRAKUBE_ENV", "dev"),
-		PublicURL:           strings.TrimRight(env("TERRAKUBE_PUBLIC_URL", "http://localhost:8080"), "/"),
-		LogLevel:            level,
-		DatabaseURL:         envFirst([]string{"TERRAKUBE_DATABASE_URL", "DATABASE_URL"}, "postgres://terrakube@localhost:5432/terrakube?sslmode=disable"),
-		AutoMigrate:         envBool("TERRAKUBE_AUTO_MIGRATE", true),
-		RedisURL:            envFirst([]string{"TERRAKUBE_REDIS_URL", "REDIS_URL"}, "redis://localhost:6379/0"),
-		AuthToken:           env("TERRAKUBE_AUTH_TOKEN", ""),
-		InternalTokenSecret: envFirst([]string{"TERRAKUBE_INTERNAL_TOKEN_SECRET", "IO_TERRAKUBE_TOKEN_INTERNAL"}, ""),
-		UploadTicketSecret:  env("TERRAKUBE_UPLOAD_TICKET_SECRET", ""),
-		StateMaxSizeBytes:   envInt64([]string{"TERRAKUBE_STATE_MAX_SIZE_BYTES", "IO_TERRAKUBE_STATE_MAX_SIZE_BYTES"}, 104857600),
-		ShutdownTimeout:     envDuration("TERRAKUBE_SHUTDOWN_TIMEOUT", 15*time.Second),
-		DexClientID:         env("TERRAKUBE_DEX_CLIENT_ID", "terrakube"),
-		DexIssuerURL:        strings.TrimRight(env("TERRAKUBE_DEX_ISSUER_URL", "http://localhost:5556/dex"), "/"),
-		TerraformLogin:      envBool("TERRAKUBE_TERRAFORM_LOGIN_ENABLED", false),
-		UIDir:               env("TERRAKUBE_UI_DIR", ""),
-		CORSOrigins:         envList("TERRAKUBE_CORS_ORIGINS"),
-		HTTPAddr:            env("TERRAKUBE_HTTP_ADDR", ":8080"),
-		ExecutorHTTPAddr:    env("TERRAKUBE_EXECUTOR_HTTP_ADDR", ":8081"),
-		RegistryHTTPAddr:    env("TERRAKUBE_REGISTRY_HTTP_ADDR", ":8082"),
-		ExecutorBinary:      env("TERRAKUBE_EXECUTOR_BINARY", ""),
-		ExecutorWorkDir:     env("TERRAKUBE_EXECUTOR_WORK_DIR", ""),
-		ExecutorJobTimeout:  envDuration("TERRAKUBE_EXECUTOR_JOB_TIMEOUT", 2*time.Hour),
+		Env:                   env("TERRAKUBE_ENV", "dev"),
+		PublicURL:             strings.TrimRight(env("TERRAKUBE_PUBLIC_URL", "http://localhost:8080"), "/"),
+		LogLevel:              level,
+		DatabaseURL:           envFirst([]string{"TERRAKUBE_DATABASE_URL", "DATABASE_URL"}, "postgres://terrakube@localhost:5432/terrakube?sslmode=disable"),
+		AutoMigrate:           envBool("TERRAKUBE_AUTO_MIGRATE", true),
+		RedisURL:              envFirst([]string{"TERRAKUBE_REDIS_URL", "REDIS_URL"}, "redis://localhost:6379/0"),
+		AuthToken:             env("TERRAKUBE_AUTH_TOKEN", ""),
+		InternalTokenSecret:   envFirst([]string{"TERRAKUBE_INTERNAL_TOKEN_SECRET", "IO_TERRAKUBE_TOKEN_INTERNAL"}, ""),
+		UploadTicketSecret:    env("TERRAKUBE_UPLOAD_TICKET_SECRET", ""),
+		StateMaxSizeBytes:     envInt64([]string{"TERRAKUBE_STATE_MAX_SIZE_BYTES", "IO_TERRAKUBE_STATE_MAX_SIZE_BYTES"}, 104857600),
+		ShutdownTimeout:       envDuration("TERRAKUBE_SHUTDOWN_TIMEOUT", 15*time.Second),
+		DexClientID:           env("TERRAKUBE_DEX_CLIENT_ID", "terrakube"),
+		DexIssuerURL:          strings.TrimRight(env("TERRAKUBE_DEX_ISSUER_URL", "http://localhost:5556/dex"), "/"),
+		DexEnabled:            envBool("TERRAKUBE_DEX_ENABLED", false),
+		DexAudienceValidation: envBool("TERRAKUBE_DEX_AUDIENCE_VALIDATION", false),
+		DexExtraAudiences:     envList("TERRAKUBE_DEX_EXTRA_AUDIENCES"),
+		TerraformLogin:        envBool("TERRAKUBE_TERRAFORM_LOGIN_ENABLED", false),
+		UIDir:                 env("TERRAKUBE_UI_DIR", ""),
+		CORSOrigins:           envList("TERRAKUBE_CORS_ORIGINS"),
+		HTTPAddr:              env("TERRAKUBE_HTTP_ADDR", ":8080"),
+		ExecutorHTTPAddr:      env("TERRAKUBE_EXECUTOR_HTTP_ADDR", ":8081"),
+		RegistryHTTPAddr:      env("TERRAKUBE_REGISTRY_HTTP_ADDR", ":8082"),
+		ExecutorBinary:        env("TERRAKUBE_EXECUTOR_BINARY", ""),
+		ExecutorWorkDir:       env("TERRAKUBE_EXECUTOR_WORK_DIR", ""),
+		ExecutorJobTimeout:    envDuration("TERRAKUBE_EXECUTOR_JOB_TIMEOUT", 2*time.Hour),
 		Storage: Storage{
 			Type:      strings.ToLower(env("TERRAKUBE_STORAGE_TYPE", StorageTypeLocal)),
 			LocalPath: env("TERRAKUBE_STORAGE_LOCAL_PATH", ".data"),

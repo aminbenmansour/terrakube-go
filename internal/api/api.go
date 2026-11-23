@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/aminbenmansour/terrakube-go/internal/auth"
 	"github.com/aminbenmansour/terrakube-go/internal/httpapi"
 	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
@@ -29,6 +30,8 @@ type Deps struct {
 	Logger    *slog.Logger
 	PublicURL string
 	AuthToken string
+	// Dex verifies the UI's Dex bearer token. Nil disables Dex authentication.
+	Dex auth.Verifier
 	// CORSOrigins lists the origins allowed to call the API from a browser.
 	// Empty allows any origin, which is the historical behaviour; a UI served
 	// by this API shares its origin and needs no entry.
@@ -50,8 +53,8 @@ func New(deps Deps) http.Handler {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
-	if deps.AuthToken == "" {
-		deps.Logger.Warn("management API authentication is disabled: set TERRAKUBE_AUTH_TOKEN to require a bearer token")
+	if deps.AuthToken == "" && deps.Dex == nil {
+		deps.Logger.Warn("management API authentication is disabled: set TERRAKUBE_AUTH_TOKEN or TERRAKUBE_DEX_ENABLED to require a bearer token")
 	}
 
 	a := &API{deps: deps}
@@ -293,20 +296,30 @@ func requireUUIDParams(next http.Handler) http.Handler {
 }
 
 func (a *API) authenticate(next http.Handler) http.Handler {
-	if a.deps.AuthToken == "" {
+	if a.deps.AuthToken == "" && a.deps.Dex == nil {
 		return next
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		header := r.Header.Get("Authorization")
-		const prefix = "Bearer "
-		if !strings.HasPrefix(header, prefix) ||
-			subtle.ConstantTimeCompare([]byte(strings.TrimPrefix(header, prefix)), []byte(a.deps.AuthToken)) != 1 {
+		if !a.authorized(r) {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			jsonapi.WriteError(w, http.StatusUnauthorized, "Unauthorized", "A valid bearer token is required.")
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// authorized accepts the development bearer token or a Dex JWT.
+func (a *API) authorized(r *http.Request) bool {
+	raw, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if !ok {
+		return false
+	}
+	raw = strings.TrimSpace(raw)
+	if a.deps.AuthToken != "" && subtle.ConstantTimeCompare([]byte(raw), []byte(a.deps.AuthToken)) == 1 {
+		return true
+	}
+	return a.deps.Dex != nil && a.deps.Dex.Verify(r.Context(), raw) == nil
 }
 
 // writeStoreError maps common PostgreSQL errors onto JSON:API responses. It
