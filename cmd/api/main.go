@@ -100,10 +100,10 @@ func run() error {
 	// see it, whether the change came from the management API or the executor.
 	querier := jobstatus.Wrap(store.New(pool), events.Publish)
 
-	var dexAuth *internalauth.DexValidator
+	var verifiers []internalauth.Verifier
 	if cfg.DexEnabled {
-		dexAuth = internalauth.NewDexValidator(cfg.DexIssuerURL,
-			append([]string{cfg.DexClientID}, cfg.DexExtraAudiences...), cfg.DexAudienceValidation)
+		verifiers = append(verifiers, internalauth.NewDexValidator(cfg.DexIssuerURL,
+			append([]string{cfg.DexClientID}, cfg.DexExtraAudiences...), cfg.DexAudienceValidation))
 		logger.Info("dex token validation enabled", "issuer", cfg.DexIssuerURL)
 	}
 
@@ -120,7 +120,7 @@ func run() error {
 		Logger:      logger,
 		PublicURL:   cfg.PublicURL,
 		AuthToken:   cfg.AuthToken,
-		Dex:         dexAuth,
+		Verifiers:   verifiers,
 		CORSOrigins: cfg.CORSOrigins,
 	}))
 	tfeDeps := tfe.Deps{
@@ -142,7 +142,7 @@ func run() error {
 		Events:    events,
 		Logger:    logger,
 		AuthToken: cfg.AuthToken,
-		Dex:       dexAuth,
+		Verifiers: verifiers,
 	}
 	// The UI calls these cross-origin when it is served from another host, and
 	// browsers enforce CORS on the HTTP query endpoint just like any other.

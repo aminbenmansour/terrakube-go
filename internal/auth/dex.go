@@ -19,7 +19,7 @@ import (
 
 // Verifier checks a user bearer token.
 type Verifier interface {
-	Verify(ctx context.Context, raw string) error
+	Verify(ctx context.Context, raw string) (*Identity, error)
 }
 
 // DexValidator verifies the Dex JWT the upstream UI sends as a bearer token.
@@ -57,13 +57,13 @@ func NewDexValidator(issuerURL string, audiences []string, validateAudience bool
 
 // Verify checks the signature against the issuer's JWKS, then iss, exp and,
 // when enabled, aud. The returned error never contains the token.
-func (v *DexValidator) Verify(ctx context.Context, raw string) error {
+func (v *DexValidator) Verify(ctx context.Context, raw string) (*Identity, error) {
 	if v == nil || v.issuer == "" {
-		return errors.New("auth: dex validator is not configured")
+		return nil, errors.New("auth: dex validator is not configured")
 	}
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return errors.New("auth: dex token is empty")
+		return nil, errors.New("auth: dex token is empty")
 	}
 
 	claims := jwt.MapClaims{}
@@ -78,23 +78,49 @@ func (v *DexValidator) Verify(ctx context.Context, raw string) error {
 		return v.key(ctx, kid)
 	})
 	if err != nil {
-		return fmt.Errorf("auth: verify dex token: %w", err)
+		return nil, fmt.Errorf("auth: verify dex token: %w", err)
 	}
 
 	if v.validateAudience {
 		audiences, err := claims.GetAudience()
 		if err != nil {
-			return errors.New("auth: dex token audience is not accepted")
+			return nil, errors.New("auth: dex token audience is not accepted")
 		}
 		accepted := false
 		for _, audience := range v.audiences {
 			accepted = accepted || contains(audiences, audience)
 		}
 		if !accepted {
-			return errors.New("auth: dex token audience is not accepted")
+			return nil, errors.New("auth: dex token audience is not accepted")
 		}
 	}
-	return nil
+
+	identity := &Identity{Issuer: v.issuer}
+	identity.Subject, _ = claims["sub"].(string)
+	identity.Email, _ = claims["email"].(string)
+	identity.Name, _ = claims["name"].(string)
+	identity.Groups = stringSlice(claims["groups"])
+	if identity.Name == "" {
+		identity.Name = identity.Email
+	}
+	return identity, nil
+}
+
+func stringSlice(value any) []string {
+	switch typed := value.(type) {
+	case []string:
+		return typed
+	case []any:
+		values := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if text, ok := item.(string); ok {
+				values = append(values, text)
+			}
+		}
+		return values
+	default:
+		return nil
+	}
 }
 
 func contains(values []string, want string) bool {

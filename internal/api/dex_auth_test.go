@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/aminbenmansour/terrakube-go/internal/auth"
 )
 
 type stubDexVerifier struct {
@@ -16,21 +18,21 @@ type stubDexVerifier struct {
 	err   error
 }
 
-func (s stubDexVerifier) Verify(_ context.Context, raw string) error {
+func (s stubDexVerifier) Verify(_ context.Context, raw string) (*auth.Identity, error) {
 	if s.err != nil {
-		return s.err
+		return nil, s.err
 	}
 	if raw != s.token {
-		return errors.New("invalid token")
+		return nil, errors.New("invalid token")
 	}
-	return nil
+	return &auth.Identity{Issuer: "dex", Email: "user@example.com"}, nil
 }
 
 func TestAuthMiddlewareAcceptsDexTokens(t *testing.T) {
 	handler := New(Deps{
-		Store:  &stubQuerier{},
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-		Dex:    stubDexVerifier{token: "dex-token"},
+		Store:     &stubQuerier{},
+		Logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Verifiers: []auth.Verifier{stubDexVerifier{token: "dex-token"}},
 	})
 
 	rec := httptest.NewRecorder()
@@ -64,7 +66,7 @@ func TestAuthMiddlewareAcceptsEitherCredential(t *testing.T) {
 		Store:     &stubQuerier{},
 		Logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
 		AuthToken: "dev-token",
-		Dex:       stubDexVerifier{token: "dex-token"},
+		Verifiers: []auth.Verifier{stubDexVerifier{token: "dex-token"}},
 	})
 
 	for _, token := range []string{"dev-token", "dex-token"} {

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aminbenmansour/terrakube-go/internal/auth"
 	"github.com/aminbenmansour/terrakube-go/internal/jobstatus"
 )
 
@@ -18,21 +19,21 @@ type stubDexVerifier struct {
 	err   error
 }
 
-func (s stubDexVerifier) Verify(_ context.Context, raw string) error {
+func (s stubDexVerifier) Verify(_ context.Context, raw string) (*auth.Identity, error) {
 	if s.err != nil {
-		return s.err
+		return nil, s.err
 	}
 	if raw != s.token {
-		return errors.New("invalid token")
+		return nil, errors.New("invalid token")
 	}
-	return nil
+	return &auth.Identity{Issuer: "dex", Email: "user@example.com"}, nil
 }
 
 func TestDexTokenIsAcceptedOnGraphQL(t *testing.T) {
 	handler := New(Deps{
-		DB:     failingDB{},
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-		Dex:    stubDexVerifier{token: "dex-token"},
+		DB:        failingDB{},
+		Logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Verifiers: []auth.Verifier{stubDexVerifier{token: "dex-token"}},
 	})
 
 	recorder := httptest.NewRecorder()
@@ -59,10 +60,10 @@ func TestDexTokenIsAcceptedOnGraphQL(t *testing.T) {
 
 func TestSubscriptionAcceptsADexConnectionToken(t *testing.T) {
 	server := httptest.NewServer(NewSubscriptions(Deps{
-		DB:     failingDB{},
-		Events: &fakeEvents{events: make(chan jobstatus.Event)},
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-		Dex:    stubDexVerifier{token: "dex-token"},
+		DB:        failingDB{},
+		Events:    &fakeEvents{events: make(chan jobstatus.Event)},
+		Logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Verifiers: []auth.Verifier{stubDexVerifier{token: "dex-token"}},
 	}))
 	defer server.Close()
 
