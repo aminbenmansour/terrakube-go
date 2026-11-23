@@ -86,6 +86,10 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.PATSecret != "" || cfg.AdminGroup != "TERRAKUBE_ADMIN" {
 		t.Errorf("PAT settings = %q/%q, want empty/TERRAKUBE_ADMIN", cfg.PATSecret, cfg.AdminGroup)
 	}
+	if cfg.TerraformLogin || cfg.TerraformLoginDefaultDays != 30 || cfg.TerraformLoginMaxDays != 365 {
+		t.Errorf("login settings = %v/%d/%d, want false/30/365",
+			cfg.TerraformLogin, cfg.TerraformLoginDefaultDays, cfg.TerraformLoginMaxDays)
+	}
 }
 
 func TestLoadOverrides(t *testing.T) {
@@ -102,6 +106,8 @@ func TestLoadOverrides(t *testing.T) {
 	t.Setenv("TERRAKUBE_DEX_EXTRA_AUDIENCES", "terrakube, second-client")
 	t.Setenv("TERRAKUBE_PAT_SECRET", "secret")
 	t.Setenv("TERRAKUBE_ADMIN_GROUP", "platform-admins")
+	t.Setenv("TERRAKUBE_TERRAFORM_LOGIN_DEFAULT_DAYS", "14")
+	t.Setenv("TERRAKUBE_TERRAFORM_LOGIN_MAX_DAYS", "90")
 
 	cfg, err := Load()
 	if err != nil {
@@ -131,6 +137,9 @@ func TestLoadOverrides(t *testing.T) {
 	}
 	if cfg.PATSecret != "secret" || cfg.AdminGroup != "platform-admins" {
 		t.Errorf("PATSecret/AdminGroup = %q/%q, want secret/platform-admins", cfg.PATSecret, cfg.AdminGroup)
+	}
+	if cfg.TerraformLoginDefaultDays != 14 || cfg.TerraformLoginMaxDays != 90 {
+		t.Errorf("login days = %d/%d, want 14/90", cfg.TerraformLoginDefaultDays, cfg.TerraformLoginMaxDays)
 	}
 }
 
