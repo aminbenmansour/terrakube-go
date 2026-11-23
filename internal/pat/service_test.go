@@ -211,6 +211,19 @@ func TestVerifyRejectsRevokedExpiredAndForeignTokens(t *testing.T) {
 	}
 }
 
+func TestIssueAttributesTheBrokerToken(t *testing.T) {
+	service, store := newService(t, "")
+	identity := auth.Identity{Issuer: "https://dex.example/dex", Email: "user@example.com", Name: "Example User"}
+	if _, err := service.Issue(context.Background(), identity, 30, "terraform login", SourceCLILogin, "user@example.com"); err != nil {
+		t.Fatalf("Issue: %v", err)
+	}
+	for _, row := range store.pats {
+		if row.Source != SourceCLILogin || row.CreatedBy == nil || *row.CreatedBy != "user@example.com" {
+			t.Errorf("row = %+v, want source %s attributed to the user", row, SourceCLILogin)
+		}
+	}
+}
+
 func TestListReturnsMetadataOnlyForTheCreator(t *testing.T) {
 	service, store := newService(t, "")
 	if _, err := service.Create(context.Background(), dexUser(), 1, "one"); err != nil {
