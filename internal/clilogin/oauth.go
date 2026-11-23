@@ -23,6 +23,7 @@ import (
 const (
 	// ClientID is the public OAuth client the CLI uses, as upstream names it.
 	ClientID = "terraform-cli"
+
 	// PortLow and PortHigh bound the loopback ports Terraform may open.
 	PortLow  = 10000
 	PortHigh = 10010
@@ -35,8 +36,6 @@ const (
 	sessionTTL = 10 * time.Minute
 	codeTTL    = 60 * time.Second
 )
-
-var errInvalidCredential = errors.New("cli login: invalid credential")
 
 // NewCodeVerifier returns a 48-byte PKCE verifier (64 base64url characters).
 func NewCodeVerifier() (string, error) {
