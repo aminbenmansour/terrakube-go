@@ -16,6 +16,9 @@ var allKeys = []string{
 	"TERRAKUBE_REDIS_URL",
 	"REDIS_URL",
 	"TERRAKUBE_AUTH_TOKEN",
+	"TERRAKUBE_DEX_ENABLED",
+	"TERRAKUBE_DEX_AUDIENCE_VALIDATION",
+	"TERRAKUBE_DEX_EXTRA_AUDIENCES",
 	"TERRAKUBE_INTERNAL_TOKEN_SECRET",
 	"IO_TERRAKUBE_TOKEN_INTERNAL",
 	"TERRAKUBE_STATE_MAX_SIZE_BYTES",
@@ -76,6 +79,10 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.ExecutorJobTimeout != 2*time.Hour {
 		t.Errorf("ExecutorJobTimeout = %v, want 2h", cfg.ExecutorJobTimeout)
 	}
+	if cfg.DexEnabled || cfg.DexAudienceValidation || len(cfg.DexExtraAudiences) != 0 {
+		t.Errorf("Dex settings = %v/%v/%v, want disabled with no audience checks",
+			cfg.DexEnabled, cfg.DexAudienceValidation, cfg.DexExtraAudiences)
+	}
 }
 
 func TestLoadOverrides(t *testing.T) {
@@ -87,6 +94,9 @@ func TestLoadOverrides(t *testing.T) {
 	t.Setenv("TERRAKUBE_STORAGE_S3_BUCKET", "state")
 	t.Setenv("TERRAKUBE_PUBLIC_URL", "https://terrakube.example.com/")
 	t.Setenv("TERRAKUBE_EXECUTOR_JOB_TIMEOUT", "45m")
+	t.Setenv("TERRAKUBE_DEX_ENABLED", "true")
+	t.Setenv("TERRAKUBE_DEX_AUDIENCE_VALIDATION", "true")
+	t.Setenv("TERRAKUBE_DEX_EXTRA_AUDIENCES", "terrakube, second-client")
 
 	cfg, err := Load()
 	if err != nil {
@@ -107,6 +117,12 @@ func TestLoadOverrides(t *testing.T) {
 	}
 	if cfg.ExecutorJobTimeout != 45*time.Minute {
 		t.Errorf("ExecutorJobTimeout = %v, want 45m", cfg.ExecutorJobTimeout)
+	}
+	if !cfg.DexEnabled || !cfg.DexAudienceValidation {
+		t.Errorf("Dex enabled/audience = %v/%v, want true/true", cfg.DexEnabled, cfg.DexAudienceValidation)
+	}
+	if len(cfg.DexExtraAudiences) != 2 || cfg.DexExtraAudiences[1] != "second-client" {
+		t.Errorf("DexExtraAudiences = %v, want [terrakube second-client]", cfg.DexExtraAudiences)
 	}
 }
 

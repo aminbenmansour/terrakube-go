@@ -53,4 +53,5 @@ go.work.sum
 /graphify-out/.graphify_labels.json
 /graphify-out/.graphify_labels.json.sig
 /graphify-out/.graphify_labels.pending.json
+/graphify-out/.graphify_partition_cache.json
 /graphify-out/20*/
