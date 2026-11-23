@@ -13,6 +13,7 @@ import (
 
 	"github.com/aminbenmansour/terrakube-go/internal/api"
 	internalauth "github.com/aminbenmansour/terrakube-go/internal/auth"
+	"github.com/aminbenmansour/terrakube-go/internal/clilogin"
 	"github.com/aminbenmansour/terrakube-go/internal/config"
 	"github.com/aminbenmansour/terrakube-go/internal/db"
 	graphqlapi "github.com/aminbenmansour/terrakube-go/internal/graphql"
@@ -140,6 +141,28 @@ func run() error {
 		Verifiers: verifiers,
 		PATs:      pats,
 	}))
+	if cfg.TerraformLogin {
+		if pats == nil {
+			return fmt.Errorf("terraform login requires TERRAKUBE_PAT_SECRET")
+		}
+		if cfg.DexIssuerURL == "" || cfg.DexClientID == "" {
+			return fmt.Errorf("terraform login requires TERRAKUBE_DEX_ISSUER_URL and TERRAKUBE_DEX_CLIENT_ID")
+		}
+		cookieSigner, err := clilogin.NewCookieSigner(cfg.PATSecret)
+		if err != nil {
+			return fmt.Errorf("configure terraform login: %w", err)
+		}
+		loginService := clilogin.NewService(querier,
+			clilogin.NewDex(cfg.DexIssuerURL, cfg.DexClientID, cfg.PublicURL+"/oauth/callback"),
+			pats, cfg.TerraformLoginDefaultDays, cfg.TerraformLoginMaxDays)
+		handler.Mount("/oauth", clilogin.New(clilogin.Deps{
+			Service:   loginService,
+			Cookie:    cookieSigner,
+			PublicURL: cfg.PublicURL,
+			Logger:    logger,
+		}))
+		logger.Info("terraform login enabled", "issuer", cfg.DexIssuerURL)
+	}
 	tfeDeps := tfe.Deps{
 		Store:              querier,
 		Storage:            storeBackend,

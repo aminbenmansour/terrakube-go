@@ -406,6 +406,37 @@ func TestDiscovery(t *testing.T) {
 	}
 }
 
+func TestDiscoveryWithTerraformLogin(t *testing.T) {
+	handler := Discovery(Deps{
+		PublicURL:      "https://terrakube.example.com",
+		DexClientID:    "terrakube",
+		DexIssuerURL:   "https://dex.example.com/dex",
+		TerraformLogin: true,
+	})
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/.well-known/terraform.json", nil))
+
+	var doc map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &doc); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	login, ok := doc["login.v1"].(map[string]any)
+	if !ok {
+		t.Fatalf("login.v1 = %#v", doc["login.v1"])
+	}
+	if login["client"] != "terraform-cli" {
+		t.Errorf("login client = %v, want terraform-cli", login["client"])
+	}
+	if login["authz"] != "https://terrakube.example.com/oauth/authorize" ||
+		login["token"] != "https://terrakube.example.com/oauth/token" {
+		t.Errorf("login endpoints = %v/%v", login["authz"], login["token"])
+	}
+	ports, _ := login["ports"].([]any)
+	if len(ports) != 2 || ports[0] != float64(10000) || ports[1] != float64(10010) {
+		t.Errorf("login ports = %v, want [10000 10010]", login["ports"])
+	}
+}
+
 func TestPing(t *testing.T) {
 	handler := newTestAPI(t, &stubQuerier{})
 	rec := httptest.NewRecorder()

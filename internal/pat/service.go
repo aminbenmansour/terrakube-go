@@ -25,6 +25,8 @@ const (
 	Issuer = "Terrakube"
 	// SourceAPI is the upstream source for tokens minted from the UI/API.
 	SourceAPI = "API"
+	// SourceCLILogin marks tokens the terraform login broker minted.
+	SourceCLILogin = "CLI_LOGIN"
 )
 
 var (
@@ -93,8 +95,18 @@ func (s *Service) Create(ctx context.Context, user auth.Identity, days int, desc
 	if user.Issuer == Issuer {
 		return "", ErrNonInteractive
 	}
+	return s.Issue(ctx, user, days, description, SourceAPI, user.Email)
+}
+
+// Issue mints a token for a caller that was already authenticated elsewhere,
+// such as the terraform login broker. source is stored on the row and
+// createdBy attributes it to the user who authorized it.
+func (s *Service) Issue(ctx context.Context, user auth.Identity, days int, description, source, createdBy string) (string, error) {
 	if days < 0 {
 		return "", ErrInvalidLifetime
+	}
+	if source == "" {
+		source = SourceAPI
 	}
 
 	id := uuid.NewString()
@@ -103,9 +115,9 @@ func (s *Service) Create(ctx context.Context, user auth.Identity, days int, desc
 		ID:          id,
 		Days:        &daysValue,
 		Description: &description,
-		Source:      SourceAPI,
-		CreatedBy:   stringPtr(user.Email),
-		UpdatedBy:   stringPtr(user.Email),
+		Source:      source,
+		CreatedBy:   stringPtr(createdBy),
+		UpdatedBy:   stringPtr(createdBy),
 	})
 	if err != nil {
 		return "", fmt.Errorf("pat: create metadata: %w", err)
@@ -134,7 +146,7 @@ func (s *Service) Create(ctx context.Context, user auth.Identity, days int, desc
 	token, err := jwt.NewWithClaims(s.alg, claims).SignedString(s.key)
 	if err != nil {
 		// Do not leave a row behind that no client can ever use.
-		_ = s.store.SoftDeletePat(ctx, store.SoftDeletePatParams{ID: row.ID, UpdatedBy: stringPtr(user.Email)})
+		_ = s.store.SoftDeletePat(ctx, store.SoftDeletePatParams{ID: row.ID, UpdatedBy: stringPtr(createdBy)})
 		return "", fmt.Errorf("pat: sign token: %w", err)
 	}
 	return token, nil

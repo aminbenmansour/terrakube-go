@@ -158,7 +158,8 @@ accepted. `GET /ping` is intentionally unauthenticated and returns `404` with
 `tfe.v2` and `tfe.v2.1`. The `login.v1` block points at Dex by default
 (`TERRAKUBE_DEX_CLIENT_ID`, `TERRAKUBE_DEX_ISSUER_URL`); setting
 `TERRAKUBE_TERRAFORM_LOGIN_ENABLED=true` switches it to the optional OAuth
-broker URLs under `TERRAKUBE_PUBLIC_URL`.
+broker URLs under `TERRAKUBE_PUBLIC_URL`, with client `terraform-cli` and the
+loopback port range `[10000, 10010]`. See “Terraform login — `/oauth`”.
 
 ## State backend — `/tfstate/v1`
 
@@ -306,6 +307,52 @@ JSON:API, and is served outside `/api/v1`:
 - The signing secret is `TERRAKUBE_PAT_SECRET` (base64, ≥ 32 bytes) and the
   instance owner is `TERRAKUBE_ADMIN_GROUP` (default `TERRAKUBE_ADMIN`), which
   may revoke any token.
+
+### Terraform login — `/oauth`
+
+Source: `api/.../plugin/token/login/OAuthBrokerController.java`,
+`CliLoginService.java`, `DexExchangeClient.java` and `PkceUtil.java` in 2.34.3.
+
+Off unless `TERRAKUBE_TERRAFORM_LOGIN_ENABLED=true`; it then needs
+`TERRAKUBE_DEX_ISSUER_URL`, `TERRAKUBE_DEX_CLIENT_ID`, `TERRAKUBE_PAT_SECRET`
+and `TERRAKUBE_PUBLIC_URL`. The Dex client must be public and list
+`<public URL>/oauth/callback`; the CLI's loopback redirects are intercepted by
+the broker, so they need no registration. `terraform login` reads the flow from
+`login.v1` in `/.well-known/terraform.json`.
+
+- `GET /oauth/authorize?client_id=terraform-cli&redirect_uri=…&response_type=code&code_challenge=…&code_challenge_method=S256&state=…`
+  → `302` to Dex with the broker's own PKCE challenge. `client_id` must be
+  `terraform-cli`, the method S256, and `redirect_uri` must be
+  `http://{localhost,127.0.0.1,[::1]}:10000-10010/login` with no query,
+  fragment or userinfo; anything else is `400`.
+- `GET /oauth/callback?code=…&state=…` exchanges the code at Dex and redirects
+  the browser to `/oauth/consent`. The `id_token` is verified like a UI bearer
+  token with the Dex client as the required audience. `error=access_denied`
+  redirects straight to the CLI loopback with `error=access_denied&state=…`.
+- `GET /oauth/consent` renders the consent page (signed-in email, token name,
+  days). `POST /oauth/consent` is form-urlencoded with `decision`
+  (`approve`/`deny`), `days` and `name`; it requires a same-origin
+  `Origin`/`Referer` and the signed `tk_cli_login` cookie, then redirects to the
+  loopback with `code=…&state=…` or `error=access_denied&state=…`.
+- `POST /oauth/token` (form-urlencoded `grant_type=authorization_code`, `code`,
+  `code_verifier`, `redirect_uri`, `client_id`) → `200
+  {"access_token","token_type":"Bearer","expires_in"}`; bad input is `400
+  {"error":"invalid_grant"}`. The one-time code is stored SHA-256 hashed,
+  expires after 60 s and can be redeemed once.
+- Sessions live in `cli_auth_session` for 10 minutes with the upstream statuses
+  (`PENDING_IDP`, `PENDING_CONSENT`, `CODE_ISSUED`, `EXCHANGED`, `DENIED`,
+  `FAILED`); expired rows are pruned when the next login starts.
+- The issued token is an ordinary personal access token with `source`
+  `CLI_LOGIN` and `createdBy` set to the authorizing user. Days default to 30
+  and are capped at 365 (`TERRAKUBE_TERRAFORM_LOGIN_DEFAULT_DAYS`,
+  `TERRAKUBE_TERRAFORM_LOGIN_MAX_DAYS`).
+- `tk_cli_login` is an HMAC-SHA256 cookie over the session id, keyed with
+  HKDF-SHA256 of the PAT secret, `Path=/oauth`, `HttpOnly`, `Secure`,
+  `SameSite=Lax`.
+
+Verified with `tofu login localhost:8443` against a local Dex v2.44: the CLI
+picked port 10004, the broker redeemed the Dex code, the token was stored and
+then accepted by `/api/v1`, `/graphql/api/v1` and the PAT list.
 
 ### Verified against a live upstream (2026-11-20)
 
