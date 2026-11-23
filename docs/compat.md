@@ -448,8 +448,9 @@ Current M1 limitations (tracked for later milestones):
 
 - Filters, sorting and paging run in memory over the full collection. This is
   fine for smoke tests but must become SQL before production use.
-- Authentication is a single static bearer token (`TERRAKUBE_AUTH_TOKEN`).
-  PATs, team tokens, executor tokens and Dex JWTs are not implemented yet.
+- Authentication is a static bearer token (`TERRAKUBE_AUTH_TOKEN`) or, with
+  `TERRAKUBE_DEX_ENABLED=true`, a Dex JWT (see the UI contract below). PATs,
+  team tokens and executor tokens are not implemented yet.
 - `include=` is implemented only for the workspace's `variable`,
   `organization`, `project`, `reference`, `vcs`, `ssh` and `agent`; relationship
   writes exist only for the workspace's `project`, `vcs`, `ssh` and `agent`,
@@ -665,9 +666,18 @@ Implemented so far (`internal/graphql`, backed by gqlgen):
   access for a split-origin deployment. Verified against a real 2.34.3 build:
   single-origin serving passes `scripts/ui-smoke.sh`, and the split-origin
   container answers GraphQL queries with the UI's origin echoed.
-- Not implemented: validating the Dex ID token the UI gets after login. The
-  bearer token (`TERRAKUBE_AUTH_TOKEN`) is the only accepted user credential, so
-  a stock UI build completes the OIDC redirect and then receives 401s.
+- **Dex authentication.** With `TERRAKUBE_DEX_ENABLED=true` the API accepts the
+  Dex JWT the UI stores and sends as `Authorization: Bearer …`, mirroring
+  upstream's `DexAuthenticationManagerResolver`. The token is verified against
+  the issuer's OIDC discovery document and JWKS: RS256 signature, `iss` and
+  `exp` (60 s leeway). `TERRAKUBE_DEX_AUDIENCE_VALIDATION=true` additionally
+  requires `aud` to contain `TERRAKUBE_DEX_CLIENT_ID` or one of
+  `TERRAKUBE_DEX_EXTRA_AUDIENCES`; it is off by default, as upstream's
+  `DexAudienceValidation`. Discovery is cached, signing keys are cached, and an
+  unknown `kid` refetches the JWKS (at most once a minute) so Dex key rotation
+  works. The same credential is accepted on `/api/v1`, `/graphql/api/v1` and
+  the `/subscriptions` connection parameter. Tokens are never logged. This is
+  authentication only: group/role authorization is still pending.
 
 - **Contract tests.** `internal/graphql/contract_test.go` validates every
   captured UI operation against the SDL and then executes it against Postgres,

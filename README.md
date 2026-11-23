@@ -71,10 +71,12 @@ TERRAKUBE_UI_DIR=/path/to/terrakube/ui/build make run-api   # http://localhost:8
 
 `index.html` is returned for deep links, `/env-config.js` is generated from
 `TERRAKUBE_PUBLIC_URL`, `TERRAKUBE_DEX_CLIENT_ID` and `TERRAKUBE_DEX_ISSUER_URL`.
-Login needs a Dex ID token validator, which is not implemented yet: the UI
-completes the OIDC redirect and then receives 401s until the API accepts Dex
-tokens. With an empty `TERRAKUBE_AUTH_TOKEN` the API accepts everything, which is
-the current way to browse the UI locally.
+With `TERRAKUBE_DEX_ENABLED=true` the API validates the JWT Dex issues to the UI
+against the issuer's JWKS and accepts it on the REST, GraphQL and subscription
+endpoints. Audience validation is opt-in via
+`TERRAKUBE_DEX_AUDIENCE_VALIDATION=true`, matching upstream. With an empty
+`TERRAKUBE_AUTH_TOKEN` and Dex disabled the API accepts everything, which is the
+current way to browse the UI locally.
 
 The build is upstream's, unmodified, and it comes from
 [terrakube-ui](https://github.com/aminbenmansour/terrakube-ui): a pinned pipeline
