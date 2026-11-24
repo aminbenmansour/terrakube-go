@@ -5,6 +5,7 @@ package graphql
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	db     DB
-	events EventSource
+	db         DB
+	events     EventSource
+	adminGroup string
 }
