@@ -510,22 +510,35 @@ func TestRunnerTokenScope(t *testing.T) {
 	cases := []struct {
 		name   string
 		token  string
+		method string
 		path   string
+		body   string
 		status int
 	}{
-		{"own workspace", runner, "/workspaces/ws-1/tag-bindings", http.StatusOK},
-		{"another workspace", otherWorkspace, "/workspaces/ws-1/tag-bindings", http.StatusForbidden},
-		{"own organization", runner, "/organizations/acme", http.StatusOK},
-		{"another organization", otherOrganization, "/organizations/acme", http.StatusForbidden},
-		{"own workspace run", runner, "/runs/7", http.StatusOK},
-		{"another workspace run", otherWorkspace, "/runs/7", http.StatusForbidden},
-		{"own workspace state version", runner, "/state-versions/h-1", http.StatusOK},
-		{"another workspace state version", otherWorkspace, "/state-versions/h-1", http.StatusForbidden},
-		{"service token is unscoped", service, "/organizations/acme", http.StatusOK},
+		{"own workspace", runner, "", "/workspaces/ws-1/tag-bindings", "", http.StatusOK},
+		{"another workspace", otherWorkspace, "", "/workspaces/ws-1/tag-bindings", "", http.StatusForbidden},
+		{"own organization", runner, "", "/organizations/acme", "", http.StatusOK},
+		{"another organization", otherOrganization, "", "/organizations/acme", "", http.StatusForbidden},
+		{"own workspace run", runner, "", "/runs/7", "", http.StatusOK},
+		{"another workspace run", otherWorkspace, "", "/runs/7", "", http.StatusForbidden},
+		{"own workspace state version", runner, "", "/state-versions/h-1", "", http.StatusOK},
+		{"another workspace state version", otherWorkspace, "", "/state-versions/h-1", "", http.StatusForbidden},
+		{"create run in another workspace", otherWorkspace, http.MethodPost, "/runs",
+			`{"data":{"type":"runs","relationships":{"workspace":{"data":{"type":"workspaces","id":"ws-1"}},"configuration-version":{"data":{"type":"configuration-versions","id":"cv-1"}}}}}`,
+			http.StatusForbidden},
+		{"service token is unscoped", service, "", "/organizations/acme", "", http.StatusOK},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
+			method := tc.method
+			if method == "" {
+				method = http.MethodGet
+			}
+			var body io.Reader
+			if tc.body != "" {
+				body = strings.NewReader(tc.body)
+			}
+			req := httptest.NewRequest(method, tc.path, body)
 			req.Header.Set("Authorization", "Bearer "+tc.token)
 			rec := httptest.NewRecorder()
 			handler.ServeHTTP(rec, req)
