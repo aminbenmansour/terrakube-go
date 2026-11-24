@@ -34,6 +34,10 @@ type Deps struct {
 	Verifiers []auth.Verifier
 	// PATs backs /pat/v1. Nil answers 503 there.
 	PATs PATService
+	// AccessTokens backs /access-token/v1. Nil answers 503 there.
+	AccessTokens AccessTokenStore
+	// AdminGroup is the instance owner group. Empty means TERRAKUBE_ADMIN.
+	AdminGroup string
 	// CORSOrigins lists the origins allowed to call the API from a browser.
 	// Empty allows any origin, which is the historical behaviour; a UI served
 	// by this API shares its origin and needs no entry.

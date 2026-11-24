@@ -141,6 +141,13 @@ func run() error {
 		Verifiers: verifiers,
 		PATs:      pats,
 	}))
+	handler.Mount("/access-token/v1", api.NewAccessToken(api.Deps{
+		Logger:       logger,
+		AuthToken:    cfg.AuthToken,
+		Verifiers:    verifiers,
+		AdminGroup:   cfg.AdminGroup,
+		AccessTokens: querier,
+	}))
 	if cfg.TerraformLogin {
 		if pats == nil {
 			return fmt.Errorf("terraform login requires TERRAKUBE_PAT_SECRET")
