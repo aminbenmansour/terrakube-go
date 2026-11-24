@@ -162,3 +162,53 @@ func TestPermissionsJSONUsesUpstreamFieldNames(t *testing.T) {
 }
 
 func stringPtr(value string) *string { return &value }
+
+// Every field ApplyTeam can touch, against the two roles that set all of them.
+// A swapped mapping (manageModule <- manageProvider, say) changes the struct and
+// fails the comparison.
+func TestApplyTeamMapsEveryField(t *testing.T) {
+	all := rbac.Permissions{
+		ManageState: true, ManageWorkspace: true, ManageModule: true,
+		ManageProvider: true, ManageVcs: true, ManageTemplate: true,
+		ManageCollection: true, ManageJob: true, PlanJob: true,
+		ApproveJob: true, ManagePermission: true, ManagePolicies: true,
+	}
+	custom := rbac.Flags{
+		Role: "custom", ManageWorkspace: true, ManageState: true, ManageModule: true,
+		ManageProvider: true, ManageVcs: true, ManageTemplate: true, ManageCollection: true,
+		ManagePolicies: true, PlanJob: true, ApproveJob: true, DestroyJob: true,
+	}
+	for name, flags := range map[string]rbac.Flags{"admin": {Role: "admin"}, "custom": custom} {
+		var permissions rbac.Permissions
+		permissions.ApplyTeam(flags)
+		if permissions != all {
+			t.Errorf("ApplyTeam(%s) = %+v, want every field granted", name, permissions)
+		}
+	}
+}
+
+// Access rows add five permissions and never the organization ones.
+func TestApplyAccessMapsOnlyItsFields(t *testing.T) {
+	want := rbac.Permissions{
+		ManageState: true, ManageWorkspace: true, ManageJob: true, PlanJob: true, ApproveJob: true,
+	}
+	custom := rbac.Flags{
+		Role: "custom", ManageWorkspace: true, ManageState: true, PlanJob: true,
+		ApproveJob: true, DestroyJob: true,
+	}
+	for name, apply := range map[string]func(*rbac.Permissions, rbac.Flags){
+		"access":         (*rbac.Permissions).ApplyAccess,
+		"project access": (*rbac.Permissions).ApplyProjectAccess,
+	} {
+		var permissions rbac.Permissions
+		apply(&permissions, rbac.Flags{Role: "admin"})
+		if permissions != want {
+			t.Errorf("Apply(%s admin) = %+v, want the five workspace flags", name, permissions)
+		}
+		permissions = rbac.Permissions{}
+		apply(&permissions, custom)
+		if permissions != want {
+			t.Errorf("Apply(%s custom) = %+v, want the row flags", name, permissions)
+		}
+	}
+}
