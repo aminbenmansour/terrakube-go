@@ -317,11 +317,12 @@ never JSON:API, except the errors:
 
 - `GET /access-token/v1/teams/current-teams` →
   `202 {"groups":["team-a","TERRAKUBE_ADMIN"]}` — the token's `groups` claim,
-  in order, with no membership lookup. A token without groups answers an empty
-  array.
+  in order, with no membership lookup. (Upstream prefers federated group names
+  when that integration is configured; this API has no federated lookup.) A
+  token without groups answers an empty array.
 - `GET /access-token/v1/teams/permissions/organization/{org}` → `202` with the
-  twelve-boolean `PermissionSet` below. `{org}` must be a UUID; a malformed one
-  is **500** upstream and **400** here.
+  twelve-boolean `PermissionSet` below. `{org}` and `{ws}` must be UUIDs; a
+  malformed one is **500** upstream and **400** here.
 - `GET /access-token/v1/teams/permissions/organization/{org}/workspace/{ws}`
   → the organization set plus the workspace's `access` rows and its project's
   `project_access` rows. A missing workspace is not an error: it answers the
@@ -457,7 +458,8 @@ Captured from `azbuilder/api-server:2.34.3`; the responses are in
   one the UI's settings screens call; `moduleSshKey` and `sharedIds` are stored
   as attributes.
 - The recordings are replayed by `internal/api/upstream_contract_test.go`, so an
-  attribute rename fails `make check`. They are regenerated with
+  attribute rename fails `make check` for every replayed capture; a deferred one
+  keeps its reason in that test. They are regenerated with
   `scripts/upstream-capture/` against a new upstream tag; a capture that is
   neither replayed nor deferred with a reason fails the build.
 
@@ -492,7 +494,8 @@ bug recorded in the captures rather than copied.
 Actions. Ids are the editor's slugs (`terrakube.open-ai`), not UUIDs; the list
 answers the UI's `filter[action]=active==true;type=in=(...)` expression, reads
 are open, and writes exist because the UI's editor sends them (upstream
-restricts writes to superusers; this API has no RBAC yet). Creating does not
+restricts writes to superusers; this API does not enforce permissions yet,
+#141). Creating does not
 set `createdBy`/`updatedBy` because a static token carries no user identity, so
 they are null; timestamps are set.
 
@@ -504,8 +507,9 @@ binds a collection to a workspace in the same organization, and
 makes for each reference. Missing required attributes answer upstream's `409`
 data-integrity conflict (its Elide/primitive behaviour), an invalid category is
 `400`, and a collection created without `priority` gets `0` as upstream does.
-Upstream gates collection writes on a team permission; this API has no RBAC
-yet (#44), so the routes are open behind the same bearer token.
+Upstream gates collection writes on a team permission; this API resolves those
+permissions for the UI (`/access-token/v1`) but does not enforce them yet
+(#141), so the routes are open behind the same bearer token.
 `GET /workspace/:id?include=reference` now emits the reference relationship and
 `included` rows, and workspace resources carry the audit attributes and
 `lastJobDate` upstream serialises.
@@ -517,8 +521,8 @@ upstream's `read private key` permission hides it. `agent` is the self-hosted
 agent pool the Agents screen and the workspace picker use: list, create and
 delete. Upstream requires no attribute beyond the JSON:API `type` on either, so
 a key without a name is accepted with `name: null`; upstream gates agent writes
-on superuser and ssh writes on a team permission, while this API has no RBAC yet
-(#44). `GET /workspace/:id?include=ssh,agent` now emits both `included` rows. Deleting
+on superuser and ssh writes on a team permission, while this API resolves but
+does not yet enforce permissions (#141). `GET /workspace/:id?include=ssh,agent` now emits both `included` rows. Deleting
 a key or pool a workspace still points at answers upstream's data-integrity
 `409` rather than leaving a dangling id. The ssh private key is stored
 plaintext, like variable values, until #54 lands.
@@ -529,8 +533,9 @@ entries carry: list, get, create, patch and delete under
 answers upstream's `409`); every permission is a boolean, missing ones default to
 false except `destroyJob`, which defaults to true as upstream does. `role` is a
 free string upstream does not validate, and null is accepted. Upstream gates
-team writes on superuser; this API has no RBAC yet (#44), so the routes are open
-behind the bearer token and nothing enforces the permissions stored on the row.
+team writes on superuser; this API resolves the stored permissions for the UI
+but does not enforce them yet (#141), so the routes are open behind the bearer
+token.
 
 `notificationConfiguration` is the Settings > Notifications screen. A
 configuration is organization-wide or workspace-scoped (created under
@@ -559,8 +564,8 @@ yet (#52). Writes are open until RBAC lands (#44).
 JSON:API `type`, so an empty `attributes` object answers `201` with nulls; an
 unknown id is `404` and a malformed one `400 Invalid value: x`. Deleting a
 template leaves `workspace.default_template` alone, as upstream does (no foreign
-key). Upstream gates writes on a team's manage-template permission; this API has
-no RBAC yet (#44). One divergence: an unknown attribute in a PATCH is ignored
+key). Upstream gates writes on a team's manage-template permission; this API does not
+enforce permissions yet (#141). One divergence: an unknown attribute in a PATCH is ignored
 here, while upstream answers `404 Unknown attribute`.
 
 `POST /operations` implements the JSON:API atomic operations extension the UI
