@@ -426,9 +426,9 @@
     "semantic_hash": "ad1b6b49190994e15ed2b3182f57d672"
   },
   "scripts/smoke.sh": {
-    "mtime": 1795560529.0025158,
-    "seen": 1795560623.51103,
-    "ast_hash": "5462b10cf85ad7f266a7c80307626b14",
+    "mtime": 1795560799.4560697,
+    "seen": 1795560820.8865507,
+    "ast_hash": "60b9e79a4ee6760792c2d8f834ffc265",
     "semantic_hash": ""
   },
   "scripts/state-smoke.sh": {
@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "docs/compat.md": {
-    "mtime": 1795560525.2141705,
-    "seen": 1795560623.5113785,
-    "ast_hash": "f71187389742269da220f07b8e0b93b4",
+    "mtime": 1795560780.246159,
+    "seen": 1795560820.8868923,
+    "ast_hash": "da51917546933a2a98da674f9df10859",
     "semantic_hash": ""
   },
   "internal/executor/executor.go": {
@@ -1014,9 +1014,9 @@
     "semantic_hash": ""
   },
   "internal/api/upstream_contract_test.go": {
-    "mtime": 1795519044.4262083,
-    "seen": 1795560623.5089042,
-    "ast_hash": "18ac209b1e6f69c47cbf77a373d3cdaa",
+    "mtime": 1795560789.0348315,
+    "seen": 1795560820.884264,
+    "ast_hash": "e5d67d16bc58d8ced532877f678a009c",
     "semantic_hash": ""
   },
   "scripts/upstream-capture/capture.sh": {
@@ -2550,15 +2550,15 @@
     "semantic_hash": ""
   },
   "internal/api/grants.go": {
-    "mtime": 1795518783.9089296,
-    "seen": 1795560623.5085268,
-    "ast_hash": "68cf747de1e95f1b82193172d481f919",
+    "mtime": 1795560774.4150822,
+    "seen": 1795560820.8839843,
+    "ast_hash": "bb4ddae0db8ea36a5b166e8651ff5a10",
     "semantic_hash": ""
   },
   "internal/api/grants_test.go": {
-    "mtime": 1795519060.3892972,
-    "seen": 1795560623.5085297,
-    "ast_hash": "bc278d6758bd42369fc38a265e071fbf",
+    "mtime": 1795560774.415299,
+    "seen": 1795560820.883989,
+    "ast_hash": "917dee2dc94174188a9d0fd7c2eec074",
     "semantic_hash": ""
   }
 }
