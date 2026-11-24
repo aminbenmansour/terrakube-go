@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -316,4 +317,76 @@ func TestMountPrefixDoesNotConfuseTheIDCheck(t *testing.T) {
 			t.Errorf("%s: body = %s, want the collection blamed, not the mount prefix", tc.path, rec.Body.String())
 		}
 	}
+}
+
+// ListOrganizationIDsByGroupNames backs the membership check. The stub only
+// needs the rows the tests seed, so it mirrors the SQL's three sources.
+func (s *stubQuerier) ListOrganizationIDsByGroupNames(_ context.Context, names []string) ([]string, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	var ids []string
+	seen := map[string]bool{}
+	add := func(id string) {
+		if id != "" && !seen[id] {
+			seen[id] = true
+			ids = append(ids, id)
+		}
+	}
+	for _, team := range s.teams {
+		if slices.Contains(names, team.Name) {
+			add(team.OrganizationID)
+		}
+	}
+	for _, row := range s.access {
+		if !slices.Contains(names, row.Name) {
+			continue
+		}
+		for _, ws := range s.workspaces {
+			if ws.ID == row.WorkspaceID {
+				add(ws.OrganizationID)
+			}
+		}
+	}
+	for _, row := range s.projectAccess {
+		if row.Name == nil || !slices.Contains(names, *row.Name) {
+			continue
+		}
+		for _, project := range s.projects {
+			if project.ID == row.ProjectID {
+				add(project.OrganizationID)
+			}
+		}
+	}
+	return ids, nil
+}
+
+func (s *stubQuerier) ListTeamsByOrganizationAndNames(_ context.Context, arg store.ListTeamsByOrganizationAndNamesParams) ([]store.Team, error) {
+	var teams []store.Team
+	for _, team := range s.teams {
+		if team.OrganizationID == arg.OrganizationID && slices.Contains(arg.Names, team.Name) {
+			teams = append(teams, team)
+		}
+	}
+	return teams, s.err
+}
+
+func (s *stubQuerier) ListAccessByWorkspaceAndNames(_ context.Context, arg store.ListAccessByWorkspaceAndNamesParams) ([]store.Access, error) {
+	var rows []store.Access
+	for _, row := range s.access {
+		if row.WorkspaceID == arg.WorkspaceID && slices.Contains(arg.Names, row.Name) {
+			rows = append(rows, row)
+		}
+	}
+	return rows, s.err
+}
+
+func (s *stubQuerier) ListProjectAccessByProjectAndNames(_ context.Context, arg store.ListProjectAccessByProjectAndNamesParams) ([]store.ProjectAccess, error) {
+	var rows []store.ProjectAccess
+	for _, row := range s.projectAccess {
+		if row.ProjectID == arg.ProjectID && row.Name != nil && slices.Contains(arg.Names, *row.Name) {
+			rows = append(rows, row)
+		}
+	}
+	return rows, s.err
 }
