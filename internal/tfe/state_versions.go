@@ -186,6 +186,9 @@ func (a *API) getStateVersion(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if !a.authorizeScope(w, r, "", history.WorkspaceID) {
+		return
+	}
 	ws, err := a.deps.Store.GetWorkspace(r.Context(), history.WorkspaceID)
 	if err != nil {
 		if !a.writeStoreError(w, "get state version workspace", err) {

@@ -39,6 +39,9 @@ func (a *API) getWorkspace(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if !a.authorizeScope(w, r, org.ID, ws.ID) {
+		return
+	}
 	tagNames, err := a.workspaceTagNames(r, org.ID, ws.ID)
 	if err != nil {
 		a.internalError(w, "load workspace tags", err)

@@ -89,6 +89,11 @@ func (a *API) getConfigurationVersion(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if claims, scoped := runnerClaims(r); scoped &&
+		(content.WorkspaceID == nil || !strings.EqualFold(claims.WorkspaceID, *content.WorkspaceID)) {
+		jsonapi.WriteError(w, http.StatusForbidden, "Forbidden", "The token is not scoped to this resource.")
+		return
+	}
 	jsonapi.WriteResource(w, http.StatusOK, configurationVersionResource(content))
 }
 

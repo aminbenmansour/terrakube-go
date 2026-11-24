@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	internalauth "github.com/aminbenmansour/terrakube-go/internal/auth"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
@@ -473,6 +474,65 @@ func TestAuth(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("with token status = %d, want 200; body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestRunnerTokenScope(t *testing.T) {
+	secret := base64.RawURLEncoding.EncodeToString(make([]byte, 32))
+	validator, err := internalauth.NewValidator(secret)
+	if err != nil {
+		t.Fatalf("NewValidator() error = %v", err)
+	}
+	q := &stubQuerier{
+		org:       store.Organization{ID: "org-1", Name: "acme"},
+		workspace: store.Workspace{ID: "ws-1", OrganizationID: "org-1", Name: "prod"},
+		job:       store.Job{ID: 7, OrganizationID: "org-1", WorkspaceID: "ws-1"},
+		history:   store.History{ID: "h-1", WorkspaceID: "ws-1"},
+	}
+	handler := New(Deps{
+		Store:        q,
+		Logger:       slog.New(slog.NewTextHandler(io.Discard, nil)),
+		InternalAuth: validator,
+	})
+	sign := func(t *testing.T, claims internalauth.Claims) string {
+		t.Helper()
+		token, err := internalauth.Sign(secret, claims)
+		if err != nil {
+			t.Fatalf("Sign() error = %v", err)
+		}
+		return token
+	}
+	runner := sign(t, internalauth.Claims{OrganizationID: "org-1", WorkspaceID: "ws-1"})
+	otherWorkspace := sign(t, internalauth.Claims{OrganizationID: "org-1", WorkspaceID: "ws-2"})
+	otherOrganization := sign(t, internalauth.Claims{OrganizationID: "org-2", WorkspaceID: "ws-9"})
+	service := sign(t, internalauth.Claims{JobID: "7", StepID: "step-1"})
+
+	cases := []struct {
+		name   string
+		token  string
+		path   string
+		status int
+	}{
+		{"own workspace", runner, "/workspaces/ws-1/tag-bindings", http.StatusOK},
+		{"another workspace", otherWorkspace, "/workspaces/ws-1/tag-bindings", http.StatusForbidden},
+		{"own organization", runner, "/organizations/acme", http.StatusOK},
+		{"another organization", otherOrganization, "/organizations/acme", http.StatusForbidden},
+		{"own workspace run", runner, "/runs/7", http.StatusOK},
+		{"another workspace run", otherWorkspace, "/runs/7", http.StatusForbidden},
+		{"own workspace state version", runner, "/state-versions/h-1", http.StatusOK},
+		{"another workspace state version", otherWorkspace, "/state-versions/h-1", http.StatusForbidden},
+		{"service token is unscoped", service, "/organizations/acme", http.StatusOK},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
+			req.Header.Set("Authorization", "Bearer "+tc.token)
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+			if rec.Code != tc.status {
+				t.Fatalf("status = %d, want %d; body = %s", rec.Code, tc.status, rec.Body.String())
+			}
+		})
 	}
 }
 

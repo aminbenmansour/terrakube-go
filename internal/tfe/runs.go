@@ -60,6 +60,9 @@ func (a *API) createRun(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if !a.authorizeScope(w, r, ws.OrganizationID, ws.ID) {
+		return
+	}
 	content, err := a.deps.Store.GetContent(r.Context(), configurationID)
 	if err != nil {
 		if !a.writeStoreError(w, "get run configuration", err) {
@@ -431,6 +434,9 @@ func (a *API) jobAndWorkspace(w http.ResponseWriter, r *http.Request, param stri
 		if !a.writeStoreError(w, "get run", err) {
 			a.internalError(w, "get run", err)
 		}
+		return store.Job{}, store.Workspace{}, false
+	}
+	if !a.authorizeScope(w, r, job.OrganizationID, job.WorkspaceID) {
 		return store.Job{}, store.Workspace{}, false
 	}
 	ws, err := a.deps.Store.GetWorkspace(r.Context(), job.WorkspaceID)
