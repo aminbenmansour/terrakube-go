@@ -827,6 +827,17 @@ Differences from upstream at this stage:
   `updated_date`, `updated_by`).
 - Additional upstream tables (tokens, registry, policies, the notification
   outbox) arrive in later migrations rather than all at once.
+- `vcs.client_secret`, `vcs.access_token`, `vcs.refresh_token`,
+  `vcs.private_key` and `notification_configuration.signing_secret` are `text`
+  rather than upstream's `varchar`, because the encryption envelope below can
+  exceed the original widths.
+
+Secret columns are encrypted at rest with a versioned AES-256-GCM envelope
+(`enc:v1:<key>:<nonce>:<ciphertext>`) and a per-column AAD. The JSON:API and
+GraphQL responses still return plaintext, so the upstream UI and clients see
+no difference. The keyring is configured with `TERRAKUBE_ENCRYPTION_KEYS`;
+`make db-migrate` backfills legacy rows. `notification_configuration.destination_url`
+remains plaintext because upstream treats it as configuration.
 
 ## UI contract
 
