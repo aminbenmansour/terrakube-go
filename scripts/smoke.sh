@@ -133,6 +133,10 @@ access_id=$(req -X POST "${BASE}/organization/${org_id}/workspace/${ws_id}/acces
 [[ -n "$access_id" && "$access_id" != "null" ]] || { echo "FAIL: create workspace access" >&2; exit 1; }
 count=$(req "${BASE}/organization/${org_id}/workspace/${ws_id}/access" | jq '.data | length')
 [[ "$count" == "1" ]] || { echo "FAIL: workspace access count ${count}" >&2; exit 1; }
+# Upstream's unique constraint on (workspace_id, name) is in the schema now.
+expect_status 409 "$(curl -s -o /dev/null -w '%{http_code}' "${auth[@]}" "${json[@]}" \
+  -X POST "${BASE}/organization/${org_id}/workspace/${ws_id}/access" \
+  -d '{"data": {"type": "access", "attributes": {"name": "smoke-group"}}}')" "duplicate workspace access"
 expect_status 204 "$(status -X PATCH "${BASE}/organization/${org_id}/workspace/${ws_id}/access/${access_id}" -d '{
   "data": {"type": "access", "id": "'"${access_id}"'", "attributes": {"role": "plan"}}
 }')" "patch workspace access"
