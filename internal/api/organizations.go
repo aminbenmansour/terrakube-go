@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/aminbenmansour/terrakube-go/internal/auth"
 	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 )
@@ -26,6 +27,28 @@ func (a *API) listOrganizations(w http.ResponseWriter, r *http.Request) {
 			a.internalError(w, "list organizations", err)
 		}
 		return
+	}
+
+	// Upstream filters the list to the caller's organizations; a token with no
+	// matching group sees an empty collection, not an error.
+	if !a.callerIsOwner(r) {
+		identity, _ := auth.IdentityFromContext(r.Context())
+		ids, err := a.deps.Store.ListOrganizationIDsByGroupNames(r.Context(), identity.Groups)
+		if err != nil {
+			a.internalError(w, "list organizations", err)
+			return
+		}
+		visible := make(map[string]bool, len(ids))
+		for _, id := range ids {
+			visible[id] = true
+		}
+		visibleItems := items[:0]
+		for _, org := range items {
+			if visible[org.ID] {
+				visibleItems = append(visibleItems, org)
+			}
+		}
+		items = visibleItems
 	}
 
 	page, total := filterSortPage(items, q, func(o store.Organization) string { return o.Name })
