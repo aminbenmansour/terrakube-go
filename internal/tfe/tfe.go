@@ -160,6 +160,11 @@ func (a *API) authenticate(next http.Handler) http.Handler {
 		if a.deps.InternalAuth != nil {
 			claims, err := a.deps.InternalAuth.Parse(raw)
 			if err == nil && internalauth.Classify(claims) != internalauth.TypeNotInternal {
+				if internalauth.Classify(claims) == internalauth.TypeWorkspaceExecutor &&
+					tfstate.ValidateActiveStep(r.Context(), a.deps.Store, claims) != nil {
+					a.unauthorized(w)
+					return
+				}
 				next.ServeHTTP(w, r.WithContext(internalauth.WithClaims(r.Context(), claims)))
 				return
 			}

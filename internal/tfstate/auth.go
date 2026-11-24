@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	internalauth "github.com/aminbenmansour/terrakube-go/internal/auth"
+	"github.com/aminbenmansour/terrakube-go/internal/store"
 )
 
 type claimsContextKey struct{}
@@ -71,7 +72,7 @@ func (h *Handler) authenticate(next http.Handler) http.Handler {
 
 		switch internalauth.Classify(claims) {
 		case internalauth.TypeWorkspaceExecutor:
-			if err := h.validateActiveStep(r.Context(), claims); err != nil {
+			if err := ValidateActiveStep(r.Context(), h.deps.Store, claims); err != nil {
 				h.deps.Logger.Info("state backend runner token rejected", "error", err)
 				w.WriteHeader(http.StatusUnauthorized)
 				return
@@ -89,13 +90,16 @@ func (h *Handler) authenticate(next http.Handler) http.Handler {
 	})
 }
 
-func (h *Handler) validateActiveStep(ctx context.Context, claims *internalauth.Claims) error {
+// ValidateActiveStep reports whether a workspace token still points at a step
+// that has not finished. The TFE and log APIs use it so a runner token expires
+// when its job ends, like the state backend.
+func ValidateActiveStep(ctx context.Context, q store.Querier, claims *internalauth.Claims) error {
 	stepID := claims.EffectiveStepID()
 	if stepID == "" {
 		return errors.New("runner token has no stepId")
 	}
 
-	step, err := h.deps.Store.GetStep(ctx, stepID)
+	step, err := q.GetStep(ctx, stepID)
 	if err != nil {
 		return fmt.Errorf("load step %s: %w", stepID, err)
 	}

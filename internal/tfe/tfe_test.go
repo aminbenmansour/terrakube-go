@@ -222,6 +222,13 @@ func (s *stubQuerier) ApproveJob(_ context.Context, arg store.ApproveJobParams) 
 	return s.job, nil
 }
 
+func (s *stubQuerier) GetStep(_ context.Context, id string) (store.Step, error) {
+	if s.step.ID != "" && s.step.ID != id {
+		return store.Step{}, pgx.ErrNoRows
+	}
+	return s.step, nil
+}
+
 func (s *stubQuerier) GetStepByJobAndNumber(_ context.Context, arg store.GetStepByJobAndNumberParams) (store.Step, error) {
 	if s.step.JobID == arg.JobID && s.step.StepNumber == arg.StepNumber {
 		return s.step, nil
@@ -488,6 +495,7 @@ func TestRunnerTokenScope(t *testing.T) {
 		workspace: store.Workspace{ID: "ws-1", OrganizationID: "org-1", Name: "prod"},
 		job:       store.Job{ID: 7, OrganizationID: "org-1", WorkspaceID: "ws-1"},
 		history:   store.History{ID: "h-1", WorkspaceID: "ws-1"},
+		step:      store.Step{ID: "step-1", JobID: 7, Status: stringPtr("running")},
 	}
 	handler := New(Deps{
 		Store:        q,
@@ -502,9 +510,10 @@ func TestRunnerTokenScope(t *testing.T) {
 		}
 		return token
 	}
-	runner := sign(t, internalauth.Claims{OrganizationID: "org-1", WorkspaceID: "ws-1"})
-	otherWorkspace := sign(t, internalauth.Claims{OrganizationID: "org-1", WorkspaceID: "ws-2"})
-	otherOrganization := sign(t, internalauth.Claims{OrganizationID: "org-2", WorkspaceID: "ws-9"})
+	runner := sign(t, internalauth.Claims{OrganizationID: "org-1", WorkspaceID: "ws-1", StepID: "step-1"})
+	otherWorkspace := sign(t, internalauth.Claims{OrganizationID: "org-1", WorkspaceID: "ws-2", StepID: "step-1"})
+	otherOrganization := sign(t, internalauth.Claims{OrganizationID: "org-2", WorkspaceID: "ws-9", StepID: "step-1"})
+	finished := sign(t, internalauth.Claims{OrganizationID: "org-1", WorkspaceID: "ws-1", StepID: "step-done"})
 	service := sign(t, internalauth.Claims{JobID: "7", StepID: "step-1"})
 
 	cases := []struct {
@@ -527,6 +536,7 @@ func TestRunnerTokenScope(t *testing.T) {
 			`{"data":{"type":"runs","relationships":{"workspace":{"data":{"type":"workspaces","id":"ws-1"}},"configuration-version":{"data":{"type":"configuration-versions","id":"cv-1"}}}}}`,
 			http.StatusForbidden},
 		{"service token is unscoped", service, "", "/organizations/acme", "", http.StatusOK},
+		{"finished step", finished, "", "/organizations/acme", "", http.StatusUnauthorized},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
