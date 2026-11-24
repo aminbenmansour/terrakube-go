@@ -28,7 +28,14 @@ func TestBackfillEncryptsPlaintextRows(t *testing.T) {
 	if err := db.Migrate(ctx, pool, migrations.Files, "."); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	q := store.New(pool)
+	// Backfill touches every row in the shared test database. Run it in a
+	// transaction and roll back so rows other packages created are untouched.
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin transaction: %v", err)
+	}
+	defer tx.Rollback(ctx)
+	q := store.New(tx)
 
 	c, err := NewCipher("k1:"+testKey(1), "")
 	if err != nil {
@@ -41,7 +48,6 @@ func TestBackfillEncryptsPlaintextRows(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("create organization: %v", err)
 	}
-	t.Cleanup(func() { _ = q.DeleteOrganization(context.Background(), orgID) })
 
 	wsID := uuid.NewString()
 	if _, err := q.CreateWorkspace(ctx, store.CreateWorkspaceParams{
