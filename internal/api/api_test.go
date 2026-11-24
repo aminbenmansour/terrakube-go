@@ -40,6 +40,8 @@ type stubQuerier struct {
 	vcs                   []store.Vc
 	templates             []store.Template
 	teams                 []store.Team
+	access                []store.Access
+	projectAccess         []store.ProjectAccess
 	notifications         []store.NotificationConfiguration
 	triggers              []store.NotificationTrigger
 	notificationTemplates map[string][]string
@@ -48,6 +50,7 @@ type stubQuerier struct {
 	createdAction         *store.CreateActionParams
 	updatedAction         *store.UpdateActionParams
 	deletedAction         string
+	updatedAccess         *store.UpdateAccessParams
 }
 
 func (s *stubQuerier) ListOrganizations(context.Context) ([]store.Organization, error) {
