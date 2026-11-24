@@ -3,6 +3,7 @@ package tfoutput
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	internalauth "github.com/aminbenmansour/terrakube-go/internal/auth"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
@@ -275,5 +277,49 @@ func (b *logBackend) Stat(_ context.Context, key string) (storage.Object, error)
 func (b *logBackend) Health(context.Context) error { return nil }
 
 var _ storage.Backend = (*logBackend)(nil)
+
+func TestGetStepLogScopesRunnerToken(t *testing.T) {
+	secret := base64.RawURLEncoding.EncodeToString(make([]byte, 32))
+	validator, err := internalauth.NewValidator(secret)
+	if err != nil {
+		t.Fatalf("NewValidator() error = %v", err)
+	}
+	output := "log"
+	q := &stubQuerier{
+		job:  store.Job{ID: 7, OrganizationID: "org-1", WorkspaceID: "ws-1"},
+		step: store.Step{ID: "step-1", JobID: 7, Output: &output},
+	}
+	handler := New(Deps{Store: q, InternalAuth: validator})
+	sign := func(t *testing.T, claims internalauth.Claims) string {
+		t.Helper()
+		token, err := internalauth.Sign(secret, claims)
+		if err != nil {
+			t.Fatalf("Sign() error = %v", err)
+		}
+		return token
+	}
+
+	cases := []struct {
+		name   string
+		claims internalauth.Claims
+		status int
+	}{
+		{"own workspace", internalauth.Claims{OrganizationID: "org-1", WorkspaceID: "ws-1"}, http.StatusOK},
+		{"another workspace", internalauth.Claims{OrganizationID: "org-1", WorkspaceID: "ws-2"}, http.StatusForbidden},
+		{"another organization", internalauth.Claims{OrganizationID: "org-2", WorkspaceID: "ws-9"}, http.StatusForbidden},
+		{"service token is unscoped", internalauth.Claims{JobID: "7", StepID: "step-1"}, http.StatusOK},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/organization/org-1/job/7/step/step-1", nil)
+			req.Header.Set("Authorization", "Bearer "+sign(t, tc.claims))
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+			if rec.Code != tc.status {
+				t.Fatalf("status = %d, want %d; body = %s", rec.Code, tc.status, rec.Body.String())
+			}
+		})
+	}
+}
 
 func stringPtr(value string) *string { return &value }
