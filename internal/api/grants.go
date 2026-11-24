@@ -75,7 +75,7 @@ func (a *API) projectGrantParent(w http.ResponseWriter, r *http.Request) (store.
 		a.internalError(w, "get project", err)
 		return store.Project{}, false
 	}
-	jsonapi.WriteError(w, http.StatusNotFound, "Not Found", "Unknown identifier "+projectID+" for project")
+	jsonapi.WriteError(w, http.StatusNotFound, "Not Found", "Unknown identifier ["+projectID+"] for project")
 	return store.Project{}, false
 }
 
@@ -106,7 +106,7 @@ func (a *API) workspaceAccess(w http.ResponseWriter, r *http.Request) (store.Acc
 		a.internalError(w, "get workspace access", err)
 		return store.Access{}, false
 	}
-	jsonapi.WriteError(w, http.StatusNotFound, "Not Found", "Unknown identifier "+id+" for access")
+	jsonapi.WriteError(w, http.StatusNotFound, "Not Found", "Unknown identifier ["+id+"] for access")
 	return store.Access{}, false
 }
 
@@ -132,9 +132,10 @@ func (a *API) createWorkspaceAccess(w http.ResponseWriter, r *http.Request) {
 		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Attributes", err.Error())
 		return
 	}
-	if attrs.Name == nil || *attrs.Name == "" {
+	if attrs.Name == nil {
 		// Elide answers its data-integrity conflict for a missing required
-		// column, as it does for collections and global variables.
+		// column, as it does for collections and global variables. An empty
+		// string is a value, and the column accepts it.
 		jsonapi.WriteError(w, http.StatusConflict, "Conflict", "This operation conflicts with data that already exists.")
 		return
 	}
@@ -240,7 +241,7 @@ func (a *API) projectAccess(w http.ResponseWriter, r *http.Request) (store.Proje
 		a.internalError(w, "get project access", err)
 		return store.ProjectAccess{}, false
 	}
-	jsonapi.WriteError(w, http.StatusNotFound, "Not Found", "Unknown identifier "+id+" for projectAccess")
+	jsonapi.WriteError(w, http.StatusNotFound, "Not Found", "Unknown identifier ["+id+"] for projectAccess")
 	return store.ProjectAccess{}, false
 }
 

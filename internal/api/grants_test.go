@@ -55,6 +55,18 @@ func TestWorkspaceAccessCreateDefaults(t *testing.T) {
 	}
 }
 
+// An empty name is a value, not a missing one; the column accepts it.
+func TestWorkspaceAccessCreateEmptyName(t *testing.T) {
+	_, handler := grantsAPI(t)
+	rec := doGrant(t, handler, http.MethodPost,
+		"/organization/"+capturedRelOrg+"/workspace/"+capturedRelWS+"/access",
+		`{"data":{"type":"access","attributes":{"name":""}}}`)
+
+	if rec.Code != http.StatusCreated {
+		t.Errorf("status = %d, want 201: %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestWorkspaceAccessCreateWithoutNameConflicts(t *testing.T) {
 	_, handler := grantsAPI(t)
 	rec := doGrant(t, handler, http.MethodPost,
@@ -101,7 +113,7 @@ func TestWorkspaceAccessRejectsAnotherWorkspace(t *testing.T) {
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404: %s", rec.Code, rec.Body.String())
 	}
-	if !strings.Contains(rec.Body.String(), "Unknown identifier "+capturedAccessID+" for access") {
+	if !strings.Contains(rec.Body.String(), "Unknown identifier ["+capturedAccessID+"] for access") {
 		t.Errorf("detail = %s, want upstream's identifier message", rec.Body.String())
 	}
 }
@@ -133,7 +145,7 @@ func TestProjectAccessRejectsAnotherOrganization(t *testing.T) {
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404: %s", rec.Code, rec.Body.String())
 	}
-	if !strings.Contains(rec.Body.String(), "Unknown identifier "+capturedRelP1+" for project") {
+	if !strings.Contains(rec.Body.String(), "Unknown identifier ["+capturedRelP1+"] for project") {
 		t.Errorf("detail = %s, want upstream's identifier message", rec.Body.String())
 	}
 }
