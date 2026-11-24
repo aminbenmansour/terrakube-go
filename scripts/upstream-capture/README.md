@@ -27,6 +27,8 @@ claim and every organization read requires the instance-owner group, so the PAT
 path is the only one that works without an LDAP server. `pat.py` inserts a
 `pat` row and signs an HS256 token with the `PatSecret` from `start.sh`; the
 signing key is the base64url-decoded secret, not the raw string.
+`PAT_GROUPS` mints a token for other group names (`PAT_GROUPS=capture-team
+./pat.py`), which is how the team-derived permission captures are taken.
 
 `token.txt` and `.secrets.env` are git-ignored. `start.sh` generates the shared
 PAT and internal secrets on first run and gives them to the API; `pat.py` reads

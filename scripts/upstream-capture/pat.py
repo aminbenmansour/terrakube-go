@@ -8,6 +8,9 @@ requires the instance owner group, so the PAT path is the only way in without
 an LDAP server.
 
 Run after start.sh:  ./pat.py > token.txt; curl -H "Authorization: Bearer $(cat token.txt)" ...
+
+Set PAT_GROUPS to a comma-separated list to mint a token for other groups, e.g.
+PAT_GROUPS=capture-team to capture team-derived permissions.
 """
 
 import base64
@@ -62,6 +65,7 @@ def main() -> None:
         stdout=subprocess.DEVNULL,
     )
 
+    groups = [group.strip() for group in os.environ.get("PAT_GROUPS", "TERRAKUBE_ADMIN").split(",") if group.strip()]
     now = int(time.time())
     claims = {
         "iss": ISSUER,
@@ -71,7 +75,7 @@ def main() -> None:
         "email": "admin@example.com",
         "email_verified": True,
         "name": "admin@example.com (Token)",
-        "groups": ["TERRAKUBE_ADMIN"],
+        "groups": groups,
         "iat": now,
         "exp": now + 24 * 3600,
     }
