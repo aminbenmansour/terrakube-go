@@ -126,21 +126,26 @@ expect_status 204 "$(status -X DELETE "${BASE}/variable/${var_id}")" "delete var
 expect_status 404 "$(status "${BASE}/variable/${var_id}")" "get deleted variable"
 
 # The UI's permission endpoints are mounted outside /api/v1 and answer plain
-# JSON with 202. The development token is the instance owner, so it gets the
-# two owner flags and nothing else when no team matches.
-root="${BASE%/api/v1}"
-teams=$(curl -fsS "${auth[@]}" "${root}/access-token/v1/teams/current-teams")
-[[ "$(echo "$teams" | jq -r '.groups | length')" == "0" ]] || { echo "FAIL: current teams (${teams})" >&2; exit 1; }
-echo "ok: current teams"
+# JSON with 202. They need a bearer token even when the management API is open,
+# and the development token is the instance owner: two flags and nothing else
+# when no team matches.
+if [[ -n "$TOKEN" ]]; then
+  root="${BASE%/api/v1}"
+  expect_status 202 "$(status "${root}/access-token/v1/teams/current-teams")" "current teams"
+  teams=$(curl -fsS "${auth[@]}" "${root}/access-token/v1/teams/current-teams")
+  [[ "$(echo "$teams" | jq -r '.groups | length')" == "0" ]] || { echo "FAIL: current teams (${teams})" >&2; exit 1; }
+  echo "ok: current teams"
 
-perms=$(curl -fsS "${auth[@]}" "${root}/access-token/v1/teams/permissions/organization/${org_id}")
-[[ "$(echo "$perms" | jq -r '.managePermission')" == "true" &&
-   "$(echo "$perms" | jq -r '.managePolicies')" == "true" &&
-   "$(echo "$perms" | jq -r '.manageWorkspace')" == "false" ]] || {
-  echo "FAIL: team permissions (${perms})" >&2
-  exit 1
-}
-echo "ok: team permissions"
+  expect_status 202 "$(status "${root}/access-token/v1/teams/permissions/organization/${org_id}")" "team permissions"
+  perms=$(curl -fsS "${auth[@]}" "${root}/access-token/v1/teams/permissions/organization/${org_id}")
+  [[ "$(echo "$perms" | jq -r '.managePermission')" == "true" &&
+     "$(echo "$perms" | jq -r '.managePolicies')" == "true" &&
+     "$(echo "$perms" | jq -r '.manageWorkspace')" == "false" ]] || {
+    echo "FAIL: team permissions (${perms})" >&2
+    exit 1
+  }
+  echo "ok: team permissions"
+fi
 expect_status 204 "$(status -X DELETE "${BASE}/workspace/${ws_id}")" "delete workspace"
 expect_status 404 "$(status "${BASE}/workspace/${ws_id}")" "get deleted workspace"
 expect_status 204 "$(status -X DELETE "${BASE}/project/${project_id}")" "delete project"
