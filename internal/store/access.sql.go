@@ -9,8 +9,207 @@ import (
 	"context"
 )
 
-const listAccessByWorkspaceAndNames = `-- name: ListAccessByWorkspaceAndNames :many
+const createAccess = `-- name: CreateAccess :one
+INSERT INTO access (
+    id, name, manage_workspace, manage_state, manage_job, plan_job,
+    approve_job, destroy_job, role, workspace_id
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, name, manage_workspace, manage_state, manage_job, plan_job, approve_job, destroy_job, role, workspace_id
+`
 
+type CreateAccessParams struct {
+	ID              string  `json:"id"`
+	Name            string  `json:"name"`
+	ManageWorkspace bool    `json:"manage_workspace"`
+	ManageState     bool    `json:"manage_state"`
+	ManageJob       bool    `json:"manage_job"`
+	PlanJob         bool    `json:"plan_job"`
+	ApproveJob      bool    `json:"approve_job"`
+	DestroyJob      bool    `json:"destroy_job"`
+	Role            *string `json:"role"`
+	WorkspaceID     string  `json:"workspace_id"`
+}
+
+func (q *Queries) CreateAccess(ctx context.Context, arg CreateAccessParams) (Access, error) {
+	row := q.db.QueryRow(ctx, createAccess,
+		arg.ID,
+		arg.Name,
+		arg.ManageWorkspace,
+		arg.ManageState,
+		arg.ManageJob,
+		arg.PlanJob,
+		arg.ApproveJob,
+		arg.DestroyJob,
+		arg.Role,
+		arg.WorkspaceID,
+	)
+	var i Access
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.ManageWorkspace,
+		&i.ManageState,
+		&i.ManageJob,
+		&i.PlanJob,
+		&i.ApproveJob,
+		&i.DestroyJob,
+		&i.Role,
+		&i.WorkspaceID,
+	)
+	return i, err
+}
+
+const createProjectAccess = `-- name: CreateProjectAccess :one
+INSERT INTO project_access (
+    id, name, manage_workspace, manage_state, manage_job, plan_job,
+    approve_job, destroy_job, role, project_id
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, name, manage_workspace, manage_state, manage_job, plan_job, approve_job, destroy_job, role, project_id
+`
+
+type CreateProjectAccessParams struct {
+	ID              string  `json:"id"`
+	Name            *string `json:"name"`
+	ManageWorkspace bool    `json:"manage_workspace"`
+	ManageState     bool    `json:"manage_state"`
+	ManageJob       bool    `json:"manage_job"`
+	PlanJob         bool    `json:"plan_job"`
+	ApproveJob      bool    `json:"approve_job"`
+	DestroyJob      bool    `json:"destroy_job"`
+	Role            *string `json:"role"`
+	ProjectID       string  `json:"project_id"`
+}
+
+func (q *Queries) CreateProjectAccess(ctx context.Context, arg CreateProjectAccessParams) (ProjectAccess, error) {
+	row := q.db.QueryRow(ctx, createProjectAccess,
+		arg.ID,
+		arg.Name,
+		arg.ManageWorkspace,
+		arg.ManageState,
+		arg.ManageJob,
+		arg.PlanJob,
+		arg.ApproveJob,
+		arg.DestroyJob,
+		arg.Role,
+		arg.ProjectID,
+	)
+	var i ProjectAccess
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.ManageWorkspace,
+		&i.ManageState,
+		&i.ManageJob,
+		&i.PlanJob,
+		&i.ApproveJob,
+		&i.DestroyJob,
+		&i.Role,
+		&i.ProjectID,
+	)
+	return i, err
+}
+
+const deleteAccess = `-- name: DeleteAccess :exec
+DELETE FROM access WHERE id = $1
+`
+
+func (q *Queries) DeleteAccess(ctx context.Context, id string) error {
+	_, err := q.db.Exec(ctx, deleteAccess, id)
+	return err
+}
+
+const deleteProjectAccess = `-- name: DeleteProjectAccess :exec
+DELETE FROM project_access WHERE id = $1
+`
+
+func (q *Queries) DeleteProjectAccess(ctx context.Context, id string) error {
+	_, err := q.db.Exec(ctx, deleteProjectAccess, id)
+	return err
+}
+
+const getAccess = `-- name: GetAccess :one
+SELECT id, name, manage_workspace, manage_state, manage_job, plan_job, approve_job, destroy_job, role, workspace_id FROM access WHERE id = $1
+`
+
+func (q *Queries) GetAccess(ctx context.Context, id string) (Access, error) {
+	row := q.db.QueryRow(ctx, getAccess, id)
+	var i Access
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.ManageWorkspace,
+		&i.ManageState,
+		&i.ManageJob,
+		&i.PlanJob,
+		&i.ApproveJob,
+		&i.DestroyJob,
+		&i.Role,
+		&i.WorkspaceID,
+	)
+	return i, err
+}
+
+const getProjectAccess = `-- name: GetProjectAccess :one
+SELECT id, name, manage_workspace, manage_state, manage_job, plan_job, approve_job, destroy_job, role, project_id FROM project_access WHERE id = $1
+`
+
+func (q *Queries) GetProjectAccess(ctx context.Context, id string) (ProjectAccess, error) {
+	row := q.db.QueryRow(ctx, getProjectAccess, id)
+	var i ProjectAccess
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.ManageWorkspace,
+		&i.ManageState,
+		&i.ManageJob,
+		&i.PlanJob,
+		&i.ApproveJob,
+		&i.DestroyJob,
+		&i.Role,
+		&i.ProjectID,
+	)
+	return i, err
+}
+
+const listAccessByWorkspace = `-- name: ListAccessByWorkspace :many
+
+SELECT id, name, manage_workspace, manage_state, manage_job, plan_job, approve_job, destroy_job, role, workspace_id FROM access WHERE workspace_id = $1 ORDER BY name, id
+`
+
+// Workspace and project access grants. A row's name is the Dex group it
+// grants, so the by-name lookups are the RBAC checks.
+func (q *Queries) ListAccessByWorkspace(ctx context.Context, workspaceID string) ([]Access, error) {
+	rows, err := q.db.Query(ctx, listAccessByWorkspace, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Access{}
+	for rows.Next() {
+		var i Access
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ManageWorkspace,
+			&i.ManageState,
+			&i.ManageJob,
+			&i.PlanJob,
+			&i.ApproveJob,
+			&i.DestroyJob,
+			&i.Role,
+			&i.WorkspaceID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAccessByWorkspaceAndNames = `-- name: ListAccessByWorkspaceAndNames :many
 SELECT id, name, manage_workspace, manage_state, manage_job, plan_job, approve_job, destroy_job, role, workspace_id FROM access
 WHERE workspace_id = $1 AND name = ANY($2::text[])
 ORDER BY name, id
@@ -21,8 +220,6 @@ type ListAccessByWorkspaceAndNamesParams struct {
 	Names       []string `json:"names"`
 }
 
-// Workspace and project access grants. A row's name is the Dex group it
-// grants, so the by-name lookups are the RBAC checks.
 func (q *Queries) ListAccessByWorkspaceAndNames(ctx context.Context, arg ListAccessByWorkspaceAndNamesParams) ([]Access, error) {
 	rows, err := q.db.Query(ctx, listAccessByWorkspaceAndNames, arg.WorkspaceID, arg.Names)
 	if err != nil {
@@ -43,6 +240,41 @@ func (q *Queries) ListAccessByWorkspaceAndNames(ctx context.Context, arg ListAcc
 			&i.DestroyJob,
 			&i.Role,
 			&i.WorkspaceID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProjectAccessByProject = `-- name: ListProjectAccessByProject :many
+SELECT id, name, manage_workspace, manage_state, manage_job, plan_job, approve_job, destroy_job, role, project_id FROM project_access WHERE project_id = $1 ORDER BY name, id
+`
+
+func (q *Queries) ListProjectAccessByProject(ctx context.Context, projectID string) ([]ProjectAccess, error) {
+	rows, err := q.db.Query(ctx, listProjectAccessByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProjectAccess{}
+	for rows.Next() {
+		var i ProjectAccess
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ManageWorkspace,
+			&i.ManageState,
+			&i.ManageJob,
+			&i.PlanJob,
+			&i.ApproveJob,
+			&i.DestroyJob,
+			&i.Role,
+			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}
@@ -94,4 +326,112 @@ func (q *Queries) ListProjectAccessByProjectAndNames(ctx context.Context, arg Li
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateAccess = `-- name: UpdateAccess :one
+UPDATE access SET
+    name = $2,
+    manage_workspace = $3,
+    manage_state = $4,
+    manage_job = $5,
+    plan_job = $6,
+    approve_job = $7,
+    destroy_job = $8,
+    role = $9
+WHERE id = $1
+RETURNING id, name, manage_workspace, manage_state, manage_job, plan_job, approve_job, destroy_job, role, workspace_id
+`
+
+type UpdateAccessParams struct {
+	ID              string  `json:"id"`
+	Name            string  `json:"name"`
+	ManageWorkspace bool    `json:"manage_workspace"`
+	ManageState     bool    `json:"manage_state"`
+	ManageJob       bool    `json:"manage_job"`
+	PlanJob         bool    `json:"plan_job"`
+	ApproveJob      bool    `json:"approve_job"`
+	DestroyJob      bool    `json:"destroy_job"`
+	Role            *string `json:"role"`
+}
+
+func (q *Queries) UpdateAccess(ctx context.Context, arg UpdateAccessParams) (Access, error) {
+	row := q.db.QueryRow(ctx, updateAccess,
+		arg.ID,
+		arg.Name,
+		arg.ManageWorkspace,
+		arg.ManageState,
+		arg.ManageJob,
+		arg.PlanJob,
+		arg.ApproveJob,
+		arg.DestroyJob,
+		arg.Role,
+	)
+	var i Access
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.ManageWorkspace,
+		&i.ManageState,
+		&i.ManageJob,
+		&i.PlanJob,
+		&i.ApproveJob,
+		&i.DestroyJob,
+		&i.Role,
+		&i.WorkspaceID,
+	)
+	return i, err
+}
+
+const updateProjectAccess = `-- name: UpdateProjectAccess :one
+UPDATE project_access SET
+    name = $2,
+    manage_workspace = $3,
+    manage_state = $4,
+    manage_job = $5,
+    plan_job = $6,
+    approve_job = $7,
+    destroy_job = $8,
+    role = $9
+WHERE id = $1
+RETURNING id, name, manage_workspace, manage_state, manage_job, plan_job, approve_job, destroy_job, role, project_id
+`
+
+type UpdateProjectAccessParams struct {
+	ID              string  `json:"id"`
+	Name            *string `json:"name"`
+	ManageWorkspace bool    `json:"manage_workspace"`
+	ManageState     bool    `json:"manage_state"`
+	ManageJob       bool    `json:"manage_job"`
+	PlanJob         bool    `json:"plan_job"`
+	ApproveJob      bool    `json:"approve_job"`
+	DestroyJob      bool    `json:"destroy_job"`
+	Role            *string `json:"role"`
+}
+
+func (q *Queries) UpdateProjectAccess(ctx context.Context, arg UpdateProjectAccessParams) (ProjectAccess, error) {
+	row := q.db.QueryRow(ctx, updateProjectAccess,
+		arg.ID,
+		arg.Name,
+		arg.ManageWorkspace,
+		arg.ManageState,
+		arg.ManageJob,
+		arg.PlanJob,
+		arg.ApproveJob,
+		arg.DestroyJob,
+		arg.Role,
+	)
+	var i ProjectAccess
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.ManageWorkspace,
+		&i.ManageState,
+		&i.ManageJob,
+		&i.PlanJob,
+		&i.ApproveJob,
+		&i.DestroyJob,
+		&i.Role,
+		&i.ProjectID,
+	)
+	return i, err
 }
