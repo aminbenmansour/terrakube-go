@@ -379,14 +379,18 @@ required for `access` (upstream's data-integrity **409**) but nullable for
 `project_access`. `role` is a free string upstream does not validate.
 
 A grant id that does not exist, or that belongs to another workspace/project,
-answers **404 `Unknown identifier [id] for access|projectAccess`**, and a parent
-outside the organization answers **404 `Unknown identifier [id] for
-workspace|project`**. Lists are ordered by name then id. The GraphQL `access`
-and `projectAccess` relations read the same tables.
+answers **404 `Unknown identifier [id] for access|projectAccess`**. A project
+outside the organization answers **404 `Unknown identifier [id] for project`**;
+the workspace routes share the generic `The requested resource does not exist.`
+detail for a missing or foreign workspace, with the same 404 status. Lists
+answer every row for the parent, ordered by name then id; `page`, `sort` and
+`filter` parameters are not applied yet, as with the other in-memory lists.
+The GraphQL `access` and `projectAccess` relations read the same tables.
 
 Divergences: a duplicate `access.name` within a workspace violates upstream's
-`const_workspace_access` unique constraint, which upstream lets surface as
-**500**; this API answers **409**. An unknown attribute in a PATCH is ignored
+`const_workspace_access` unique constraint (added to this schema by `0017`),
+which upstream lets surface as **500**; this API answers **409**. An unknown
+attribute in a PATCH is ignored
 here, while upstream answers **404 `Unknown attribute ...`**, as with templates.
 Writes are not permission-checked yet (#141); upstream gates them on the
 `manage workspace access` / `manage project access` permissions. Captures are
