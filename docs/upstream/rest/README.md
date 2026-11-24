@@ -38,20 +38,22 @@ tools that produced them are in
 | `action` ids | editor slugs (`terrakube.open-ai`), not UUIDs | same |
 | `action` list filter | `filter[action]=active==true;type=in=('A','B')` | same |
 | `action` create / patch / delete | **201** with the resource / **204** / **204**; audit fields set from the PAT's user | same statuses; `createdBy`/`updatedBy` are null (no user in the token) |
-| `ssh` | organization-scoped CRUD; `privateKey` is never returned; delete in use **409** | same; no team permission check yet (#44) |
-| `agent` | list, create, delete; delete in use **409**; superuser-only writes | same routes and 409; writes open (no RBAC enforcement yet) |
-| `vcs` | organization-scoped CRUD; `name`/`description`/`vcsType` required; invalid enum **400**; secrets never returned; delete unlinks its workspaces | same routes and statuses; secrets plaintext until #54 |
-| `team` | organization-scoped CRUD; `name` required; permission booleans, `destroyJob` default true; `role` unvalidated; superuser-only writes | same routes and defaults; writes open (no RBAC enforcement yet) |
-| `access` / `project_access` | relationship resources (`rootLevel=false`): CRUD only under `/organization/{org}/workspace/{ws}/access` and `/project/{p}/projectAccess`; **201** with the resource, PATCH/DELETE **204**; omitted `destroyJob` is **true**; DELETE must send no content type | same routes and statuses; duplicate `access.name` **409** where upstream **500**; unknown PATCH attribute ignored; writes not permission-checked yet (#141) |
+| `ssh` | organization-scoped CRUD; `privateKey` is never returned; delete in use **409**; writes need a team's VCS permission | same; writes need `manageVcs` |
+| `agent` | list, create, delete; delete in use **409**; superuser-only writes | same routes and 409; writes owner-only |
+| `vcs` | organization-scoped CRUD; `name`/`description`/`vcsType` required; invalid enum **400**; secrets never returned; delete unlinks its workspaces; writes need a team's VCS permission | same routes, statuses and `manageVcs` gate; secrets plaintext until #54 |
+| `team` | organization-scoped CRUD; `name` required; permission booleans, `destroyJob` default true; `role` unvalidated; superuser-only writes | same routes and defaults; writes owner-only |
+| `access` / `project_access` | relationship resources (`rootLevel=false`): CRUD only under `/organization/{org}/workspace/{ws}/access` and `/project/{p}/projectAccess`; **201** with the resource, PATCH/DELETE **204**; omitted `destroyJob` is **true**; DELETE must send no content type | same routes and statuses; duplicate `access.name` **409** where upstream **500**; unknown PATCH attribute ignored; writes need `manageWorkspace` |
 | `/access-token/v1/teams/*` | plain JSON, **202**; malformed organization id **500**; missing workspace still 202; owner group adds only `managePermission`/`managePolicies` | same 202 bodies outside `/api/v1`; malformed id **400**; 401 carries a JSON:API error where upstream's body is empty; only access rows naming one of the caller's groups apply |
-| `notificationConfiguration` / `notification_trigger` | org- or workspace-scoped; `name`/`channelType`/`destinationUrl` required (**409**), enums **400**, `signingSecret` never returned; triggers under the configuration; templates relationship replaced wholesale | same routes and statuses; `workspace` is `data:null` without upstream's empty to-many arrays; no test-send or delivery |
-| `template` | organization-scoped CRUD; no required attributes, so an empty create is **201**; unknown id **404**, malformed **400**; unknown PATCH attribute **404** | same routes and statuses; an unknown PATCH attribute is ignored |
+| `notificationConfiguration` / `notification_trigger` | org- or workspace-scoped; `name`/`channelType`/`destinationUrl` required (**409**), enums **400**, `signingSecret` never returned; triggers under the configuration; templates relationship replaced wholesale | same routes and statuses; writes need `manageWorkspace`; `workspace` is `data:null` without upstream's empty to-many arrays; no test-send or delivery |
+| `template` | organization-scoped CRUD; no required attributes, so an empty create is **201**; unknown id **404**, malformed **400**; unknown PATCH attribute **404**; writes need a team's template permission | same routes and statuses; writes need `manageTemplate`; an unknown PATCH attribute is ignored |
 | `tag` | organization-scoped CRUD; optional name; duplicate name **500** | same routes and optional name; duplicate **409** (unique index) |
 | `workspacetag` | list/create/patch/delete under the workspace; missing/unknown `tagId` **409**; duplicate binding **500** | same routes and 409; duplicate binding **409** |
-| `collection` / `item` / `reference` | organization-scoped CRUD, `GET /reference/:id/collection?include=item`; writes gated on a team permission; missing required attribute **409**; no `priority` means **0** | same routes and statuses; writes are open (no RBAC enforcement yet) |
+| `collection` / `item` / `reference` | organization-scoped CRUD, `GET /reference/:id/collection?include=item`; writes gated on a team permission; missing required attribute **409**; no `priority` means **0** | same routes and statuses; writes need `manageCollection` |
 | `POST /operations` (atomic) | `add`/`update`; `Content-Type` **and** `Accept` must be the atomic media type or **415**; an unsupported op is a no-op 200 | same shape and 415; an unsupported op is **400** and a failure is one error object, not an array of per-op results |
 | Resources | `type`, `id`, `attributes`, `relationships` | `type`, `id`, `attributes`, and `relationships` for the links that exist |
 | Error objects | `detail` only | `detail`, `status`, `title` |
+| Non-member read | **403** `ReadPermission Denied`; the organization list is empty | same |
+| Member write without the resource permission | **403** `CreatePermission Denied` / `UpdatePermission Denied` / `DeletePermission Denied` | same |
 
 The differences that matter are deliberate: we are a superset where upstream is
 stricter (paging on `organization`, extra error members), and leaving a
