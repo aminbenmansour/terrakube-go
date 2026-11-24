@@ -18,6 +18,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/jobstatus"
 	"github.com/aminbenmansour/terrakube-go/internal/logging"
 	"github.com/aminbenmansour/terrakube-go/internal/queue"
+	"github.com/aminbenmansour/terrakube-go/internal/secretstore"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
@@ -38,6 +39,14 @@ func run() error {
 
 	logger := logging.New(cfg.LogLevel, cfg.Env)
 	slog.SetDefault(logger)
+
+	cipher, err := secretstore.NewCipher(cfg.EncryptionKeys, cfg.EncryptionActiveKey)
+	if err != nil {
+		return fmt.Errorf("configure secret encryption: %w", err)
+	}
+	if cipher == nil {
+		logger.Warn("secret encryption is disabled: set TERRAKUBE_ENCRYPTION_KEYS")
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -73,7 +82,7 @@ func run() error {
 	}
 
 	runner := executor.New(executor.Deps{
-		Store:               jobstatus.Wrap(store.New(pool), events.Publish),
+		Store:               jobstatus.Wrap(secretstore.Wrap(store.New(pool), cipher), events.Publish),
 		Storage:             storeBackend,
 		Queue:               q,
 		Locker:              db.NewLocker(pool),

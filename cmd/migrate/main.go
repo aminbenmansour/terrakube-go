@@ -11,6 +11,8 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/config"
 	"github.com/aminbenmansour/terrakube-go/internal/db"
 	"github.com/aminbenmansour/terrakube-go/internal/logging"
+	"github.com/aminbenmansour/terrakube-go/internal/secretstore"
+	"github.com/aminbenmansour/terrakube-go/internal/store"
 	"github.com/aminbenmansour/terrakube-go/migrations"
 )
 
@@ -30,6 +32,11 @@ func run() error {
 	logger := logging.New(cfg.LogLevel, cfg.Env)
 	slog.SetDefault(logger)
 
+	cipher, err := secretstore.NewCipher(cfg.EncryptionKeys, cfg.EncryptionActiveKey)
+	if err != nil {
+		return fmt.Errorf("configure secret encryption: %w", err)
+	}
+
 	ctx := context.Background()
 	pool, err := db.NewPool(ctx, cfg.DatabaseURL)
 	if err != nil {
@@ -42,5 +49,17 @@ func run() error {
 	}
 
 	logger.Info("database migrations applied")
+
+	if cipher == nil {
+		logger.Warn("secret encryption is disabled: set TERRAKUBE_ENCRYPTION_KEYS")
+		return nil
+	}
+	changed, err := secretstore.Backfill(ctx, store.New(pool), cipher)
+	if err != nil {
+		return fmt.Errorf("backfill secret encryption: %w", err)
+	}
+	if changed > 0 {
+		logger.Info("encrypted plaintext secrets", "rows", changed)
+	}
 	return nil
 }
