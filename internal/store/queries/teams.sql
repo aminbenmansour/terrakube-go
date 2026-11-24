@@ -33,3 +33,8 @@ RETURNING *;
 
 -- name: DeleteTeam :exec
 DELETE FROM team WHERE id = $1;
+
+-- name: ListTeamsByOrganizationAndNames :many
+SELECT * FROM team
+WHERE organization_id = $1 AND name = ANY(sqlc.arg(names)::text[])
+ORDER BY name, id;
