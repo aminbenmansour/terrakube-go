@@ -287,7 +287,7 @@ func TestGetStepLogScopesRunnerToken(t *testing.T) {
 	output := "log"
 	q := &stubQuerier{
 		job:  store.Job{ID: 7, OrganizationID: "org-1", WorkspaceID: "ws-1"},
-		step: store.Step{ID: "step-1", JobID: 7, Output: &output},
+		step: store.Step{ID: "step-1", JobID: 7, Output: &output, Status: stringPtr("running")},
 	}
 	handler := New(Deps{Store: q, InternalAuth: validator})
 	sign := func(t *testing.T, claims internalauth.Claims) string {
@@ -304,10 +304,11 @@ func TestGetStepLogScopesRunnerToken(t *testing.T) {
 		claims internalauth.Claims
 		status int
 	}{
-		{"own workspace", internalauth.Claims{OrganizationID: "org-1", WorkspaceID: "ws-1"}, http.StatusOK},
-		{"another workspace", internalauth.Claims{OrganizationID: "org-1", WorkspaceID: "ws-2"}, http.StatusForbidden},
-		{"another organization", internalauth.Claims{OrganizationID: "org-2", WorkspaceID: "ws-9"}, http.StatusForbidden},
+		{"own workspace", internalauth.Claims{OrganizationID: "org-1", WorkspaceID: "ws-1", StepID: "step-1"}, http.StatusOK},
+		{"another workspace", internalauth.Claims{OrganizationID: "org-1", WorkspaceID: "ws-2", StepID: "step-1"}, http.StatusForbidden},
+		{"another organization", internalauth.Claims{OrganizationID: "org-2", WorkspaceID: "ws-9", StepID: "step-1"}, http.StatusForbidden},
 		{"service token is unscoped", internalauth.Claims{JobID: "7", StepID: "step-1"}, http.StatusOK},
+		{"finished step", internalauth.Claims{OrganizationID: "org-1", WorkspaceID: "ws-1", StepID: "step-done"}, http.StatusUnauthorized},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

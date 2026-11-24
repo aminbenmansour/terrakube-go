@@ -84,6 +84,12 @@ func (h *Handler) authenticate(next http.Handler) http.Handler {
 		if h.deps.InternalAuth != nil {
 			if claims, err := h.deps.InternalAuth.Parse(raw); err == nil &&
 				internalauth.Classify(claims) != internalauth.TypeNotInternal {
+				if internalauth.Classify(claims) == internalauth.TypeWorkspaceExecutor &&
+					tfstate.ValidateActiveStep(r.Context(), h.deps.Store, claims) != nil {
+					w.Header().Set("WWW-Authenticate", "Bearer")
+					http.Error(w, "unauthorized", http.StatusUnauthorized)
+					return
+				}
 				next.ServeHTTP(w, r.WithContext(internalauth.WithClaims(r.Context(), claims)))
 				return
 			}
