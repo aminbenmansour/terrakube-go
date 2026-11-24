@@ -145,6 +145,7 @@ func run() error {
 		Logger:       logger,
 		AuthToken:    cfg.AuthToken,
 		Verifiers:    verifiers,
+		CORSOrigins:  cfg.CORSOrigins,
 		AdminGroup:   cfg.AdminGroup,
 		AccessTokens: querier,
 	}))

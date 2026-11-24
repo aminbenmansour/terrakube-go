@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/aminbenmansour/terrakube-go/internal/auth"
+	"github.com/aminbenmansour/terrakube-go/internal/httpapi"
 	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
 	"github.com/aminbenmansour/terrakube-go/internal/rbac"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
@@ -38,11 +39,16 @@ func NewAccessToken(deps Deps) http.Handler {
 	a := &API{deps: deps}
 
 	r := chi.NewRouter()
+	r.Use(httpapi.CORS(deps.CORSOrigins))
 	r.Use(a.authenticate)
-	r.Use(a.requireAccessTokenStore)
+	// Only the two permission routes read the store; current-teams echoes the
+	// token and must keep working when no database is configured.
 	r.Get("/teams/current-teams", a.currentTeams)
-	r.Get("/teams/permissions/organization/{organizationID}", a.organizationPermissions)
-	r.Get("/teams/permissions/organization/{organizationID}/workspace/{workspaceID}", a.workspacePermissions)
+	r.Group(func(r chi.Router) {
+		r.Use(a.requireAccessTokenStore)
+		r.Get("/teams/permissions/organization/{organizationID}", a.organizationPermissions)
+		r.Get("/teams/permissions/organization/{organizationID}/workspace/{workspaceID}", a.workspacePermissions)
+	})
 	return r
 }
 
@@ -87,11 +93,14 @@ func (a *API) workspacePermissions(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	workspaceID := chi.URLParam(r, "workspaceID")
-	if _, err := uuid.Parse(workspaceID); err != nil {
+	// Parsing and re-serialising canonicalises forms Go accepts but Postgres
+	// would reject, such as urn:uuid:.
+	workspaceUUID, err := uuid.Parse(chi.URLParam(r, "workspaceID"))
+	if err != nil {
 		jsonapi.WriteError(w, http.StatusBadRequest, "Bad Request", "The workspace id is not a UUID.")
 		return
 	}
+	workspaceID := workspaceUUID.String()
 	permissions, ok := a.organizationPermissionSet(w, r, identity, orgID)
 	if !ok {
 		return
@@ -142,13 +151,13 @@ func (a *API) permissionCaller(w http.ResponseWriter, r *http.Request) (*auth.Id
 		jsonapi.WriteError(w, http.StatusUnauthorized, "Unauthorized", "A valid bearer token is required.")
 		return nil, "", false
 	}
-	orgID := chi.URLParam(r, "organizationID")
-	if _, err := uuid.Parse(orgID); err != nil {
+	orgUUID, err := uuid.Parse(chi.URLParam(r, "organizationID"))
+	if err != nil {
 		// Upstream answers 500 here; a 400 says the same without a stack trace.
 		jsonapi.WriteError(w, http.StatusBadRequest, "Bad Request", "The organization id is not a UUID.")
 		return nil, "", false
 	}
-	return identity, orgID, true
+	return identity, orgUUID.String(), true
 }
 
 // organizationPermissionSet is the team-derived half of both endpoints.
@@ -174,7 +183,7 @@ func (a *API) organizationPermissionSet(w http.ResponseWriter, r *http.Request, 
 // isInstanceOwner mirrors upstream's groups.contains(instanceOwner), plus the
 // development token, which has no Dex groups but owns a local stack.
 func (a *API) isInstanceOwner(identity *auth.Identity) bool {
-	if identity.Issuer == "development" {
+	if identity.Issuer == auth.DevIssuer {
 		return true
 	}
 	return slices.Contains(identity.Groups, a.adminGroup())
@@ -189,6 +198,8 @@ func (a *API) adminGroup() string {
 
 func writeAccessTokenJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
+	// The same URL answers differently per token; keep shared caches out.
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(body)
 }

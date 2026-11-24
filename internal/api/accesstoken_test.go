@@ -16,23 +16,29 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 )
 
-// fakeAccessTokenStore answers the four lookups from maps, so the handlers can
-// be tested without a database.
+// fakeAccessTokenStore records the parameters it receives and returns rows by
+// name only. The org/project filters live in the SQL, so this fake deliberately
+// ignores them: a handler that queries the wrong parent leaks a foreign row and
+// the tests catch it.
 type fakeAccessTokenStore struct {
-	teams         []store.Team
-	access        []store.Access
-	projectAccess []store.ProjectAccess
-	workspaces    map[string]store.Workspace
-	lastTeamNames []string
-	lastAccessID  string
-	lastProjectID string
+	teams            []store.Team
+	access           []store.Access
+	projectAccess    []store.ProjectAccess
+	workspaces       map[string]store.Workspace
+	lastTeamOrgID    string
+	lastTeamNames    []string
+	lastAccessID     string
+	lastAccessNames  []string
+	lastProjectID    string
+	lastProjectNames []string
 }
 
 func (f *fakeAccessTokenStore) ListTeamsByOrganizationAndNames(_ context.Context, arg store.ListTeamsByOrganizationAndNamesParams) ([]store.Team, error) {
+	f.lastTeamOrgID = arg.OrganizationID
 	f.lastTeamNames = arg.Names
 	var out []store.Team
 	for _, team := range f.teams {
-		if team.OrganizationID == arg.OrganizationID && contains(arg.Names, team.Name) {
+		if contains(arg.Names, team.Name) {
 			out = append(out, team)
 		}
 	}
@@ -41,9 +47,10 @@ func (f *fakeAccessTokenStore) ListTeamsByOrganizationAndNames(_ context.Context
 
 func (f *fakeAccessTokenStore) ListAccessByWorkspaceAndNames(_ context.Context, arg store.ListAccessByWorkspaceAndNamesParams) ([]store.Access, error) {
 	f.lastAccessID = arg.WorkspaceID
+	f.lastAccessNames = arg.Names
 	var out []store.Access
 	for _, access := range f.access {
-		if access.WorkspaceID == arg.WorkspaceID && contains(arg.Names, access.Name) {
+		if contains(arg.Names, access.Name) {
 			out = append(out, access)
 		}
 	}
@@ -52,9 +59,10 @@ func (f *fakeAccessTokenStore) ListAccessByWorkspaceAndNames(_ context.Context, 
 
 func (f *fakeAccessTokenStore) ListProjectAccessByProjectAndNames(_ context.Context, arg store.ListProjectAccessByProjectAndNamesParams) ([]store.ProjectAccess, error) {
 	f.lastProjectID = arg.ProjectID
+	f.lastProjectNames = arg.Names
 	var out []store.ProjectAccess
 	for _, access := range f.projectAccess {
-		if access.ProjectID == arg.ProjectID && access.Name != nil && contains(arg.Names, *access.Name) {
+		if access.Name != nil && contains(arg.Names, *access.Name) {
 			out = append(out, access)
 		}
 	}
@@ -114,11 +122,43 @@ func serveAccessToken(t *testing.T, fake *fakeAccessTokenStore, verifier stubIde
 	return rec
 }
 
-func decodePermissions(t *testing.T, body []byte) map[string]bool {
+func expectPermissions(t *testing.T, rec *httptest.ResponseRecorder, want map[string]bool) {
 	t.Helper()
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("Cache-Control"); got != "no-store" {
+		t.Errorf("Cache-Control = %q, want no-store", got)
+	}
 	var permissions map[string]bool
-	if err := json.Unmarshal(body, &permissions); err != nil {
-		t.Fatalf("decode permissions: %v (%s)", err, body)
+	if err := json.Unmarshal(rec.Body.Bytes(), &permissions); err != nil {
+		t.Fatalf("decode permissions: %v (%s)", err, rec.Body.String())
+	}
+	if len(permissions) != len(want) {
+		t.Fatalf("field count = %d, want %d: %s", len(permissions), len(want), rec.Body.String())
+	}
+	for name, value := range want {
+		if permissions[name] != value {
+			t.Errorf("%s = %v, want %v", name, permissions[name], value)
+		}
+	}
+}
+
+// none is the all-false permission set, so a test only names the granted ones.
+var none = map[string]bool{
+	"manageState": false, "manageWorkspace": false, "manageModule": false,
+	"manageProvider": false, "manageVcs": false, "manageTemplate": false,
+	"manageCollection": false, "manageJob": false, "planJob": false,
+	"approveJob": false, "managePermission": false, "managePolicies": false,
+}
+
+func with(grants map[string]bool) map[string]bool {
+	permissions := map[string]bool{}
+	for name, value := range none {
+		permissions[name] = value
+	}
+	for name, value := range grants {
+		permissions[name] = value
 	}
 	return permissions
 }
@@ -167,13 +207,25 @@ func TestAccessTokenOrganizationPermissions(t *testing.T) {
 	if rec.Code != http.StatusAccepted {
 		t.Fatalf("status = %d, want 202", rec.Code)
 	}
-	permissions := decodePermissions(t, rec.Body.Bytes())
-	if permissions["manageWorkspace"] || permissions["manageState"] || permissions["planJob"] ||
-		permissions["manageModule"] || permissions["managePermission"] || permissions["managePolicies"] {
-		t.Errorf("permissions = %v, want a read team to grant nothing", permissions)
+	expectPermissions(t, rec, none)
+	if fake.lastTeamOrgID != testOrgID {
+		t.Errorf("queried organization = %q, want %q", fake.lastTeamOrgID, testOrgID)
 	}
 	if len(fake.lastTeamNames) != 1 || fake.lastTeamNames[0] != "readers" {
 		t.Errorf("queried names = %v, want only the caller's groups", fake.lastTeamNames)
+	}
+}
+
+func TestAccessTokenOrganizationPermissionsWithoutGroups(t *testing.T) {
+	fake := &fakeAccessTokenStore{teams: []store.Team{
+		{Name: "readers", OrganizationID: testOrgID, Role: strPtr("admin")},
+	}}
+	verifier := stubIdentityVerifier{token: "user-token", identity: auth.Identity{Email: "user@example.com"}}
+	rec := serveAccessToken(t, fake, verifier, http.MethodGet, "/teams/permissions/organization/"+testOrgID)
+
+	expectPermissions(t, rec, none)
+	if fake.lastTeamOrgID != "" {
+		t.Errorf("queried organization = %q, want no team lookup for a token without groups", fake.lastTeamOrgID)
 	}
 }
 
@@ -182,13 +234,7 @@ func TestAccessTokenOrganizationPermissionsForTheOwner(t *testing.T) {
 	rec := serveAccessToken(t, &fakeAccessTokenStore{}, owner,
 		http.MethodGet, "/teams/permissions/organization/"+testOtherOrgID)
 
-	permissions := decodePermissions(t, rec.Body.Bytes())
-	if !permissions["managePermission"] || !permissions["managePolicies"] {
-		t.Errorf("permissions = %v, want the owner flags even for an unknown organization", permissions)
-	}
-	if permissions["manageWorkspace"] || permissions["planJob"] {
-		t.Errorf("permissions = %v, want the owner to add only the two flags", permissions)
-	}
+	expectPermissions(t, rec, with(map[string]bool{"managePermission": true, "managePolicies": true}))
 }
 
 func TestAccessTokenWorkspacePermissions(t *testing.T) {
@@ -214,15 +260,15 @@ func TestAccessTokenWorkspacePermissions(t *testing.T) {
 	if rec.Code != http.StatusAccepted {
 		t.Fatalf("status = %d, want 202: %s", rec.Code, rec.Body.String())
 	}
-	permissions := decodePermissions(t, rec.Body.Bytes())
-	if !permissions["manageWorkspace"] || !permissions["planJob"] || !permissions["manageState"] {
-		t.Errorf("permissions = %v, want the team plus the deployers rows", permissions)
-	}
-	if permissions["approveJob"] {
-		t.Errorf("permissions = %v, want the plan access not to approve", permissions)
-	}
+	expectPermissions(t, rec, with(map[string]bool{
+		"manageWorkspace": true, "managePermission": true,
+		"planJob": true, "manageJob": true, "manageState": true,
+	}))
 	if fake.lastAccessID != testWorkspaceID || fake.lastProjectID != testProjectID {
 		t.Errorf("lookups = %q/%q, want the workspace and its project", fake.lastAccessID, fake.lastProjectID)
+	}
+	if len(fake.lastAccessNames) != 2 || len(fake.lastProjectNames) != 2 {
+		t.Errorf("names = %v/%v, want the caller's groups", fake.lastAccessNames, fake.lastProjectNames)
 	}
 }
 
@@ -261,5 +307,37 @@ func TestAccessTokenRejectsBadInput(t *testing.T) {
 	rec := serveAccessToken(t, fake, verifier, http.MethodGet, "/teams/permissions/organization/not-a-uuid")
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("bad organization status = %d, want 400 (upstream answers 500)", rec.Code)
+	}
+
+	rec = serveAccessToken(t, fake, verifier, http.MethodGet,
+		"/teams/permissions/organization/"+testOrgID+"/workspace/not-a-uuid")
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("bad workspace status = %d, want 400 (upstream answers 500)", rec.Code)
+	}
+}
+
+func TestAccessTokenWithoutStore(t *testing.T) {
+	verifier := stubIdentityVerifier{token: "user-token", identity: auth.Identity{Groups: []string{"team-a"}}}
+	router := NewAccessToken(Deps{
+		Logger:     slog.New(slog.NewTextHandler(io.Discard, nil)),
+		AuthToken:  "dev-token",
+		Verifiers:  []auth.Verifier{verifier},
+		AdminGroup: "TERRAKUBE_ADMIN",
+	})
+
+	current := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/teams/current-teams", nil)
+	request.Header.Set("Authorization", "Bearer "+verifier.token)
+	router.ServeHTTP(current, request)
+	if current.Code != http.StatusAccepted {
+		t.Errorf("current-teams without a store = %d, want 202", current.Code)
+	}
+
+	permissions := httptest.NewRecorder()
+	request = httptest.NewRequest(http.MethodGet, "/teams/permissions/organization/"+testOrgID, nil)
+	request.Header.Set("Authorization", "Bearer "+verifier.token)
+	router.ServeHTTP(permissions, request)
+	if permissions.Code != http.StatusServiceUnavailable {
+		t.Errorf("permissions without a store = %d, want 503", permissions.Code)
 	}
 }

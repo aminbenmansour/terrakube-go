@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+// DevIssuer marks the identity behind the shared development token.
+const DevIssuer = "development"
+
 // Identity is the authenticated caller behind a bearer token.
 type Identity struct {
 	Issuer  string
@@ -41,7 +44,7 @@ func Authenticate(ctx context.Context, header, devToken string, verifiers ...Ver
 		return nil, false
 	}
 	if devToken != "" && subtle.ConstantTimeCompare([]byte(raw), []byte(devToken)) == 1 {
-		return &Identity{Issuer: "development", Subject: "dev", Email: "dev@localhost", Name: "dev"}, true
+		return &Identity{Issuer: DevIssuer, Subject: "dev", Email: "dev@localhost", Name: "dev"}, true
 	}
 	for _, verifier := range verifiers {
 		if verifier == nil {
