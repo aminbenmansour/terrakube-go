@@ -5,6 +5,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -22,6 +23,19 @@ const (
 	// SubjectRegistry identifies the registry service token.
 	SubjectRegistry = "TerrakubeInternal (REGISTRY)"
 )
+
+type claimsContextKey struct{}
+
+// WithClaims attaches validated claims to a request context.
+func WithClaims(ctx context.Context, claims *Claims) context.Context {
+	return context.WithValue(ctx, claimsContextKey{}, claims)
+}
+
+// ClaimsFromContext returns the claims a middleware attached to the request.
+func ClaimsFromContext(ctx context.Context) (*Claims, bool) {
+	claims, ok := ctx.Value(claimsContextKey{}).(*Claims)
+	return claims, ok
+}
 
 // Type classifies an internal token. It mirrors InternalTokenClassifier.
 type Type int

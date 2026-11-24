@@ -84,7 +84,7 @@ func (h *Handler) authenticate(next http.Handler) http.Handler {
 		if h.deps.InternalAuth != nil {
 			if claims, err := h.deps.InternalAuth.Parse(raw); err == nil &&
 				internalauth.Classify(claims) != internalauth.TypeNotInternal {
-				next.ServeHTTP(w, r)
+				next.ServeHTTP(w, r.WithContext(internalauth.WithClaims(r.Context(), claims)))
 				return
 			}
 		}
@@ -240,6 +240,13 @@ func (h *Handler) resolve(w http.ResponseWriter, r *http.Request) (store.Job, st
 	}
 	if !strings.EqualFold(job.OrganizationID, chi.URLParam(r, "organizationID")) {
 		http.Error(w, "not found", http.StatusNotFound)
+		return store.Job{}, store.Step{}, false
+	}
+	if claims, ok := internalauth.ClaimsFromContext(r.Context()); ok &&
+		internalauth.Classify(claims) == internalauth.TypeWorkspaceExecutor &&
+		(!strings.EqualFold(claims.OrganizationID, job.OrganizationID) ||
+			!strings.EqualFold(claims.WorkspaceID, job.WorkspaceID)) {
+		http.Error(w, "forbidden", http.StatusForbidden)
 		return store.Job{}, store.Step{}, false
 	}
 

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -159,7 +160,7 @@ func (a *API) authenticate(next http.Handler) http.Handler {
 		if a.deps.InternalAuth != nil {
 			claims, err := a.deps.InternalAuth.Parse(raw)
 			if err == nil && internalauth.Classify(claims) != internalauth.TypeNotInternal {
-				next.ServeHTTP(w, r)
+				next.ServeHTTP(w, r.WithContext(internalauth.WithClaims(r.Context(), claims)))
 				return
 			}
 		}
@@ -196,6 +197,9 @@ func (a *API) organizationByName(w http.ResponseWriter, r *http.Request) (store.
 		}
 		return store.Organization{}, false
 	}
+	if !a.authorizeScope(w, r, org.ID, "") {
+		return store.Organization{}, false
+	}
 	return org, true
 }
 
@@ -207,5 +211,32 @@ func (a *API) workspaceByID(w http.ResponseWriter, r *http.Request) (store.Works
 		}
 		return store.Workspace{}, false
 	}
+	if !a.authorizeScope(w, r, ws.OrganizationID, ws.ID) {
+		return store.Workspace{}, false
+	}
 	return ws, true
+}
+
+// runnerClaims returns the claims of a workspace-scoped runner token. Service
+// tokens and user tokens are not confined to one workspace.
+func runnerClaims(r *http.Request) (*internalauth.Claims, bool) {
+	claims, ok := internalauth.ClaimsFromContext(r.Context())
+	if !ok || internalauth.Classify(claims) != internalauth.TypeWorkspaceExecutor {
+		return nil, false
+	}
+	return claims, true
+}
+
+// authorizeScope confines a runner token to its own organization and workspace.
+func (a *API) authorizeScope(w http.ResponseWriter, r *http.Request, organizationID, workspaceID string) bool {
+	claims, scoped := runnerClaims(r)
+	if !scoped {
+		return true
+	}
+	if organizationID != "" && !strings.EqualFold(claims.OrganizationID, organizationID) ||
+		workspaceID != "" && !strings.EqualFold(claims.WorkspaceID, workspaceID) {
+		jsonapi.WriteError(w, http.StatusForbidden, "Forbidden", "The token is not scoped to this resource.")
+		return false
+	}
+	return true
 }

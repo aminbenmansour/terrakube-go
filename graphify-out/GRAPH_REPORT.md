@@ -1,17 +1,17 @@
 # Graph Report - terrakube-go  (2026-11-25)
 
 ## Corpus Check
-- 437 files · ~203,827 words
+- 437 files · ~204,626 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 19 file(s) not represented in the graph (top: .graphql 10, (none) 5, .example 1)
 
 ## Summary
-- 3751 nodes · 14892 edges · 183 communities (101 shown, 82 thin omitted)
-- Extraction: 81% EXTRACTED · 19% INFERRED · 0% AMBIGUOUS · INFERRED: 2824 edges (avg confidence: 0.84)
+- 3758 nodes · 15043 edges · 187 communities (107 shown, 80 thin omitted)
+- Extraction: 81% EXTRACTED · 19% INFERRED · 0% AMBIGUOUS · INFERRED: 2842 edges (avg confidence: 0.84)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `115e44b9`
+- Built from commit: `ebbe3e74`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -25,6 +25,7 @@
 - tagStub
 - collectionStub
 - Handler
+- ._NotificationConfiguration
 - WriteResource
 - CliAuthSession
 - graphql/collections.go
@@ -37,7 +38,6 @@
 - sqlc Generation Config
 - strPtr
 - Upstream Elide entities (GraphQL surface)
-- github.com/99designs/gqlgen/graphql.Marshaler
 - newFixture
 - Identity
 - Local Dev Services Script
@@ -66,20 +66,18 @@
 - nestedStub
 - New
 - graphql/collections.go
-- WriteError
-- Querier
+- RequestData
 - Querier
 - stubQuerier
 - dex-config.yaml
-- github.com/99designs/gqlgen/graphql.CollectedField
 - NewLayout
 - ._Project
 - models
-- Service
+- config.go
 - Team
 - collections.go
 - Access
-- reliabilityStore
+- ._Project
 - generated.go
 - where_test.go
 - Resolver
@@ -89,24 +87,24 @@
 - newJWKSServer
 - TemplateConnection
 - store.Job
+- Claims
 - REST contract, captured from upstream
 - pat.py
 - workspaces_test.go
 - CreateTagParams
 - .CreateAccess
 - authzAPI
-- .Query
-- Node
+- Queries
+- Field
 - environment
 - NewSubscriptions
 - newTestService
 - newService
-- github.com/vektah/gqlparser/v2/ast.SelectionSet
+- executionContext
 - workspaceStub
 - ui-rest-inventory.sh
-- github.com/jackc/pgx/v5/pgtype.Timestamptz
+- OrganizationConnection
 - ui-smoke.sh
-- github.com/aminbenmansour/terrakube-go/internal/store.Job
 - New
 - capture.sh
 - 0008_action.sql
@@ -114,7 +112,6 @@
 - context.Context
 - compare.sh
 - start.sh
-- .QueryRow
 - .CreateProjectAccess
 - tarGzEntries
 - log/slog.Logger
@@ -122,52 +119,59 @@
 - actionStub
 - net/http.Handler
 - run
+- .CreateNotificationConfiguration
 - tfe_test.go
 - net/http.Handler
-- JobConnection
-- ProjectAccess
+- WriteCollection
+- models_gen.go
+- Deps
 - CreateCollectionParams
-- cancelRunStore
+- reliabilityStore
 - .cloneConfiguration
-- .CreateVariable
+- .QueryRow
 - AccessConnection
 - ui.go
 - Content
+- M4 run logs and artifacts Implementation Plan
 - auth.DexValidator
-- newTestExecutor
 - ResolveOrganization
 - notificationTestAPI
 - .streamStepLog
-- .updateWorkspaceRelationship
+- CreateOrganizationParams
 - logSink
-- ResourceIdentifier
+- New
+- .processJob
 - time.Time
-- ParsePage
-- .AddNotificationConfigurationTemplate
+- serveAccessToken
+- github.com/aminbenmansour/terrakube-go/internal/store.Tag
+- query.go
+- Deps
+- Serve
+- .EnqueueJob
 
 ## God Nodes (most connected - your core abstractions)
 1. `executionContext` - 520 edges
-2. `Querier` - 168 edges
+2. `Querier` - 172 edges
 3. `Queries` - 164 edges
 4. `API` - 162 edges
 5. `New()` - 145 edges
 6. `stubQuerier` - 131 edges
-7. `WriteError()` - 112 edges
+7. `WriteError()` - 114 edges
 8. `param()` - 78 edges
-9. `API` - 66 edges
+9. `API` - 67 edges
 10. `ParseFieldsets()` - 65 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Task 3: Record the state URL and fail on history errors` --references--> `TestArchiveHistory()`  [INFERRED]
   docs/superpowers/plans/2026-11-19-m4-run-artifacts.md → internal/executor/executor_test.go
+- `Task 2: Serve archived logs from `/tfoutput/v1`` --references--> `New()`  [INFERRED]
+  docs/superpowers/plans/2026-11-19-m4-run-artifacts.md → internal/tfoutput/handler.go
 - `M4 run logs and artifacts Implementation Plan` --references--> `Backend`  [INFERRED]
   docs/superpowers/plans/2026-11-19-m4-run-artifacts.md → internal/storage/storage.go
 - `Task 2: Serve archived logs from `/tfoutput/v1`` --references--> `Layout`  [INFERRED]
   docs/superpowers/plans/2026-11-19-m4-run-artifacts.md → internal/tfstate/layout.go
 - `Task 3: `/access-token/v1` permission endpoints` --references--> `Authenticate()`  [INFERRED]
   docs/superpowers/plans/2026-11-24-rbac-permission-resolution.md → internal/auth/identity.go
-- `Task 3: `/access-token/v1` permission endpoints` --references--> `NewAccessToken()`  [INFERRED]
-  docs/superpowers/plans/2026-11-24-rbac-permission-resolution.md → internal/api/accesstoken.go
 
 ## Import Cycles
 - None detected.
@@ -177,11 +181,11 @@
 - **Local Verification and Smoke Test Flow** — _opencode_commands_verify_verify_command, _opencode_commands_smoke_smoke_command, _opencode_skills_dev_stack_skill_local_dev_stack, agents_verification_suite, readme_smoke_scripts [INFERRED 0.85]
 - **sqlc Schema-to-Store Regeneration Flow** — _opencode_skills_sqlc_workflow_skill_sqlc_workflow, _opencode_commands_generate_generate_command, agents_generated_code_off_limits, agents_append_only_migrations, docs_compat_database_schema_parity [INFERRED 0.95]
 
-## Communities (183 total, 82 thin omitted)
+## Communities (187 total, 80 thin omitted)
 
 ### Community 0 - "net/http.ResponseWriter"
-Cohesion: 0.07
-Nodes (28): Write(), WriteResource(), configurationVersionResource(), parseWorkspaceQuery(), approvalGateStatus(), failedJobStatus(), parseRunID(), stepStatusTFE() (+20 more)
+Cohesion: 0.09
+Nodes (23): WriteResource(), configurationVersionResource(), activeRunStatus(), approvalGateStatus(), failedJobStatus(), parseRunID(), runResource(), runStatus() (+15 more)
 
 ### Community 1 - "rbac.go"
 Cohesion: 0.18
@@ -192,59 +196,59 @@ Cohesion: 0.06
 Nodes (36): Compatibility Reviewer Subagent, Migration Reviewer Subagent, /compat Command, /generate Command, /pr Command, /smoke Command, /verify Command, Local Dev Stack (+28 more)
 
 ### Community 3 - "Globalvar"
-Cohesion: 0.14
+Cohesion: 0.17
 Nodes (3): globalVarStub, CreateGlobalVariableParams, UpdateGlobalVariableParams
 
 ### Community 4 - "io.Reader"
 Cohesion: 0.07
-Nodes (11): failingBackend, failingKeyBackend, memoryBackend, cleanKey(), pathClean(), TestCleanKey(), isS3NotFound(), Object (+3 more)
+Nodes (14): failingBackend, failingKeyBackend, memoryBackend, cleanKey(), pathClean(), TestCleanKey(), isS3NotFound(), NewS3() (+6 more)
 
 ### Community 5 - "Core Database Schema"
 Cohesion: 0.06
 Nodes (54): history, history_workspace_idx, job, job_organization_idx, job_workspace_idx, organization, organization_name_uq, project (+46 more)
 
 ### Community 6 - "tagStub"
-Cohesion: 0.11
+Cohesion: 0.10
 Nodes (3): tagStub, CreateWorkspaceTagParams, UpdateWorkspaceTagValueParams
 
 ### Community 7 - "collectionStub"
-Cohesion: 0.09
+Cohesion: 0.10
 Nodes (4): collectionStub, CreateItemParams, CreateReferenceParams, UpdateItemParams
 
 ### Community 8 - "Handler"
-Cohesion: 0.13
-Nodes (15): Claims, Type, Classify(), ExtractToken(), claimsFromContext(), isActiveStepStatus(), isExternalUser(), withClaims() (+7 more)
+Cohesion: 0.16
+Nodes (8): writeAccessTokenJSON(), isExternalUser(), matchesMD5(), New(), newUUID(), pathIDs(), sharedIDsContain(), Handler
 
 ### Community 10 - "WriteResource"
-Cohesion: 0.11
-Nodes (11): API, listQuery, filterSortPage(), New(), param(), parseList(), unknownCollection(), projectAccessResource() (+3 more)
+Cohesion: 0.09
+Nodes (28): actionAttrs, API, itemAttrs, notificationConfigurationAttrs, teamAttrs, templateAttrs, decodeActionAttrs(), stringOr() (+20 more)
 
 ### Community 11 - "CliAuthSession"
-Cohesion: 0.10
-Nodes (6): fakeStore, Store, CliAuthSession, CreateCliAuthSessionParams, IssueCliAuthCodeParams, SetCliAuthSessionIdentityParams
+Cohesion: 0.05
+Nodes (15): fakeStore, Service, Store, TokenResponse, cliRedirect(), decodeGroups(), hashCode(), int32Value() (+7 more)
 
 ### Community 12 - "graphql/collections.go"
-Cohesion: 0.24
-Nodes (3): DB, failingDB, loadPage()
+Cohesion: 0.14
+Nodes (9): DB, failingDB, listArgs, afterString(), loadPage(), ParsePage(), TestParsePage(), TestParsePageRejectsAnOversizedPage() (+1 more)
 
 ### Community 13 - "Resource"
-Cohesion: 0.10
-Nodes (37): actionResource(), parseInclude(), collectionResource(), itemResource(), referenceResource(), globalVarResource(), accessResource(), jobResource() (+29 more)
+Cohesion: 0.08
+Nodes (37): actionResource(), parseInclude(), collectionResource(), itemResource(), referenceResource(), globalVarResource(), accessResource(), projectAccessResource() (+29 more)
 
 ### Community 14 - "steps"
 Cohesion: 0.06
 Nodes (41): POSTGRES_DB, POSTGRES_HOST_AUTH_METHOD, POSTGRES_USER, TERRAKUBE_TEST_DATABASE_URL, TERRAKUBE_TEST_REDIS_URL, env, runs-on, services (+33 more)
 
 ### Community 15 - "CreateProjectParams"
-Cohesion: 0.18
+Cohesion: 0.21
 Nodes (3): CreateProjectParams, GetProjectByNameParams, UpdateProjectParams
 
 ### Community 16 - "Vc"
-Cohesion: 0.12
+Cohesion: 0.13
 Nodes (3): vcsStub, CreateVCSParams, UpdateVCSParams
 
 ### Community 18 - "Ssh"
-Cohesion: 0.07
+Cohesion: 0.08
 Nodes (4): sshAgentStub, CreateAgentParams, CreateSSHKeyParams, UpdateSSHKeyParams
 
 ### Community 20 - "sqlc Generation Config"
@@ -252,24 +256,20 @@ Cohesion: 0.13
 Nodes (14): go, emit_empty_slices, emit_interface, emit_json_tags, emit_pointers_for_null_types, out, package, sql_package (+6 more)
 
 ### Community 21 - "strPtr"
-Cohesion: 0.07
-Nodes (53): replay, upstreamCapture, expectPermissions(), serveAccessToken(), TestAccessTokenCurrentTeams(), TestAccessTokenCurrentTeamsWithoutGroups(), TestAccessTokenOrganizationPermissions(), TestAccessTokenOrganizationPermissionsForTheOwner() (+45 more)
+Cohesion: 0.10
+Nodes (42): replay, upstreamCapture, sshTestAPI(), TestAgentsJSONAPI(), TestSSHKeysJSONAPI(), TestWorkspaceLinksAnSSHKeyOrAgent(), newTeamStub(), teamTestAPI() (+34 more)
 
 ### Community 22 - "Upstream Elide entities (GraphQL surface)"
 Cohesion: 0.15
 Nodes (12): access (Access), Conventions, GenericAuditFields (shared superclass), job (Job), notification_configuration (NotificationConfiguration), notification_trigger (NotificationTrigger), organization, project (+4 more)
 
-### Community 23 - "github.com/99designs/gqlgen/graphql.Marshaler"
-Cohesion: 0.06
-Nodes (3): PageInfo, WorkspaceTagConnection, WorkspaceTagEdge
-
 ### Community 24 - "newFixture"
-Cohesion: 0.13
+Cohesion: 0.15
 Nodes (23): decodeSecret(), NewValidator(), Sign(), TestParseRejectsExpiredToken(), TestParseRejectsWrongSecret(), testSecret(), TestSignAndParse(), TestValidatorAlgorithmByKeyLength() (+15 more)
 
 ### Community 25 - "Identity"
-Cohesion: 0.11
-Nodes (12): groupVerifier, PATService, stubDexVerifier, stubIdentityVerifier, fakeVerifier, Identity, fakeIssuer, groupVerifier (+4 more)
+Cohesion: 0.10
+Nodes (12): groupVerifier, stubDexVerifier, stubIdentityVerifier, fakeVerifier, Identity, fakeIssuer, TokenIssuer, groupVerifier (+4 more)
 
 ### Community 26 - "Local Dev Services Script"
 Cohesion: 0.47
@@ -289,7 +289,7 @@ Nodes (8): POSTGRES_DB, POSTGRES_HOST_AUTH_METHOD, POSTGRES_USER, environment, i
 
 ### Community 30 - "api/main.go"
 Cohesion: 0.06
-Nodes (60): actionFilter, agentAttrs, atomicResult, authorizationKey, collectionAttrs, createPATRequest, globalVarAttrs, grantAttrs (+52 more)
+Nodes (59): actionFilter, agentAttrs, atomicResult, authorizationKey, collectionAttrs, createPATRequest, globalVarAttrs, grantAttrs (+51 more)
 
 ### Community 31 - ".runApply"
 Cohesion: 0.14
@@ -316,8 +316,8 @@ Cohesion: 0.40
 Nodes (5): depends_on, postgres, redis, condition, condition
 
 ### Community 37 - "idsFrom"
-Cohesion: 0.17
-Nodes (7): notificationConfigurationResolver, organizationResolver, queryResolver, workspaceResolver, organizationScope(), TestOrganizationScope(), idsFrom()
+Cohesion: 0.14
+Nodes (9): notificationConfigurationResolver, organizationResolver, ProjectConnection, queryResolver, workspaceResolver, organizationScope(), TestOrganizationScope(), idsFrom() (+1 more)
 
 ### Community 38 - "Redis Compose Service"
 Cohesion: 0.40
@@ -336,12 +336,12 @@ Cohesion: 0.70
 Nodes (4): expect_status(), req(), tfe-smoke.sh script, status()
 
 ### Community 51 - "time.Duration"
-Cohesion: 0.10
-Nodes (6): fakeQueue, JobQueue, defaultRetryDelay(), Message, Queue, stubJobQueue
+Cohesion: 0.12
+Nodes (5): fakeQueue, JobQueue, defaultRetryDelay(), Message, Queue
 
 ### Community 52 - "testing.T"
-Cohesion: 0.03
-Nodes (107): TestAccessTokenWithoutStore(), newActionStub(), TestCreateActionRequiresAnIDAndAttributes(), TestCreateActionStoresTheCatalogRow(), TestDeleteAction(), TestGetActionAcceptsSlugID(), TestListActionsFiltersTheDrawerExpression(), TestUpdateActionKeepsOmittedAttributes() (+99 more)
+Cohesion: 0.04
+Nodes (92): newActionStub(), TestCreateActionRequiresAnIDAndAttributes(), TestCreateActionStoresTheCatalogRow(), TestDeleteAction(), TestGetActionAcceptsSlugID(), TestListActionsFiltersTheDrawerExpression(), TestUpdateActionKeepsOmittedAttributes(), newTestAPI() (+84 more)
 
 ### Community 53 - "Pat"
 Cohesion: 0.17
@@ -352,52 +352,52 @@ Cohesion: 0.67
 Nodes (4): fail(), req(), executor-e2e.sh script, wait_for()
 
 ### Community 55 - "Executor"
-Cohesion: 0.15
-Nodes (6): Executor, preparedWorkspace, isCancelledStatus(), stringPointer(), TestBinarySelection(), baseEnvironment()
+Cohesion: 0.22
+Nodes (4): Executor, isCancelledStatus(), TestBinarySelection(), baseEnvironment()
 
 ### Community 58 - "New"
-Cohesion: 0.10
-Nodes (21): Storage, Global Constraints, M4 run logs and artifacts Implementation Plan, Review Focus, Self-review notes, Task 1: Archive the final step log, Task 2: Serve archived logs from `/tfoutput/v1`, Task 3: Record the state URL and fail on history errors (+13 more)
+Cohesion: 0.18
+Nodes (14): TestArchiveHistory(), TestArchiveHistoryWithoutStateIsNoop(), TestWriteBackendOverride(), New(), newHandler(), stringPtr(), TestGetStepLogFallsBackToInlineOutput(), TestGetStepLogPrefersArchivedObject() (+6 more)
 
 ### Community 59 - "graphql/collections.go"
-Cohesion: 0.10
-Nodes (22): collectionSpec, listArgs, page, accessEdges(), afterString(), column(), jobEdges(), notificationConfigurationEdges() (+14 more)
+Cohesion: 0.20
+Nodes (9): page, accessEdges(), jobEdges(), notificationConfigurationEdges(), notificationTriggerEdges(), projectAccessEdges(), templateEdges(), workspaceEdges() (+1 more)
 
-### Community 60 - "WriteError"
-Cohesion: 0.09
-Nodes (43): actionAttrs, atomicOperation, itemAttrs, notificationConfigurationAttrs, teamAttrs, templateAttrs, vcsAttrs, decodeActionAttrs() (+35 more)
+### Community 60 - "RequestData"
+Cohesion: 0.08
+Nodes (30): atomicOperation, nestedDocument, vcsAttrs, strPtr(), strValue(), atomicWorkspaceHref(), isAtomicRequest(), decodeVCSAttrs() (+22 more)
 
-### Community 61 - "Querier"
-Cohesion: 0.04
-Nodes (3): New(), DBTX, Queries
-
-### Community 62 - "Querier"
-Cohesion: 0.07
-Nodes (3): CreateOrganizationParams, Querier, UpdateOrganizationParams
+### Community 63 - "stubQuerier"
+Cohesion: 0.05
+Nodes (7): jobStub, statusQuerier, captureJobs(), SetWorkspaceLastJobParams, UpdateJobStatusParams, stubQuerier, stubQuerier
 
 ### Community 64 - "dex-config.yaml"
 Cohesion: 0.15
 Nodes (12): issuer, oauth2, skipApprovalScreen, staticClients, id, name, redirectURIs, secret (+4 more)
 
 ### Community 66 - "NewLayout"
-Cohesion: 0.07
-Nodes (47): fakeLocker, gitOutput(), initGitRepo(), requireGit(), TestAcquireConfigurationClonesGitSource(), TestAcquireConfigurationExtractsUploadedArchive(), TestAcquireConfigurationFailsWithoutSource(), TestAcquireConfigurationRejectsInvalidArchive() (+39 more)
+Cohesion: 0.06
+Nodes (53): gitOutput(), initGitRepo(), requireGit(), TestAcquireConfigurationClonesGitSource(), TestAcquireConfigurationExtractsUploadedArchive(), TestAcquireConfigurationFailsWithoutSource(), TestAcquireConfigurationRejectsInvalidArchive(), TestCloneConfigurationChecksOutCommit() (+45 more)
 
 ### Community 68 - "models"
 Cohesion: 0.05
 Nodes (38): model, exec, filename, package, model, model, model, filename (+30 more)
 
-### Community 69 - "Service"
-Cohesion: 0.15
-Nodes (10): Service, TokenIssuer, TokenResponse, cliRedirect(), decodeGroups(), hashCode(), int32Value(), randomToken() (+2 more)
+### Community 69 - "config.go"
+Cohesion: 0.20
+Nodes (18): Config, S3, env(), envBool(), envDuration(), envFirst(), envInt64(), envList() (+10 more)
+
+### Community 70 - "Team"
+Cohesion: 0.14
+Nodes (5): contains(), contains(), fakeOrganizationStore, OrganizationStore, ListTeamsByOrganizationAndNamesParams
 
 ### Community 71 - "collections.go"
 Cohesion: 0.17
 Nodes (12): ParseRSQL(), TestParseRSQLAcceptsUIExpressions(), TestParseRSQLBooleanStructure(), TestParseRSQLComparisons(), TestParseRSQLEmpty(), TestParseRSQLErrors(), And, Compare (+4 more)
 
 ### Community 72 - "Access"
-Cohesion: 0.28
-Nodes (4): contains(), contains(), Access, ListAccessByWorkspaceAndNamesParams
+Cohesion: 0.29
+Nodes (3): Access, ListAccessByWorkspaceAndNamesParams, UpdateAccessParams
 
 ### Community 74 - "generated.go"
 Cohesion: 0.10
@@ -428,8 +428,12 @@ Cohesion: 0.15
 Nodes (20): jwksServer, dexFixture, NewDexValidator(), dexClaims(), newJWKSServer(), newRSAKey(), signDexToken(), TestDexValidatorAcceptsAValidToken() (+12 more)
 
 ### Community 82 - "store.Job"
-Cohesion: 0.12
-Nodes (4): UpdateJobStatusParams, Publisher, publishingStore, stubQuerier
+Cohesion: 0.33
+Nodes (3): Publisher, publishingStore, stubQuerier
+
+### Community 83 - "Claims"
+Cohesion: 0.15
+Nodes (14): Claims, Type, ClaimsFromContext(), Classify(), ExtractToken(), TestClassify(), TestEffectiveStepIDFromJTI(), TestExtractToken() (+6 more)
 
 ### Community 84 - "REST contract, captured from upstream"
 Cohesion: 0.22
@@ -443,13 +447,17 @@ Nodes (3): b64url(), main(), pat_secret()
 Cohesion: 0.19
 Nodes (21): decodeAtomicResults(), serveAtomic(), TestAtomicOperationCreatesAWorkspace(), TestAtomicOperationOnAnotherOrganizationsWorkspaceIsNotFound(), TestAtomicOperationRejectsAnUnsupportedOp(), TestAtomicOperationRequiresTheAtomicMediaType(), TestAtomicOperationUpdatesAWorkspace(), TestAtomicOperationWithNoOperationsReturnsNoResults() (+13 more)
 
-### Community 88 - "CreateTagParams"
-Cohesion: 0.15
-Nodes (3): CreateTagParams, GetTagByNameParams, UpdateTagParams
-
 ### Community 92 - "authzAPI"
-Cohesion: 0.17
-Nodes (13): authzAPI(), authzRequest(), TestOrganizationListIsScopedToTheCaller(), TestOrganizationPermissionMatrix(), TestProjectGrantOfAnotherOrganizationIsNotFound(), TestWorkspaceGrantAllowsTheWrite(), strPtr(), TestResolveOrganization() (+5 more)
+Cohesion: 0.14
+Nodes (16): authzAPI(), authzRequest(), TestOrganizationListIsScopedToTheCaller(), TestOrganizationPermissionMatrix(), TestProjectGrantOfAnotherOrganizationIsNotFound(), TestWorkspaceGrantAllowsTheWrite(), New(), TestDeleteRemovesAMessage() (+8 more)
+
+### Community 93 - "Queries"
+Cohesion: 0.06
+Nodes (4): New(), CreateNotificationTriggerParams, DBTX, Queries
+
+### Community 94 - "Field"
+Cohesion: 0.15
+Nodes (12): collectionSpec, column(), predicate(), Order, OrderBy(), ParseSort(), TestOrderByRendersSQL(), TestParseSort() (+4 more)
 
 ### Community 98 - "environment"
 Cohesion: 0.17
@@ -467,24 +475,20 @@ Nodes (21): AuthorizeRequest, ChallengeS256(), NewCodeVerifier(), TestNewCodeVer
 Cohesion: 0.19
 Nodes (15): decodeSecret(), New(), dexUser(), newFakeStore(), newService(), TestCreateRejectsNonInteractiveUsersAndBadLifetimes(), TestCreateSignsTheUpstreamToken(), TestCreateWithoutExpiryHasNoExp() (+7 more)
 
-### Community 103 - "github.com/vektah/gqlparser/v2/ast.SelectionSet"
-Cohesion: 0.04
-Nodes (13): ComplexityRoot, NotificationConfigurationConnection, NotificationConfigurationEdge, NotificationTriggerConnection, NotificationTriggerEdge, OrganizationConnection, OrganizationEdge, ProjectConnection (+5 more)
+### Community 103 - "executionContext"
+Cohesion: 0.07
+Nodes (3): executionContext, NotificationConfigurationConnection, NotificationConfigurationEdge
 
 ### Community 108 - "workspaceStub"
-Cohesion: 0.10
+Cohesion: 0.11
 Nodes (4): fakeAccessTokenStore, workspaceStub, CreateWorkspaceParams, UpdateWorkspaceParams
 
 ### Community 119 - "ui-smoke.sh"
 Cohesion: 0.60
 Nodes (5): body(), fail(), header(), ui-smoke.sh script, status()
 
-### Community 122 - "github.com/aminbenmansour/terrakube-go/internal/store.Job"
-Cohesion: 0.16
-Nodes (4): jobStub, statusQuerier, captureJobs(), SetWorkspaceLastJobParams
-
 ### Community 123 - "New"
-Cohesion: 0.18
+Cohesion: 0.21
 Nodes (9): Deps, ConsentPage(), ErrorPage(), effectivePort(), New(), originMatches(), writeHTML(), writeJSON() (+1 more)
 
 ### Community 124 - "capture.sh"
@@ -496,23 +500,23 @@ Cohesion: 0.18
 Nodes (3): GetArchiveRow, UpdateHistoryOutputParams, stubStore
 
 ### Community 128 - "context.Context"
-Cohesion: 0.05
-Nodes (5): teamStub, artifactStore, historyStub, variableStore, stubQuerier
+Cohesion: 0.07
+Nodes (4): teamStub, artifactStore, historyStub, variableStore
 
 ### Community 140 - "tarGzEntries"
-Cohesion: 0.23
-Nodes (12): archiveLimits, tarEntry, tarGzEntries(), TestExtractTarGzEnforcesEntryLimit(), TestExtractTarGzEnforcesFileSizeLimit(), TestExtractTarGzEnforcesTotalSizeLimit(), TestExtractTarGzRejectsHardlinks(), TestExtractTarGzRejectsSymlinks() (+4 more)
+Cohesion: 0.25
+Nodes (11): archiveLimits, tarEntry, tarGzEntries(), TestExtractTarGzEnforcesEntryLimit(), TestExtractTarGzEnforcesFileSizeLimit(), TestExtractTarGzEnforcesTotalSizeLimit(), TestExtractTarGzRejectsHardlinks(), TestExtractTarGzRejectsSymlinks() (+3 more)
 
 ### Community 141 - "log/slog.Logger"
-Cohesion: 0.09
-Nodes (17): Validator, main(), run(), Deps, JobLocker, Deps, fakePinger, Pinger (+9 more)
+Cohesion: 0.22
+Nodes (6): Validator, Layout, Deps, JobQueue, Deps, Deps
 
 ### Community 142 - "Dex"
 Cohesion: 0.21
 Nodes (3): Dex, Exchanger, fakeDex
 
 ### Community 143 - "actionStub"
-Cohesion: 0.15
+Cohesion: 0.18
 Nodes (3): actionStub, CreateActionParams, UpdateActionParams
 
 ### Community 144 - "net/http.Handler"
@@ -520,88 +524,112 @@ Cohesion: 0.28
 Nodes (10): CookieSigner, authorize(), doRequest(), newTestHandler(), TestBrokerCallbackErrorRedirectsToTheCLI(), TestBrokerFullFlow(), TestBrokerRejectsBadRequests(), TestConsentRejectsInvalidDays() (+2 more)
 
 ### Community 145 - "run"
-Cohesion: 0.04
-Nodes (65): main(), run(), main(), run(), main(), run(), Config, Locker (+57 more)
+Cohesion: 0.05
+Nodes (53): main(), run(), main(), run(), Locker, Deps, NewAccessToken(), TestAccessTokenRejectsBadInput() (+45 more)
 
 ### Community 147 - "tfe_test.go"
-Cohesion: 0.09
-Nodes (42): assertContractJSONAPI(), TestContractDiscoveryAndPing(), TestContractOrganizationEnvelope(), TestContractWorkspaceAndRunEnvelopes(), Discovery(), capabilitySecret(), extractLogReadURL(), newTestAPI() (+34 more)
+Cohesion: 0.08
+Nodes (45): assertContractJSONAPI(), TestContractDiscoveryAndPing(), TestContractOrganizationEnvelope(), TestContractWorkspaceAndRunEnvelopes(), Discovery(), capabilitySecret(), extractLogReadURL(), newTestAPI() (+37 more)
 
 ### Community 150 - "net/http.Handler"
-Cohesion: 0.11
-Nodes (12): authorization, NewAccessToken(), writeAccessTokenJSON(), requireUUIDParams(), authorizationFrom(), isWriteMethod(), permissionDeniedDetail(), withAuthorization() (+4 more)
+Cohesion: 0.16
+Nodes (10): authorization, requireUUIDParams(), authorizationFrom(), isWriteMethod(), permissionDeniedDetail(), withAuthorization(), writePermissionDenied(), writePlainJSON() (+2 more)
 
-### Community 154 - "ProjectAccess"
-Cohesion: 0.25
-Nodes (4): AccessTokenStore, Deps, ListProjectAccessByProjectAndNamesParams, ProjectAccess
+### Community 151 - "WriteCollection"
+Cohesion: 0.26
+Nodes (5): listQuery, filterSortPage(), parseList(), Page, WriteCollection()
+
+### Community 152 - "models_gen.go"
+Cohesion: 0.06
+Nodes (10): ComplexityRoot, JobConnection, JobEdge, PageInfo, Query, Subscription, WorkspaceConnection, WorkspaceEdge (+2 more)
+
+### Community 154 - "Deps"
+Cohesion: 0.40
+Nodes (3): AccessTokenStore, Deps, PATService
 
 ### Community 157 - ".cloneConfiguration"
 Cohesion: 0.15
-Nodes (11): gitConfig, TestGitSourceDetection(), TestSanitizeGitURL(), transient(), contentIDFromSource(), gitEnv(), gitSource(), isConfigurationTarball() (+3 more)
+Nodes (11): gitConfig, preparedWorkspace, TestGitSourceDetection(), TestSanitizeGitURL(), transient(), gitEnv(), gitSource(), isConfigurationTarball() (+3 more)
+
+### Community 158 - ".QueryRow"
+Cohesion: 0.05
+Nodes (3): History, UpdateJobPlanChangesParams, Variable
 
 ### Community 160 - "ui.go"
 Cohesion: 0.29
 Nodes (8): envConfig(), exists(), New(), TestNoDirectoryMeansNoHandler(), Get(), Deps, handler, Info
 
 ### Community 162 - "Content"
-Cohesion: 0.25
+Cohesion: 0.23
 Nodes (3): CreateContentParams, UpdateContentStatusParams, Content
+
+### Community 164 - "M4 run logs and artifacts Implementation Plan"
+Cohesion: 0.18
+Nodes (9): Storage, Global Constraints, M4 run logs and artifacts Implementation Plan, Review Focus, Self-review notes, Task 1: Archive the final step log, Task 2: Serve archived logs from `/tfoutput/v1`, Task 3: Record the state URL and fail on history errors (+1 more)
 
 ### Community 165 - "auth.DexValidator"
 Cohesion: 0.31
 Nodes (4): contains(), decodeJWKPart(), rsaPublicKey(), stringSlice()
 
-### Community 166 - "newTestExecutor"
-Cohesion: 0.31
-Nodes (11): TestHandleWithoutALockerRunsTheJob(), TestReclaimStaleHandlesClaimedJobs(), TestAckDeletesTheJobMessage(), TestHandleDropsLiveLogsWhenTheJobEnds(), TestHandleKeepsLiveLogsOnShutdown(), jobMessage(), newTestExecutor(), TestHandleAcksTerminalJob() (+3 more)
-
 ### Community 167 - "ResolveOrganization"
-Cohesion: 0.16
-Nodes (10): ApplyProjectGrants(), ApplyWorkspaceGrants(), ResolveOrganization(), ResolveProject(), ResolveWorkspace(), TestResolveWorkspaceIgnoresAnotherOrganization(), Access, fakeWorkspaceStore (+2 more)
+Cohesion: 0.12
+Nodes (11): ApplyProjectGrants(), ApplyWorkspaceGrants(), ResolveProject(), ResolveWorkspace(), TestResolveWorkspaceAddsGrantRows(), TestResolveWorkspaceIgnoresAnotherOrganization(), Access, fakeWorkspaceStore (+3 more)
 
 ### Community 168 - "notificationTestAPI"
 Cohesion: 0.47
 Nodes (5): newNotificationStub(), notificationTestAPI(), TestDeleteNotificationConfigurationCascadesTriggers(), TestNotificationConfigurationJSONAPI(), TestNotificationTriggersAndTemplates()
 
 ### Community 169 - ".streamStepLog"
-Cohesion: 0.33
-Nodes (7): isTerminal(), outputOf(), stepOf(), streamKey(), writeData(), writeEvent(), Handler
+Cohesion: 0.26
+Nodes (9): isTerminal(), outputOf(), stepOf(), streamKey(), TestWriteDataSplitsMultilineOutput(), TestWriteEventFrame(), writeData(), writeEvent() (+1 more)
 
 ### Community 171 - "logSink"
 Cohesion: 0.12
 Nodes (9): captureLogPublisher, LogPublisher, logSink, redactor, TestLogSinkRedactsSecrets(), TestNilRedactorIsSafe(), TestRedactorPrefersLongestValue(), TestRedactorReplacesSensitiveValues() (+1 more)
 
-### Community 172 - "ResourceIdentifier"
-Cohesion: 0.29
-Nodes (5): nestedDocument, RelationshipList(), identifierStringAttribute(), RequestRelationship, ResourceIdentifier
+### Community 172 - "New"
+Cohesion: 0.20
+Nodes (6): Deps, fakePinger, Pinger, New(), requestLogger(), writeJSON()
 
 ### Community 174 - "time.Time"
 Cohesion: 0.39
 Nodes (4): stubPATService, timePtr(), Token, memObject
 
-### Community 176 - "ParsePage"
-Cohesion: 0.60
-Nodes (4): ParsePage(), TestParsePage(), TestParsePageRejectsAnOversizedPage(), TestParsePageRejectsBadOffset()
+### Community 175 - "serveAccessToken"
+Cohesion: 0.29
+Nodes (10): expectPermissions(), serveAccessToken(), TestAccessTokenCurrentTeams(), TestAccessTokenCurrentTeamsWithoutGroups(), TestAccessTokenOrganizationPermissions(), TestAccessTokenOrganizationPermissionsForTheOwner(), TestAccessTokenOrganizationPermissionsWithoutGroups(), TestAccessTokenWorkspacePermissions() (+2 more)
+
+### Community 177 - "query.go"
+Cohesion: 0.32
+Nodes (4): parseWorkspaceQuery(), matchesTagFilters(), tagFilter, workspaceQuery
+
+### Community 184 - "Deps"
+Cohesion: 0.29
+Nodes (3): Deps, fakeLocker, JobLocker
+
+### Community 185 - "Serve"
+Cohesion: 0.33
+Nodes (6): main(), run(), main(), run(), Serve(), New()
 
 ## Knowledge Gaps
 - **11 isolated node(s):** `TF_HTTP_PASSWORD`, `TF_HTTP_USERNAME`, `TF_IN_AUTOMATION`, `TF_LOG`, `TF_LOG_PATH` (+6 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 389 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **82 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 392 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **80 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Querier` connect `Querier` to `context.Context`, `Globalvar`, `.QueryRow`, `tagStub`, `collectionStub`, `.CreateProjectAccess`, `CliAuthSession`, `actionStub`, `CreateProjectParams`, `stubQuerier`, `Ssh`, `tfe_test.go`, `Vc`, `github.com/99designs/gqlgen/graphql.Marshaler`, `ProjectAccess`, `CreateCollectionParams`, `api/main.go`, `.CreateVariable`, `Content`, `.GetHistoryByJobReference`, `.AddNotificationConfigurationTemplate`, `testing.T`, `Pat`, `Querier`, `stubQuerier`, `Team`, `Access`, `templateStub`, `store.Job`, `CreateTagParams`, `.CreateAccess`, `.Query`, `workspaceStub`, `github.com/jackc/pgx/v5/pgtype.Timestamptz`, `stubStore`?**
-  _High betweenness centrality (0.039) - this node is a cross-community bridge._
+- **Why does `Querier` connect `Querier` to `Globalvar`, `Workspace`, `tagStub`, `collectionStub`, `.CreateProjectAccess`, `CliAuthSession`, `log/slog.Logger`, `actionStub`, `CreateProjectParams`, `stubQuerier`, `Ssh`, `tfe_test.go`, `.CreateNotificationConfiguration`, `Vc`, `github.com/99designs/gqlgen/graphql.Marshaler`, `Deps`, `CreateCollectionParams`, `.QueryRow`, `api/main.go`, `Content`, `Job`, `.CreateTeam`, `ResolveOrganization`, `CreateOrganizationParams`, `testing.T`, `Pat`, `._WorkspaceTag`, `New`, `Step`, `stubQuerier`, `Team`, `Access`, `templateStub`, `CreateTagParams`, `.CreateAccess`, `Queries`, `workspaceStub`, `._Template`, `stubStore`?**
+  _High betweenness centrality (0.035) - this node is a cross-community bridge._
 - **What connects `TF_HTTP_PASSWORD`, `TF_HTTP_USERNAME`, `TF_IN_AUTOMATION` to the rest of the system?**
   _11 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `net/http.ResponseWriter` be split into smaller, more focused modules?**
-  _Cohesion score 0.07435610302351624 - nodes in this community are weakly interconnected._
-- **Why does `executionContext` connect `github.com/99designs/gqlgen/graphql.CollectedField` to `context.Context`, `._JobStatusEvent`, `.___Type`, `._Project`, `github.com/vektah/gqlparser/v2/ast.SelectionSet`, `.childFields___InputValue`, `generated.go`, `Resolver`, `TemplateConnection`, `.___Directive`, `.marshalOBoolean2bool`, `._Organization`, `github.com/99designs/gqlgen/graphql.Marshaler`, `JobConnection`, `AccessConnection`?**
-  _High betweenness centrality (0.019) - this node is a cross-community bridge._
+  _Cohesion score 0.08699059561128526 - nodes in this community are weakly interconnected._
+- **Why does `executionContext` connect `executionContext` to `context.Context`, `github.com/99designs/gqlgen/graphql.CollectedField`, `Job`, `._Project`, `._Project`, `generated.go`, `._NotificationConfiguration`, `Resolver`, `TemplateConnection`, `.marshalOBoolean2bool`, `OrganizationConnection`, `github.com/99designs/gqlgen/graphql.Marshaler`, `models_gen.go`, `._WorkspaceTag`, `._Template`, `AccessConnection`?**
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
 - **Should `Agent Workflows and Compatibility Docs` be split into smaller, more focused modules?**
   _Cohesion score 0.05989110707803993 - nodes in this community are weakly interconnected._
-- **Why does `API` connect `WriteResource` to `.updateWorkspaceRelationship`, `Resource`, `net/http.Handler`, `ProjectAccess`, `WriteError`, `api/main.go`?**
-  _High betweenness centrality (0.019) - this node is a cross-community bridge._
-- **Should `Globalvar` be split into smaller, more focused modules?**
-  _Cohesion score 0.1437908496732026 - nodes in this community are weakly interconnected._
+- **Why does `API` connect `WriteResource` to `Handler`, `Resource`, `run`, `net/http.Handler`, `WriteCollection`, `Deps`, `RequestData`, `api/main.go`?**
+  _High betweenness centrality (0.016) - this node is a cross-community bridge._
+- **Should `io.Reader` be split into smaller, more focused modules?**
+  _Cohesion score 0.07058001397624039 - nodes in this community are weakly interconnected._

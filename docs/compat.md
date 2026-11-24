@@ -151,7 +151,12 @@ honor `offset`/`limit` query parameters.
 
 Authentication for the remaining surface is a bearer token. During local development the
 `TERRAKUBE_AUTH_TOKEN` value is accepted; internal executor JWTs are also
-accepted. `GET /ping` is intentionally unauthenticated and returns `404` with
+accepted. A workspace-scoped JWT (one carrying a `workspaceId` claim) is
+confined to its `organizationId`/`workspaceId`: a route naming another
+organization or workspace, or one resolving a run, state version or
+configuration version that belongs to another workspace, answers `403`.
+Executor and registry service tokens are unscoped. `GET /ping` is intentionally
+unauthenticated and returns `404` with
 `TFP-API-Version: 2.5` and `TFP-AppName: Terrakube`, matching upstream.
 
 `/.well-known/terraform.json` is served with `login.v1`, `state.v2`,
@@ -242,7 +247,8 @@ requested ID was trimmed (`recovery: "step-log"`), `: heartbeat` comments after
 idle reads, and an `end` event (`{"reason":"complete"}`) once the job is
 terminal. Requests are authorized with the user token or an internal executor
 JWT; both endpoints verify that the job belongs to the organization in the path
-and that the step belongs to the job.
+and that the step belongs to the job. A workspace-scoped JWT must also match the
+job's organization and workspace and is refused with `403` otherwise.
 
 `internal/tfoutput/stream_integration_test.go` covers the live path end to
 end against Redis: a record reaches an open SSE client, a record for another
@@ -734,7 +740,8 @@ running.
   plugins too and marks the step `failed` or `cancelled` respectively.
 - **Auth**: when `TERRAKUBE_INTERNAL_TOKEN_SECRET` is set, the executor mints a
   workspace-scoped internal JWT (two-hour expiry) and passes it as
-  `TF_HTTP_PASSWORD` with `TF_HTTP_USERNAME=terraform`.
+  `TF_HTTP_PASSWORD` with `TF_HTTP_USERNAME=terraform`. The API confines that
+  token to the job's organization and workspace.
 - **Steps**: plan is step `100`, approval `150`, apply `200`. Plan runs
   `init` and `plan -detailed-exitcode -out=tfplan`; exit code `2` records
   `plan_changes=true`. The saved plan is stored under the upstream plan key and
