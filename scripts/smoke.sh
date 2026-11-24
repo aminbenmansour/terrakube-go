@@ -125,6 +125,28 @@ echo "ok: patch variable"
 expect_status 204 "$(status -X DELETE "${BASE}/variable/${var_id}")" "delete variable"
 expect_status 404 "$(status "${BASE}/variable/${var_id}")" "get deleted variable"
 
+# Workspace and project grants: the Access tables on the workspace and project
+# screens. Both live under their parent and PATCH/DELETE answer 204.
+access_id=$(req -X POST "${BASE}/organization/${org_id}/workspace/${ws_id}/access" -d '{
+  "data": {"type": "access", "attributes": {"name": "smoke-group", "role": "read"}}
+}' | jq -r '.data.id')
+[[ -n "$access_id" && "$access_id" != "null" ]] || { echo "FAIL: create workspace access" >&2; exit 1; }
+count=$(req "${BASE}/organization/${org_id}/workspace/${ws_id}/access" | jq '.data | length')
+[[ "$count" == "1" ]] || { echo "FAIL: workspace access count ${count}" >&2; exit 1; }
+expect_status 204 "$(status -X PATCH "${BASE}/organization/${org_id}/workspace/${ws_id}/access/${access_id}" -d '{
+  "data": {"type": "access", "id": "'"${access_id}"'", "attributes": {"role": "plan"}}
+}')" "patch workspace access"
+expect_status 204 "$(status -X DELETE "${BASE}/organization/${org_id}/workspace/${ws_id}/access/${access_id}")" "delete workspace access"
+expect_status 404 "$(status "${BASE}/organization/${org_id}/workspace/${ws_id}/access/${access_id}")" "get deleted workspace access"
+echo "ok: workspace access grants"
+
+project_access_id=$(req -X POST "${BASE}/organization/${org_id}/project/${project_id}/projectAccess" -d '{
+  "data": {"type": "project_access", "attributes": {"name": "smoke-group", "role": "read"}}
+}' | jq -r '.data.id')
+[[ -n "$project_access_id" && "$project_access_id" != "null" ]] || { echo "FAIL: create project access" >&2; exit 1; }
+expect_status 204 "$(status -X DELETE "${BASE}/organization/${org_id}/project/${project_id}/projectAccess/${project_access_id}")" "delete project access"
+echo "ok: project access grants"
+
 # The UI's permission endpoints are mounted outside /api/v1 and answer plain
 # JSON with 202. They need a bearer token even when the management API is open,
 # and the development token is the instance owner: two flags and nothing else
