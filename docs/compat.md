@@ -155,7 +155,8 @@ accepted. A workspace-scoped JWT (one carrying a `workspaceId` claim) is
 confined to its `organizationId`/`workspaceId`: a route naming another
 organization or workspace, or one resolving a run, state version or
 configuration version that belongs to another workspace, answers `403`.
-Executor and registry service tokens are unscoped. `GET /ping` is intentionally
+Executor and registry service tokens are unscoped. A workspace-scoped JWT is
+only accepted while its step is active, so it expires when the job ends. `GET /ping` is intentionally
 unauthenticated and returns `404` with
 `TFP-API-Version: 2.5` and `TFP-AppName: Terrakube`, matching upstream.
 
@@ -248,7 +249,8 @@ idle reads, and an `end` event (`{"reason":"complete"}`) once the job is
 terminal. Requests are authorized with the user token or an internal executor
 JWT; both endpoints verify that the job belongs to the organization in the path
 and that the step belongs to the job. A workspace-scoped JWT must also match the
-job's organization and workspace and is refused with `403` otherwise.
+job's organization and workspace and is refused with `403` otherwise; it is only
+accepted while its step is active.
 
 `internal/tfoutput/stream_integration_test.go` covers the live path end to
 end against Redis: a record reaches an open SSE client, a record for another
@@ -741,7 +743,8 @@ running.
 - **Auth**: when `TERRAKUBE_INTERNAL_TOKEN_SECRET` is set, the executor mints a
   workspace-scoped internal JWT (two-hour expiry) and passes it as
   `TF_HTTP_PASSWORD` with `TF_HTTP_USERNAME=terraform`. The API confines that
-  token to the job's organization and workspace.
+  token to the job's organization and workspace and stops accepting it when the
+  step finishes.
 - **Steps**: plan is step `100`, approval `150`, apply `200`. Plan runs
   `init` and `plan -detailed-exitcode -out=tfplan`; exit code `2` records
   `plan_changes=true`. The saved plan is stored under the upstream plan key and
