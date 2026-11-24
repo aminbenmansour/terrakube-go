@@ -33,6 +33,8 @@ type Deps struct {
 	AuthToken string
 	// Verifiers accept user bearer tokens (Dex, PATs).
 	Verifiers []auth.Verifier
+	// AdminGroup is the instance owner group. Empty means TERRAKUBE_ADMIN.
+	AdminGroup string
 }
 
 // New builds the /graphql/api/v1 handler.
@@ -41,7 +43,7 @@ func New(deps Deps) http.Handler {
 		deps.Logger = slog.Default()
 	}
 
-	srv := handler.New(NewExecutableSchema(Config{Resolvers: &Resolver{db: deps.DB, events: deps.Events}}))
+	srv := handler.New(NewExecutableSchema(Config{Resolvers: &Resolver{db: deps.DB, events: deps.Events, adminGroup: deps.AdminGroup}}))
 	srv.AddTransport(transport.POST{})
 	srv.SetErrorPresenter(deps.errorPresenter)
 
@@ -81,7 +83,7 @@ func NewSubscriptions(deps Deps) http.Handler {
 		deps.Logger = slog.Default()
 	}
 
-	srv := handler.New(NewExecutableSchema(Config{Resolvers: &Resolver{db: deps.DB, events: deps.Events}}))
+	srv := handler.New(NewExecutableSchema(Config{Resolvers: &Resolver{db: deps.DB, events: deps.Events, adminGroup: deps.AdminGroup}}))
 	srv.SetErrorPresenter(deps.errorPresenter)
 	srv.AddTransport(&transport.Websocket{
 		KeepAlivePingInterval: 10 * time.Second,

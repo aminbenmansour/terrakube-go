@@ -78,7 +78,12 @@ func (r *projectResolver) ProjectAccess(ctx context.Context, obj *Project, ids [
 
 // Organization is the resolver for the organization field.
 func (r *queryResolver) Organization(ctx context.Context, ids []*string, filter *string, first *StringOrInt, after *StringOrInt, sort *string) (*OrganizationConnection, error) {
-	p, err := loadPage[Organization](ctx, r.db, organizationSpec, "", nil, listArgs{IDs: idsFrom(ids), Filter: filter, First: first, After: after, Sort: sort})
+	organizations, err := r.organizationIDs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	scope, scopeArgs := organizationScope("id", organizations)
+	p, err := loadPage[Organization](ctx, r.db, organizationSpec, scope, scopeArgs, listArgs{IDs: idsFrom(ids), Filter: filter, First: first, After: after, Sort: sort})
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +97,12 @@ func (r *queryResolver) Organization(ctx context.Context, ids []*string, filter 
 
 // Workspace is the resolver for the workspace field.
 func (r *queryResolver) Workspace(ctx context.Context, ids []*string, filter *string, first *StringOrInt, after *StringOrInt, sort *string) (*WorkspaceConnection, error) {
-	p, err := loadPage[Workspace](ctx, r.db, workspaceSpec, "", nil, listArgs{IDs: idsFrom(ids), Filter: filter, First: first, After: after, Sort: sort})
+	organizations, err := r.organizationIDs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	scope, scopeArgs := organizationScope("organization_id", organizations)
+	p, err := loadPage[Workspace](ctx, r.db, workspaceSpec, scope, scopeArgs, listArgs{IDs: idsFrom(ids), Filter: filter, First: first, After: after, Sort: sort})
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +111,12 @@ func (r *queryResolver) Workspace(ctx context.Context, ids []*string, filter *st
 
 // Project is the resolver for the project field.
 func (r *queryResolver) Project(ctx context.Context, ids []*string, filter *string, first *StringOrInt, after *StringOrInt, sort *string) (*ProjectConnection, error) {
-	p, err := loadPage[Project](ctx, r.db, projectSpec, "", nil, listArgs{IDs: idsFrom(ids), Filter: filter, First: first, After: after, Sort: sort})
+	organizations, err := r.organizationIDs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	scope, scopeArgs := organizationScope("organization_id", organizations)
+	p, err := loadPage[Project](ctx, r.db, projectSpec, scope, scopeArgs, listArgs{IDs: idsFrom(ids), Filter: filter, First: first, After: after, Sort: sort})
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +125,12 @@ func (r *queryResolver) Project(ctx context.Context, ids []*string, filter *stri
 
 // NotificationConfiguration is the resolver for the notification_configuration field.
 func (r *queryResolver) NotificationConfiguration(ctx context.Context, ids []*string, filter *string, first *StringOrInt, after *StringOrInt, sort *string) (*NotificationConfigurationConnection, error) {
-	p, err := loadPage[NotificationConfiguration](ctx, r.db, notificationConfigurationSpec, "", nil, listArgs{IDs: idsFrom(ids), Filter: filter, First: first, After: after, Sort: sort})
+	organizations, err := r.organizationIDs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	scope, scopeArgs := organizationScope("organization_id", organizations)
+	p, err := loadPage[NotificationConfiguration](ctx, r.db, notificationConfigurationSpec, scope, scopeArgs, listArgs{IDs: idsFrom(ids), Filter: filter, First: first, After: after, Sort: sort})
 	if err != nil {
 		return nil, err
 	}
@@ -119,6 +139,13 @@ func (r *queryResolver) NotificationConfiguration(ctx context.Context, ids []*st
 
 // JobStatusChanged is the resolver for the jobStatusChanged field.
 func (r *subscriptionResolver) JobStatusChanged(ctx context.Context, workspaceID string) (<-chan *JobStatusEvent, error) {
+	ok, err := r.canReadWorkspace(ctx, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, errPermissionDenied
+	}
 	return streamEvents(ctx, r.Resolver, func(event jobstatus.Event) bool {
 		return event.WorkspaceID == workspaceID
 	})
@@ -126,6 +153,13 @@ func (r *subscriptionResolver) JobStatusChanged(ctx context.Context, workspaceID
 
 // OrganizationJobStatusChanged is the resolver for the organizationJobStatusChanged field.
 func (r *subscriptionResolver) OrganizationJobStatusChanged(ctx context.Context, organizationID string) (<-chan *JobStatusEvent, error) {
+	ok, err := r.canReadOrganization(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, errPermissionDenied
+	}
 	return streamEvents(ctx, r.Resolver, func(event jobstatus.Event) bool {
 		return event.OrganizationID == organizationID
 	})

@@ -187,11 +187,12 @@ func run() error {
 		TerraformLogin:     cfg.TerraformLogin,
 	}
 	graphqlDeps := graphqlapi.Deps{
-		DB:        pool,
-		Events:    events,
-		Logger:    logger,
-		AuthToken: cfg.AuthToken,
-		Verifiers: verifiers,
+		DB:         pool,
+		Events:     events,
+		Logger:     logger,
+		AuthToken:  cfg.AuthToken,
+		Verifiers:  verifiers,
+		AdminGroup: cfg.AdminGroup,
 	}
 	// The UI calls these cross-origin when it is served from another host, and
 	// browsers enforce CORS on the HTTP query endpoint just like any other.

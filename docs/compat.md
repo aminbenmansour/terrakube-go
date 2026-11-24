@@ -842,6 +842,12 @@ Implemented so far (`internal/graphql`, backed by gqlgen):
   notification_configuration at the root, with every relationship connection the
   UI traverses. Relay connection shape, `pageInfo.totalRecords`, offset cursors,
   `first`/`after` as `StringOrInt`, RSQL `filter` and Elide `sort`.
+- Queries are scoped to the caller's organizations once authentication is
+  enabled: the root collections add an organization predicate, nested
+  connections inherit the parent's scope, and a token without a matching team
+  or grant sees nothing. The job-status subscriptions refuse a workspace or
+  organization outside that set. The owner rule is the management API's
+  (development token, admin group, or authentication disabled).
 - Same bearer token as `/api/v1` (`TERRAKUBE_AUTH_TOKEN`). Resolver errors are
   logged and replaced with a generic message.
 - **Subscriptions** at `/subscriptions` over graphql-ws: `jobStatusChanged`
