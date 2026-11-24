@@ -277,6 +277,35 @@ func (q *Queries) ListNotificationConfigurationsByWorkspace(ctx context.Context,
 	return items, nil
 }
 
+const listNotificationSecrets = `-- name: ListNotificationSecrets :many
+SELECT id, signing_secret FROM notification_configuration
+`
+
+type ListNotificationSecretsRow struct {
+	ID            string  `json:"id"`
+	SigningSecret *string `json:"signing_secret"`
+}
+
+func (q *Queries) ListNotificationSecrets(ctx context.Context) ([]ListNotificationSecretsRow, error) {
+	rows, err := q.db.Query(ctx, listNotificationSecrets)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListNotificationSecretsRow{}
+	for rows.Next() {
+		var i ListNotificationSecretsRow
+		if err := rows.Scan(&i.ID, &i.SigningSecret); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listNotificationTriggersByConfiguration = `-- name: ListNotificationTriggersByConfiguration :many
 SELECT id, job_status, configuration_id, created_date, created_by, updated_date, updated_by FROM notification_trigger WHERE configuration_id = $1 ORDER BY created_date, id
 `
@@ -307,6 +336,21 @@ func (q *Queries) ListNotificationTriggersByConfiguration(ctx context.Context, c
 		return nil, err
 	}
 	return items, nil
+}
+
+const setNotificationSecret = `-- name: SetNotificationSecret :exec
+UPDATE notification_configuration SET signing_secret = $2 WHERE id = $1 AND signing_secret = $3
+`
+
+type SetNotificationSecretParams struct {
+	ID              string  `json:"id"`
+	SigningSecret   *string `json:"signing_secret"`
+	SigningSecret_2 *string `json:"signing_secret_2"`
+}
+
+func (q *Queries) SetNotificationSecret(ctx context.Context, arg SetNotificationSecretParams) error {
+	_, err := q.db.Exec(ctx, setNotificationSecret, arg.ID, arg.SigningSecret, arg.SigningSecret_2)
+	return err
 }
 
 const updateNotificationConfiguration = `-- name: UpdateNotificationConfiguration :one

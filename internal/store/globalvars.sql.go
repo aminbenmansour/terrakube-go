@@ -83,6 +83,35 @@ func (q *Queries) GetGlobalVariable(ctx context.Context, id string) (Globalvar, 
 	return i, err
 }
 
+const listGlobalVariableSecrets = `-- name: ListGlobalVariableSecrets :many
+SELECT id, variable_value FROM globalvar
+`
+
+type ListGlobalVariableSecretsRow struct {
+	ID            string `json:"id"`
+	VariableValue string `json:"variable_value"`
+}
+
+func (q *Queries) ListGlobalVariableSecrets(ctx context.Context) ([]ListGlobalVariableSecretsRow, error) {
+	rows, err := q.db.Query(ctx, listGlobalVariableSecrets)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListGlobalVariableSecretsRow{}
+	for rows.Next() {
+		var i ListGlobalVariableSecretsRow
+		if err := rows.Scan(&i.ID, &i.VariableValue); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listGlobalVariablesByOrganization = `-- name: ListGlobalVariablesByOrganization :many
 SELECT id, variable_key, variable_value, variable_description, sensitive, hcl, variable_category, organization_id FROM globalvar WHERE organization_id = $1 ORDER BY variable_key
 `
@@ -114,6 +143,21 @@ func (q *Queries) ListGlobalVariablesByOrganization(ctx context.Context, organiz
 		return nil, err
 	}
 	return items, nil
+}
+
+const setGlobalVariableSecret = `-- name: SetGlobalVariableSecret :exec
+UPDATE globalvar SET variable_value = $2 WHERE id = $1 AND variable_value = $3
+`
+
+type SetGlobalVariableSecretParams struct {
+	ID              string `json:"id"`
+	VariableValue   string `json:"variable_value"`
+	VariableValue_2 string `json:"variable_value_2"`
+}
+
+func (q *Queries) SetGlobalVariableSecret(ctx context.Context, arg SetGlobalVariableSecretParams) error {
+	_, err := q.db.Exec(ctx, setGlobalVariableSecret, arg.ID, arg.VariableValue, arg.VariableValue_2)
+	return err
 }
 
 const updateGlobalVariable = `-- name: UpdateGlobalVariable :one

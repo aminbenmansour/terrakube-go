@@ -117,12 +117,14 @@ type Querier interface {
 	ListAgentsByOrganization(ctx context.Context, organizationID string) ([]Agent, error)
 	ListArchivesByHistory(ctx context.Context, historyID string) ([]TempArchive, error)
 	ListCollectionsByOrganization(ctx context.Context, organizationID string) ([]Collection, error)
+	ListGlobalVariableSecrets(ctx context.Context) ([]ListGlobalVariableSecretsRow, error)
 	ListGlobalVariablesByOrganization(ctx context.Context, organizationID string) ([]Globalvar, error)
 	ListItemsByCollection(ctx context.Context, collectionID string) ([]Item, error)
 	ListJobsByOrganization(ctx context.Context, organizationID string) ([]Job, error)
 	ListNotificationConfigurationTemplateIDs(ctx context.Context, configurationID string) ([]string, error)
 	ListNotificationConfigurationsByOrganization(ctx context.Context, organizationID string) ([]NotificationConfiguration, error)
 	ListNotificationConfigurationsByWorkspace(ctx context.Context, workspaceID *string) ([]NotificationConfiguration, error)
+	ListNotificationSecrets(ctx context.Context) ([]ListNotificationSecretsRow, error)
 	ListNotificationTriggersByConfiguration(ctx context.Context, configurationID string) ([]NotificationTrigger, error)
 	ListOrganizationIDsByGroupNames(ctx context.Context, names []string) ([]string, error)
 	ListOrganizations(ctx context.Context) ([]Organization, error)
@@ -132,6 +134,7 @@ type Querier interface {
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
 	ListReferencesByCollection(ctx context.Context, collectionID string) ([]Reference, error)
 	ListReferencesByWorkspace(ctx context.Context, workspaceID string) ([]Reference, error)
+	ListSSHKeySecrets(ctx context.Context) ([]ListSSHKeySecretsRow, error)
 	ListSSHKeysByOrganization(ctx context.Context, organizationID string) ([]Ssh, error)
 	ListStepsByJob(ctx context.Context, jobID int64) ([]Step, error)
 	ListTagsByOrganization(ctx context.Context, organizationID string) ([]Tag, error)
@@ -139,13 +142,20 @@ type Querier interface {
 	ListTeamsByOrganizationAndNames(ctx context.Context, arg ListTeamsByOrganizationAndNamesParams) ([]Team, error)
 	ListTemplatesByOrganization(ctx context.Context, organizationID string) ([]Template, error)
 	ListVCSByOrganization(ctx context.Context, organizationID string) ([]Vc, error)
+	ListVCSSecrets(ctx context.Context) ([]ListVCSSecretsRow, error)
+	ListVariableSecrets(ctx context.Context) ([]ListVariableSecretsRow, error)
 	ListVariablesByWorkspace(ctx context.Context, workspaceID string) ([]Variable, error)
 	ListWorkspaceIDsByVCS(ctx context.Context, vcsID *string) ([]string, error)
 	ListWorkspaceTagsByWorkspace(ctx context.Context, workspaceID string) ([]Workspacetag, error)
 	ListWorkspacesByOrganization(ctx context.Context, organizationID string) ([]Workspace, error)
 	ListWorkspacesByProject(ctx context.Context, projectID *string) ([]Workspace, error)
 	SetCliAuthSessionIdentity(ctx context.Context, arg SetCliAuthSessionIdentityParams) error
+	SetGlobalVariableSecret(ctx context.Context, arg SetGlobalVariableSecretParams) error
 	SetJobOverrideSource(ctx context.Context, arg SetJobOverrideSourceParams) (Job, error)
+	SetNotificationSecret(ctx context.Context, arg SetNotificationSecretParams) error
+	SetSSHKeySecret(ctx context.Context, arg SetSSHKeySecretParams) error
+	SetVCSSecrets(ctx context.Context, arg SetVCSSecretsParams) error
+	SetVariableSecret(ctx context.Context, arg SetVariableSecretParams) error
 	SetWorkspaceLastJob(ctx context.Context, arg SetWorkspaceLastJobParams) error
 	SetWorkspaceLock(ctx context.Context, arg SetWorkspaceLockParams) (Workspace, error)
 	SoftDeletePat(ctx context.Context, arg SoftDeletePatParams) error
