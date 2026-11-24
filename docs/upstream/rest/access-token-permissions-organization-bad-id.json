@@ -1,0 +1,1 @@
+{"timestamp":"2026-11-24T09:21:49.342Z","status":500,"error":"Internal Server Error","path":"/access-token/v1/teams/permissions/organization/not-a-uuid"}

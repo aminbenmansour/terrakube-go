@@ -1,0 +1,1 @@
+{"data":{"type":"project_access","id":"ceeb8172-ab40-4960-b603-f6f2810b3e68","attributes":{"approveJob":false,"destroyJob":true,"manageJob":false,"manageState":true,"manageWorkspace":true,"name":"capture-group","planJob":false,"role":"custom"},"relationships":{"project":{"data":{"type":"project","id":"70000000-0000-0000-0000-000000000010"}}}}}

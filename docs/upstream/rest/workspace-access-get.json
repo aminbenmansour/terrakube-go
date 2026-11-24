@@ -1,0 +1,1 @@
+{"data":{"type":"access","id":"0a9ea824-20e1-45bd-8d41-5859a16b152c","attributes":{"approveJob":false,"destroyJob":true,"manageJob":false,"manageState":true,"manageWorkspace":true,"name":"capture-group","planJob":true,"role":"custom"},"relationships":{"workspace":{"data":{"type":"workspace","id":"77777777-7777-4777-8777-777777777777"}}}}}

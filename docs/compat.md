@@ -308,6 +308,65 @@ JSON:API, and is served outside `/api/v1`:
   instance owner is `TERRAKUBE_ADMIN_GROUP` (default `TERRAKUBE_ADMIN`), which
   may revoke any token.
 
+### Team permissions — `/access-token/v1`
+
+Captured from `azbuilder/api-server:2.34.3` (`TeamTokenController`). The UI
+calls these on every screen, so they are implemented ahead of grant CRUD. Like
+`/pat/v1` this is plain JSON served outside `/api/v1`; every answer is **202**,
+never JSON:API, except the errors:
+
+- `GET /access-token/v1/teams/current-teams` →
+  `202 {"groups":["team-a","TERRAKUBE_ADMIN"]}` — the token's `groups` claim,
+  in order, with no membership lookup. A token without groups answers an empty
+  array.
+- `GET /access-token/v1/teams/permissions/organization/{org}` → `202` with the
+  twelve-boolean `PermissionSet` below. `{org}` must be a UUID; a malformed one
+  is **500** upstream and **400** here.
+- `GET /access-token/v1/teams/permissions/organization/{org}/workspace/{ws}`
+  → the organization set plus the workspace's `access` rows and its project's
+  `project_access` rows. A missing workspace is not an error: it answers the
+  organization set with 202.
+- No token → **401 with an empty body** upstream; this API sends a JSON:API
+  error instead.
+
+The body is `{manageState, manageWorkspace, manageModule, manageProvider,
+manageVcs, manageTemplate, manageCollection, manageJob, planJob, approveJob,
+managePermission, managePolicies}`. Roles decide; `custom` (and a blank or
+unknown role, which is upstream's normalisation) falls back to the row's
+booleans:
+
+| check | admin | write | plan | read | custom |
+| --- | --- | --- | --- | --- | --- |
+| `manageWorkspace`, `manageState` | yes | yes | no | no | flag |
+| `manageModule`, `manageProvider`, `manageVcs`, `manageTemplate`, `manageCollection`, `managePolicies` | yes | no | no | no | flag |
+| `planJob` | yes | yes | yes | no | flag |
+| `approveJob`, `destroyJob` | yes | yes | no | no | flag |
+| `manageJob` | yes | yes | yes | no | `planJob` or `approveJob` |
+
+`managePermission` mirrors `manageWorkspace` for teams. A caller whose groups
+contain the instance owner group gets `managePermission` and `managePolicies`
+set even when no team matches, including for an unknown organization; the other
+ten stay as the teams decided. `access` and `project_access` rows have no
+module/provider/VCS/template/collection/policy columns, so they only add the
+five workspace permissions.
+
+One deliberate divergence: upstream applies **every** `access` row of the
+workspace to every caller (`workspace.getAccess().forEach`, no name check),
+which would hand out grants to unrelated users. This API only applies the rows
+whose `name` is one of the caller's groups; `project_access` rows are filtered
+by name upstream too. The captured responses are in
+`docs/upstream/rest/access-token-*.json`.
+
+Workspace and project grants are relationship resources upstream
+(`@Include(rootLevel = false)`), so their CRUD lives under the parent:
+`/api/v1/organization/{org}/workspace/{ws}/access[/{id}]` and
+`/api/v1/organization/{org}/project/{project}/projectAccess[/{id}]`. Create is
+201 with the resource, PATCH and DELETE are 204 with no body, a grant whose
+`destroyJob` is omitted defaults to **true**, and DELETE must carry no content
+type. These are captured (`workspace-access-*.json`, `project-access-*.json`)
+but the routes are still #140's next slice; the GraphQL `access` and
+`projectAccess` relations already read the same tables.
+
 ### Terraform login — `/oauth`
 
 Source: `api/.../plugin/token/login/OAuthBrokerController.java`,

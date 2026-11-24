@@ -2,7 +2,7 @@
 
 These files are verbatim responses from **upstream Terrakube 2.34.3** (the Java
 image `azbuilder/api-server:2.34.3`), captured on 2026-11-20 with its own demo
-seed data. They are the reference for `/api/v1`, not a reading of the OpenAPI
+seed data (the `access-token` and grant captures were added on 2026-11-24). They are the reference for `/api/v1`, not a reading of the OpenAPI
 spec: where the two disagree, these win.
 
 `index.tsv` is `name<TAB>status<TAB>path`. An empty file (`organization-no-token.json`)
@@ -41,6 +41,8 @@ tools that produced them are in
 | `agent` | list, create, delete; delete in use **409**; superuser-only writes | same routes and 409; writes open (no RBAC yet) |
 | `vcs` | organization-scoped CRUD; `name`/`description`/`vcsType` required; invalid enum **400**; secrets never returned; delete unlinks its workspaces | same routes and statuses; secrets plaintext until #54 |
 | `team` | organization-scoped CRUD; `name` required; permission booleans, `destroyJob` default true; `role` unvalidated; superuser-only writes | same routes and defaults; writes open (no RBAC yet) |
+| `access` / `project_access` | relationship resources (`rootLevel=false`): CRUD only under `/organization/{org}/workspace/{ws}/access` and `/project/{p}/projectAccess`; **201** with the resource, PATCH/DELETE **204**; omitted `destroyJob` is **true**; DELETE must send no content type | not served yet (#140); GraphQL already reads both tables |
+| `/access-token/v1/teams/*` | plain JSON, **202**; malformed organization id **500**; missing workspace still 202; owner group adds only `managePermission`/`managePolicies` | same status and shape outside `/api/v1`; malformed id **400**; only access rows naming one of the caller's groups apply |
 | `notificationConfiguration` / `notification_trigger` | org- or workspace-scoped; `name`/`channelType`/`destinationUrl` required (**409**), enums **400**, `signingSecret` never returned; triggers under the configuration; templates relationship replaced wholesale | same routes and statuses; `workspace` is `data:null` without upstream's empty to-many arrays; no test-send or delivery |
 | `template` | organization-scoped CRUD; no required attributes, so an empty create is **201**; unknown id **404**, malformed **400**; unknown PATCH attribute **404** | same routes and statuses; an unknown PATCH attribute is ignored |
 | `tag` | organization-scoped CRUD; optional name; duplicate name **500** | same routes and optional name; duplicate **409** (unique index) |

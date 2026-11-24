@@ -842,6 +842,31 @@ var deferredCaptures = map[string]string{
 	"organization-atomic-unknown":      "upstream answers 400 with an array of per-operation results; we answer one JSON:API error object",
 	"organization-tag-duplicate":       "upstream's unique-constraint violation surfaces as Spring's 500 page; our unique index answers 409",
 	"workspace-tag-duplicate":          "the same Spring 500 on the unique (tag, workspace) constraint; ours answers 409",
+	// /access-token/v1 is mounted outside /api/v1, which is all this harness
+	// replays; internal/api/accesstoken_test.go asserts the 202 bodies.
+	"access-token-current-teams":                    "served by NewAccessToken at /access-token/v1, outside this /api/v1 replay harness; accesstoken_test.go covers it",
+	"access-token-no-token":                         "same endpoint; our 401 carries a JSON error where upstream answers an empty body",
+	"access-token-permissions-organization":         "same endpoint; accesstoken_test.go covers the owner and team cases",
+	"access-token-permissions-organization-team":    "same endpoint; accesstoken_test.go covers the role matrix",
+	"access-token-permissions-organization-unknown": "same endpoint; accesstoken_test.go covers the owner flags on an unknown organization",
+	"access-token-permissions-organization-bad-id":  "same endpoint; upstream answers 500, we answer 400 for a malformed UUID",
+	"access-token-permissions-workspace":            "same endpoint; accesstoken_test.go covers the workspace accumulation",
+	"access-token-permissions-workspace-team":       "same endpoint; accesstoken_test.go covers the team half",
+	"access-token-permissions-workspace-missing":    "same endpoint; accesstoken_test.go covers the missing-workspace case",
+	// Grant CRUD lands with #140; the captures above are its reference.
+	"workspace-access-list":             "the REST grant CRUD is the next #140 slice; GraphQL already reads the table",
+	"workspace-access-create":           "the REST grant CRUD is the next #140 slice",
+	"workspace-access-get":              "the REST grant CRUD is the next #140 slice",
+	"workspace-access-patch":            "the REST grant CRUD is the next #140 slice; upstream answers 204 with no body",
+	"workspace-access-get-after-patch":  "the REST grant CRUD is the next #140 slice",
+	"workspace-access-delete":           "the REST grant CRUD is the next #140 slice; DELETE carries no content type",
+	"workspace-access-get-after-delete": "the REST grant CRUD is the next #140 slice",
+	"project-access-list":               "the REST grant CRUD is the next #140 slice; GraphQL already reads the table",
+	"project-access-create":             "the REST grant CRUD is the next #140 slice",
+	"project-access-get":                "the REST grant CRUD is the next #140 slice",
+	"project-access-patch":              "the REST grant CRUD is the next #140 slice; upstream answers 204 with no body",
+	"project-access-delete":             "the REST grant CRUD is the next #140 slice; DELETE carries no content type",
+	"project-access-get-after-delete":   "the REST grant CRUD is the next #140 slice",
 }
 
 // The ids upstream's demo seed gave the captures; the job captures were taken
