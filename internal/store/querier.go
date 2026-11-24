@@ -101,6 +101,10 @@ type Querier interface {
 	GetWorkspaceByName(ctx context.Context, arg GetWorkspaceByNameParams) (Workspace, error)
 	GetWorkspaceTag(ctx context.Context, id string) (Workspacetag, error)
 	IssueCliAuthCode(ctx context.Context, arg IssueCliAuthCodeParams) error
+	// Workspace and project access grants. A row's name is the Dex group it
+	// grants, so the by-name lookups are the RBAC checks.
+	ListAccessByWorkspace(ctx context.Context, workspaceID string) ([]Access, error)
+	ListAccessByWorkspaceAndNames(ctx context.Context, arg ListAccessByWorkspaceAndNamesParams) ([]Access, error)
 	ListActions(ctx context.Context) ([]Action, error)
 	ListActiveJobsByOrganization(ctx context.Context, name string) ([]Job, error)
 	ListActiveJobsByWorkspace(ctx context.Context, workspaceID string) ([]Job, error)
@@ -116,6 +120,8 @@ type Querier interface {
 	ListNotificationTriggersByConfiguration(ctx context.Context, configurationID string) ([]NotificationTrigger, error)
 	ListOrganizations(ctx context.Context) ([]Organization, error)
 	ListPatsByCreator(ctx context.Context, createdBy *string) ([]Pat, error)
+	ListProjectAccessByProject(ctx context.Context, projectID string) ([]ProjectAccess, error)
+	ListProjectAccessByProjectAndNames(ctx context.Context, arg ListProjectAccessByProjectAndNamesParams) ([]ProjectAccess, error)
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
 	ListReferencesByCollection(ctx context.Context, collectionID string) ([]Reference, error)
 	ListReferencesByWorkspace(ctx context.Context, workspaceID string) ([]Reference, error)
@@ -123,6 +129,7 @@ type Querier interface {
 	ListStepsByJob(ctx context.Context, jobID int64) ([]Step, error)
 	ListTagsByOrganization(ctx context.Context, organizationID string) ([]Tag, error)
 	ListTeamsByOrganization(ctx context.Context, organizationID string) ([]Team, error)
+	ListTeamsByOrganizationAndNames(ctx context.Context, arg ListTeamsByOrganizationAndNamesParams) ([]Team, error)
 	ListTemplatesByOrganization(ctx context.Context, organizationID string) ([]Template, error)
 	ListVCSByOrganization(ctx context.Context, organizationID string) ([]Vc, error)
 	ListVariablesByWorkspace(ctx context.Context, workspaceID string) ([]Variable, error)

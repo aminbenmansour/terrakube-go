@@ -156,6 +156,54 @@ func (q *Queries) ListTeamsByOrganization(ctx context.Context, organizationID st
 	return items, nil
 }
 
+const listTeamsByOrganizationAndNames = `-- name: ListTeamsByOrganizationAndNames :many
+SELECT id, name, manage_workspace, manage_module, manage_provider, manage_vcs, manage_template, manage_state, manage_collection, manage_job, manage_policies, plan_job, approve_job, destroy_job, role, organization_id FROM team
+WHERE organization_id = $1 AND name = ANY($2::text[])
+ORDER BY name, id
+`
+
+type ListTeamsByOrganizationAndNamesParams struct {
+	OrganizationID string   `json:"organization_id"`
+	Names          []string `json:"names"`
+}
+
+func (q *Queries) ListTeamsByOrganizationAndNames(ctx context.Context, arg ListTeamsByOrganizationAndNamesParams) ([]Team, error) {
+	rows, err := q.db.Query(ctx, listTeamsByOrganizationAndNames, arg.OrganizationID, arg.Names)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Team{}
+	for rows.Next() {
+		var i Team
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ManageWorkspace,
+			&i.ManageModule,
+			&i.ManageProvider,
+			&i.ManageVcs,
+			&i.ManageTemplate,
+			&i.ManageState,
+			&i.ManageCollection,
+			&i.ManageJob,
+			&i.ManagePolicies,
+			&i.PlanJob,
+			&i.ApproveJob,
+			&i.DestroyJob,
+			&i.Role,
+			&i.OrganizationID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateTeam = `-- name: UpdateTeam :one
 UPDATE team
 SET name = $2,
