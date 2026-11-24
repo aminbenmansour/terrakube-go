@@ -1,1 +1,1 @@
-{"approveJob":true,"manageCollection":true,"manageJob":true,"manageModule":true,"managePermission":true,"managePolicies":true,"manageProvider":true,"manageState":true,"manageTemplate":true,"manageVcs":true,"manageWorkspace":true,"planJob":true}
+{"approveJob":true,"manageCollection":false,"manageJob":true,"manageModule":false,"managePermission":true,"managePolicies":false,"manageProvider":false,"manageState":true,"manageTemplate":false,"manageVcs":false,"manageWorkspace":true,"planJob":true}

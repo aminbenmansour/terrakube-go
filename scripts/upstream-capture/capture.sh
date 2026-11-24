@@ -374,14 +374,11 @@ request organization-team-create "/api/v1/organization/${rel_org}/team" -X POST 
   --data '{"data":{"type":"team","attributes":{"name":"capture-team","manageWorkspace":true,"manageJob":true,"planJob":true,"approveJob":true,"role":"write"}}}'
 team_new="$(python3 -c "import json;print(json.load(open('$out/organization-team-create.json'))['data']['id'])")"
 request organization-team-get "/api/v1/organization/${rel_org}/team/${team_new}"
-request organization-team-patch "/api/v1/organization/${rel_org}/team/${team_new}" -X PATCH \
-  -H 'Content-Type: application/vnd.api+json' \
-  --data "{\"data\":{\"type\":\"team\",\"id\":\"${team_new}\",\"attributes\":{\"role\":\"admin\",\"manageVcs\":true,\"destroyJob\":false}}}"
 
 # Permission endpoints the UI calls from every screen. They sit outside
-# /api/v1 and answer plain JSON with 202, not JSON:API. The second token has
-# only the capture team's group, so the answers show the role matrix without
-# the instance owner's two extra flags.
+# /api/v1 and answer plain JSON with 202, not JSON:API. The group token is
+# minted while the team still has role=write, so the team answers show a
+# non-admin row and no instance-owner flags.
 group_token="$(PAT_GROUPS='capture-team' "$here/pat.py")"
 request access-token-current-teams '/access-token/v1/teams/current-teams'
 request access-token-permissions-organization "/access-token/v1/teams/permissions/organization/${rel_org}"
@@ -393,12 +390,25 @@ request access-token-permissions-workspace "/access-token/v1/teams/permissions/o
 request access-token-permissions-workspace-missing "/access-token/v1/teams/permissions/organization/${rel_org}/workspace/00000000-0000-4000-8000-0000000000ff"
 unauthenticated access-token-no-token '/access-token/v1/teams/current-teams'
 
+request organization-team-patch "/api/v1/organization/${rel_org}/team/${team_new}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"team\",\"id\":\"${team_new}\",\"attributes\":{\"role\":\"admin\",\"manageVcs\":true,\"destroyJob\":false}}}"
 request organization-team-create-missing-name "/api/v1/organization/${rel_org}/team" -X POST \
   -H 'Content-Type: application/vnd.api+json' --data '{"data":{"type":"team","attributes":{"role":"read"}}}'
 request organization-team-missing "/api/v1/organization/${rel_org}/team/00000000-0000-4000-8000-000000000097"
 request organization-team-bad-id "/api/v1/organization/${rel_org}/team/not-a-uuid"
 request organization-team-delete "/api/v1/organization/${rel_org}/team/${team_new}" -X DELETE
 request organization-team-get-after-delete "/api/v1/organization/${rel_org}/team/${team_new}"
+
+# A read role proves the all-false half of the matrix without the owner group.
+# Setup and cleanup are not captures themselves.
+reader_team="$(curl -sS -H "Authorization: Bearer ${token}" -H 'Content-Type: application/vnd.api+json' \
+  -X POST "${base}/api/v1/organization/${rel_org}/team" \
+  --data '{"data":{"type":"team","attributes":{"name":"capture-reader","role":"read"}}}' \
+  | python3 -c "import json,sys;print(json.load(sys.stdin)['data']['id'])")"
+reader_token="$(PAT_GROUPS='capture-reader' "$here/pat.py")"
+request_as "$reader_token" access-token-permissions-organization-reader "/access-token/v1/teams/permissions/organization/${rel_org}"
+curl -sS -H "Authorization: Bearer ${token}" -X DELETE "${base}/api/v1/organization/${rel_org}/team/${reader_team}" >/dev/null
 
 # Workspace and project access grants: the team pickers on the workspace and
 # project screens. `access` and `project_access` are relationship resources

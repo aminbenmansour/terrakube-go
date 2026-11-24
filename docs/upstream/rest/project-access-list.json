@@ -1,1 +1,1 @@
-{"data":[{"type":"project_access","id":"74782143-630c-4272-8075-b56d5a7ee901","attributes":{"approveJob":false,"destroyJob":true,"manageJob":false,"manageState":false,"manageWorkspace":false,"name":"capture-ct","planJob":false,"role":"read"},"relationships":{"project":{"data":{"type":"project","id":"70000000-0000-0000-0000-000000000010"}}}}]}
+{"data":[]}
