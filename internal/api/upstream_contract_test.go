@@ -1521,6 +1521,16 @@ func assertSameResourceShape(t *testing.T, name string, theirs, mine any) {
 	if got, want := sortedKeys(myAttrs), sortedKeys(theirAttrs); strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("%s: attributes = %v, want %v", name, got, want)
 	}
+
+	// Most handlers omit relationships upstream serialises; grants must not,
+	// because the UI reads the parent from them.
+	if resourceType, _ := myResource["type"].(string); resourceType == "access" || resourceType == "project_access" {
+		theirRels, _ := theirResource["relationships"].(map[string]any)
+		myRels, _ := myResource["relationships"].(map[string]any)
+		if got, want := sortedKeys(myRels), sortedKeys(theirRels); strings.Join(got, ",") != strings.Join(want, ",") {
+			t.Errorf("%s: relationships = %v, want %v", name, got, want)
+		}
+	}
 }
 
 func sortedKeys(m map[string]any) []string {
