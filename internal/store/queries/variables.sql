@@ -26,3 +26,9 @@ RETURNING *;
 
 -- name: DeleteVariable :exec
 DELETE FROM variable WHERE id = $1;
+
+-- name: ListVariableSecrets :many
+SELECT id, variable_value FROM variable;
+
+-- name: SetVariableSecret :exec
+UPDATE variable SET variable_value = $2 WHERE id = $1 AND variable_value = $3;

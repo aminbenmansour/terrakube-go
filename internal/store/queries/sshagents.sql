@@ -44,3 +44,9 @@ SELECT count(*) FROM workspace WHERE ssh_id = $1;
 
 -- name: CountWorkspacesWithAgent :one
 SELECT count(*) FROM workspace WHERE agent_id = $1;
+
+-- name: ListSSHKeySecrets :many
+SELECT id, private_key FROM ssh;
+
+-- name: SetSSHKeySecret :exec
+UPDATE ssh SET private_key = $2 WHERE id = $1 AND private_key = $3;

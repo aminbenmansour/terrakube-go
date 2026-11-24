@@ -25,3 +25,9 @@ RETURNING *;
 
 -- name: DeleteGlobalVariable :exec
 DELETE FROM globalvar WHERE id = $1;
+
+-- name: ListGlobalVariableSecrets :many
+SELECT id, variable_value FROM globalvar;
+
+-- name: SetGlobalVariableSecret :exec
+UPDATE globalvar SET variable_value = $2 WHERE id = $1 AND variable_value = $3;
