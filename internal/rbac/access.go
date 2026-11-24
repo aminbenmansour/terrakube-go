@@ -65,8 +65,7 @@ func ResolveOrganization(ctx context.Context, q OrganizationStore, organizationI
 }
 
 // ResolveWorkspace adds the workspace and project grant rows to the
-// organization access. A workspace of another organization contributes
-// nothing; the parent guard answers that request as a 404.
+// organization access.
 func ResolveWorkspace(ctx context.Context, q WorkspaceStore, organizationID, workspaceID string, groups []string) (Access, error) {
 	access, err := ResolveOrganization(ctx, q, organizationID, groups)
 	if err != nil || !access.Member {
@@ -80,7 +79,14 @@ func ResolveWorkspace(ctx context.Context, q WorkspaceStore, organizationID, wor
 	if err != nil {
 		return Access{}, err
 	}
-	if workspace.OrganizationID != organizationID {
+	return ApplyWorkspaceGrants(ctx, q, access, organizationID, workspace, groups)
+}
+
+// ApplyWorkspaceGrants adds one workspace's grant rows to an access already
+// resolved for its organization. A workspace of another organization
+// contributes nothing; the parent guard answers that request as a 404.
+func ApplyWorkspaceGrants(ctx context.Context, q WorkspaceStore, access Access, organizationID string, workspace store.Workspace, groups []string) (Access, error) {
+	if !access.Member || workspace.OrganizationID != organizationID {
 		return access, nil
 	}
 
@@ -124,12 +130,18 @@ func ResolveProject(ctx context.Context, q WorkspaceStore, organizationID, proje
 	if err != nil {
 		return Access{}, err
 	}
-	if project.OrganizationID != organizationID {
+	return ApplyProjectGrants(ctx, q, access, organizationID, project, groups)
+}
+
+// ApplyProjectGrants adds one project's grant rows to an access already
+// resolved for its organization.
+func ApplyProjectGrants(ctx context.Context, q WorkspaceStore, access Access, organizationID string, project store.Project, groups []string) (Access, error) {
+	if !access.Member || project.OrganizationID != organizationID {
 		return access, nil
 	}
 
 	rows, err := q.ListProjectAccessByProjectAndNames(ctx, store.ListProjectAccessByProjectAndNamesParams{
-		ProjectID: projectID,
+		ProjectID: project.ID,
 		Names:     groups,
 	})
 	if err != nil {
