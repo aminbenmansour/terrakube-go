@@ -9,45 +9,8 @@ import (
 	"context"
 )
 
-const listAccessByWorkspace = `-- name: ListAccessByWorkspace :many
-
-SELECT id, name, manage_workspace, manage_state, manage_job, plan_job, approve_job, destroy_job, role, workspace_id FROM access WHERE workspace_id = $1 ORDER BY name, id
-`
-
-// Workspace and project access grants. A row's name is the Dex group it
-// grants, so the by-name lookups are the RBAC checks.
-func (q *Queries) ListAccessByWorkspace(ctx context.Context, workspaceID string) ([]Access, error) {
-	rows, err := q.db.Query(ctx, listAccessByWorkspace, workspaceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Access{}
-	for rows.Next() {
-		var i Access
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.ManageWorkspace,
-			&i.ManageState,
-			&i.ManageJob,
-			&i.PlanJob,
-			&i.ApproveJob,
-			&i.DestroyJob,
-			&i.Role,
-			&i.WorkspaceID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listAccessByWorkspaceAndNames = `-- name: ListAccessByWorkspaceAndNames :many
+
 SELECT id, name, manage_workspace, manage_state, manage_job, plan_job, approve_job, destroy_job, role, workspace_id FROM access
 WHERE workspace_id = $1 AND name = ANY($2::text[])
 ORDER BY name, id
@@ -58,6 +21,8 @@ type ListAccessByWorkspaceAndNamesParams struct {
 	Names       []string `json:"names"`
 }
 
+// Workspace and project access grants. A row's name is the Dex group it
+// grants, so the by-name lookups are the RBAC checks.
 func (q *Queries) ListAccessByWorkspaceAndNames(ctx context.Context, arg ListAccessByWorkspaceAndNamesParams) ([]Access, error) {
 	rows, err := q.db.Query(ctx, listAccessByWorkspaceAndNames, arg.WorkspaceID, arg.Names)
 	if err != nil {
@@ -78,41 +43,6 @@ func (q *Queries) ListAccessByWorkspaceAndNames(ctx context.Context, arg ListAcc
 			&i.DestroyJob,
 			&i.Role,
 			&i.WorkspaceID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listProjectAccessByProject = `-- name: ListProjectAccessByProject :many
-SELECT id, name, manage_workspace, manage_state, manage_job, plan_job, approve_job, destroy_job, role, project_id FROM project_access WHERE project_id = $1 ORDER BY name, id
-`
-
-func (q *Queries) ListProjectAccessByProject(ctx context.Context, projectID string) ([]ProjectAccess, error) {
-	rows, err := q.db.Query(ctx, listProjectAccessByProject, projectID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProjectAccess{}
-	for rows.Next() {
-		var i ProjectAccess
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.ManageWorkspace,
-			&i.ManageState,
-			&i.ManageJob,
-			&i.PlanJob,
-			&i.ApproveJob,
-			&i.DestroyJob,
-			&i.Role,
-			&i.ProjectID,
 		); err != nil {
 			return nil, err
 		}

@@ -103,7 +103,6 @@ type Querier interface {
 	IssueCliAuthCode(ctx context.Context, arg IssueCliAuthCodeParams) error
 	// Workspace and project access grants. A row's name is the Dex group it
 	// grants, so the by-name lookups are the RBAC checks.
-	ListAccessByWorkspace(ctx context.Context, workspaceID string) ([]Access, error)
 	ListAccessByWorkspaceAndNames(ctx context.Context, arg ListAccessByWorkspaceAndNamesParams) ([]Access, error)
 	ListActions(ctx context.Context) ([]Action, error)
 	ListActiveJobsByOrganization(ctx context.Context, name string) ([]Job, error)
@@ -120,7 +119,6 @@ type Querier interface {
 	ListNotificationTriggersByConfiguration(ctx context.Context, configurationID string) ([]NotificationTrigger, error)
 	ListOrganizations(ctx context.Context) ([]Organization, error)
 	ListPatsByCreator(ctx context.Context, createdBy *string) ([]Pat, error)
-	ListProjectAccessByProject(ctx context.Context, projectID string) ([]ProjectAccess, error)
 	ListProjectAccessByProjectAndNames(ctx context.Context, arg ListProjectAccessByProjectAndNamesParams) ([]ProjectAccess, error)
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
 	ListReferencesByCollection(ctx context.Context, collectionID string) ([]Reference, error)
