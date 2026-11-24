@@ -57,6 +57,9 @@ func (a *API) atomicOperations(w http.ResponseWriter, r *http.Request) {
 				jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Operation", "data.type must be workspace")
 				return
 			}
+			if !a.authorizeWorkspaceWrite(w, r, orgID, nil) {
+				return
+			}
 			ws, ok := a.createWorkspaceFromData(w, r, orgID, operation.Data)
 			if !ok {
 				return
@@ -77,6 +80,9 @@ func (a *API) atomicOperations(w http.ResponseWriter, r *http.Request) {
 			}
 			if ws.OrganizationID != orgID {
 				jsonapi.WriteError(w, http.StatusNotFound, "Not Found", "Unknown identifier "+wsID+" for workspace")
+				return
+			}
+			if !a.authorizeWorkspaceWrite(w, r, orgID, &ws) {
 				return
 			}
 			if operation.Data == nil || operation.Data.Type != "workspace" {

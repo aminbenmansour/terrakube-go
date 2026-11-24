@@ -133,6 +133,7 @@ func run() error {
 		AuthToken:   cfg.AuthToken,
 		Verifiers:   verifiers,
 		PATs:        pats,
+		AdminGroup:  cfg.AdminGroup,
 		CORSOrigins: cfg.CORSOrigins,
 	}))
 	handler.Mount("/pat/v1", api.NewPAT(api.Deps{

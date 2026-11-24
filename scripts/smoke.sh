@@ -4,11 +4,15 @@
 #
 #   TERRAKUBE_AUTH_TOKEN=dev-token ./scripts/smoke.sh
 #
+# Set TERRAKUBE_SMOKE_READER_TOKEN to a non-owner bearer token that belongs to
+# no team in the new organization to also check the 403 denials.
+#
 set -euo pipefail
 
 BASE="${TERRAKUBE_API_URL:-http://localhost:8080}"
 BASE="${BASE%/}/api/v1"
 TOKEN="${TERRAKUBE_AUTH_TOKEN:-}"
+READER_TOKEN="${TERRAKUBE_SMOKE_READER_TOKEN:-}"
 
 command -v jq >/dev/null || { echo "jq is required" >&2; exit 1; }
 
@@ -81,6 +85,20 @@ ws_id=$(req -X POST "${BASE}/organization/${org_id}/workspace" -d "{
   }
 }" | jq -r '.data.id')
 echo "ok: workspace ${ws_id}"
+
+# A token that belongs to no team proves enforcement: reads are denied, the
+# organization list is empty, and a write is denied before the handler runs.
+if [[ -n "$READER_TOKEN" ]]; then
+  reader=(-H "Authorization: Bearer ${READER_TOKEN}")
+  detail=$(curl -s "${reader[@]}" "${BASE}/organization/${org_id}" | jq -r '.errors[0].detail')
+  [[ "$detail" == "ReadPermission Denied" ]] || { echo "FAIL: non-member read (${detail})" >&2; exit 1; }
+  count=$(curl -fsS "${reader[@]}" "${BASE}/organization" | jq '.data | length')
+  [[ "$count" == "0" ]] || { echo "FAIL: non-member organization list (${count})" >&2; exit 1; }
+  detail=$(curl -s "${reader[@]}" "${json[@]}" -X POST "${BASE}/organization/${org_id}/workspace" \
+    -d '{"data":{"type":"workspace","attributes":{"name":"denied"}}}' | jq -r '.errors[0].detail')
+  [[ "$detail" == "CreatePermission Denied" ]] || { echo "FAIL: non-member write (${detail})" >&2; exit 1; }
+  echo "ok: non-member denied"
+fi
 
 gql="${BASE%/api/v1}/graphql/api/v1"
 gql_query() {

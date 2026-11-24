@@ -575,7 +575,16 @@ func (a *API) workspaceInOrganization(next http.Handler) http.Handler {
 			jsonapi.WriteError(w, http.StatusNotFound, "Not Found", "The requested resource does not exist.")
 			return
 		}
-		next.ServeHTTP(w, r)
+		access, err := a.resolveWorkspaceAuthorization(r, ws)
+		if err != nil {
+			a.internalError(w, "resolve workspace access", err)
+			return
+		}
+		if !access.Member {
+			writePermissionDenied(w, r.Method)
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(withAuthorization(r.Context(), access)))
 	})
 }
 

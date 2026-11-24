@@ -68,3 +68,16 @@ ORDER BY name, id;
 SELECT * FROM project_access
 WHERE project_id = $1 AND name = ANY(sqlc.arg(names)::text[])
 ORDER BY name, id;
+
+-- name: ListOrganizationIDsByGroupNames :many
+SELECT DISTINCT organization_id FROM team
+WHERE name = ANY(sqlc.arg(names)::text[])
+UNION
+SELECT DISTINCT w.organization_id FROM access a
+JOIN workspace w ON w.id = a.workspace_id
+WHERE a.name = ANY(sqlc.arg(names)::text[])
+UNION
+SELECT DISTINCT p.organization_id FROM project_access pa
+JOIN project p ON p.id = pa.project_id
+WHERE pa.name = ANY(sqlc.arg(names)::text[])
+ORDER BY 1;

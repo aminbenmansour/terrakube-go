@@ -76,155 +76,161 @@ func New(deps Deps) http.Handler {
 	// The action catalog fills the workspace resource drawer and the Settings >
 	// Actions editor.
 	r.Get("/action", a.listActions)
-	r.Post("/action", a.createAction)
+	r.With(a.requireOwner).Post("/action", a.createAction)
 	r.Route("/action/{actionID}", func(r chi.Router) {
 		r.Get("/", a.getAction)
-		r.Patch("/", a.updateAction)
-		r.Delete("/", a.deleteAction)
+		r.With(a.requireOwner).Patch("/", a.updateAction)
+		r.With(a.requireOwner).Delete("/", a.deleteAction)
 	})
 
 	// Organizations
 	r.Get("/organization", a.listOrganizations)
-	r.Post("/organization", a.createOrganization)
+	r.With(a.requireOwner).Post("/organization", a.createOrganization)
 	r.Route("/organization/{organizationID}", func(r chi.Router) {
+		r.Use(a.organizationAccess)
 		r.Get("/", a.getOrganization)
-		r.Patch("/", a.updateOrganization)
-		r.Delete("/", a.deleteOrganization)
+		r.With(a.requireOwner).Patch("/", a.updateOrganization)
+		r.With(a.requireOwner).Delete("/", a.deleteOrganization)
 
 		// Projects and workspaces scoped to an organization.
 		r.Get("/project", a.listProjects)
-		r.Post("/project", a.createProject)
+		r.With(a.requireWrite(canManageWorkspace)).Post("/project", a.createProject)
 		// Project access grants: Settings > Projects > Access.
 		r.Route("/project/{projectID}", func(r chi.Router) {
+			r.Use(a.projectInOrganization)
 			r.Get("/projectAccess", a.listProjectAccess)
-			r.Post("/projectAccess", a.createProjectAccess)
+			r.With(a.requireWrite(canManageWorkspace)).Post("/projectAccess", a.createProjectAccess)
 			r.Route("/projectAccess/{projectAccessID}", func(r chi.Router) {
 				r.Get("/", a.getProjectAccess)
-				r.Patch("/", a.updateProjectAccess)
-				r.Delete("/", a.deleteProjectAccess)
+				r.With(a.requireWrite(canManageWorkspace)).Patch("/", a.updateProjectAccess)
+				r.With(a.requireWrite(canManageWorkspace)).Delete("/", a.deleteProjectAccess)
 			})
 		})
 		r.Get("/workspace", a.listWorkspaces)
-		r.Post("/workspace", a.createWorkspace)
+		r.With(a.requireWrite(canManageWorkspace)).Post("/workspace", a.createWorkspace)
 
 		// Runs.
 		r.Get("/job", a.listJobs)
 		r.Route("/job/{jobID}", func(r chi.Router) {
 			r.Get("/", a.getJob)
-			r.Patch("/", a.updateJob)
+			r.With(a.requireWrite(canManageJob)).Patch("/", a.updateJob)
 		})
 
 		// Tags: Settings > Tags and the workspace tag editor.
 		r.Get("/tag", a.listTags)
-		r.Post("/tag", a.createTag)
+		r.With(a.requireWrite(canManageWorkspace)).Post("/tag", a.createTag)
 		r.Route("/tag/{tagID}", func(r chi.Router) {
 			r.Get("/", a.getTag)
-			r.Patch("/", a.updateTag)
-			r.Delete("/", a.deleteTag)
+			r.With(a.requireWrite(canManageWorkspace)).Patch("/", a.updateTag)
+			r.With(a.requireWrite(canManageWorkspace)).Delete("/", a.deleteTag)
 		})
 
 		// VCS providers: Settings > VCS and the workspace source picker.
 		r.Get("/vcs", a.listVCS)
-		r.Post("/vcs", a.createVCS)
+		r.With(a.requireWrite(canManageVcs)).Post("/vcs", a.createVCS)
 		r.Route("/vcs/{vcsID}", func(r chi.Router) {
 			r.Get("/", a.getVCS)
-			r.Patch("/", a.updateVCS)
-			r.Delete("/", a.deleteVCS)
+			r.With(a.requireWrite(canManageVcs)).Patch("/", a.updateVCS)
+			r.With(a.requireWrite(canManageVcs)).Delete("/", a.deleteVCS)
 		})
 
 		// Notifications: Settings > Notifications, org-wide and per workspace.
 		r.Get("/notificationConfiguration", a.listNotificationConfigurations)
-		r.Post("/notificationConfiguration", a.createNotificationConfiguration)
+		r.With(a.requireWrite(canManageWorkspace)).Post("/notificationConfiguration", a.createNotificationConfiguration)
 		r.Get("/notificationConfiguration/{configurationID}", a.getNotificationConfiguration)
 
 		// Teams: Settings > Teams and the access pickers.
 		r.Get("/team", a.listTeams)
-		r.Post("/team", a.createTeam)
+		r.With(a.requireOwner).Post("/team", a.createTeam)
 		r.Route("/team/{teamID}", func(r chi.Router) {
 			r.Get("/", a.getTeam)
-			r.Patch("/", a.updateTeam)
-			r.Delete("/", a.deleteTeam)
+			r.With(a.requireOwner).Patch("/", a.updateTeam)
+			r.With(a.requireOwner).Delete("/", a.deleteTeam)
 		})
 
 		// Job-flow templates: Settings > Templates and the workspace default.
 		r.Get("/template", a.listTemplates)
-		r.Post("/template", a.createTemplate)
+		r.With(a.requireWrite(canManageTemplate)).Post("/template", a.createTemplate)
 		r.Route("/template/{templateID}", func(r chi.Router) {
 			r.Get("/", a.getTemplate)
-			r.Patch("/", a.updateTemplate)
-			r.Delete("/", a.deleteTemplate)
+			r.With(a.requireWrite(canManageTemplate)).Patch("/", a.updateTemplate)
+			r.With(a.requireWrite(canManageTemplate)).Delete("/", a.deleteTemplate)
 		})
 
 		// SSH keys and self-hosted agent pools for workspace connections.
 		r.Get("/ssh", a.listSSHKeys)
-		r.Post("/ssh", a.createSSHKey)
+		r.With(a.requireWrite(canManageVcs)).Post("/ssh", a.createSSHKey)
 		r.Route("/ssh/{sshID}", func(r chi.Router) {
 			r.Get("/", a.getSSHKey)
-			r.Patch("/", a.updateSSHKey)
-			r.Delete("/", a.deleteSSHKey)
+			r.With(a.requireWrite(canManageVcs)).Patch("/", a.updateSSHKey)
+			r.With(a.requireWrite(canManageVcs)).Delete("/", a.deleteSSHKey)
 		})
 		r.Get("/agent", a.listAgents)
-		r.Post("/agent", a.createAgent)
-		r.Delete("/agent/{agentID}", a.deleteAgent)
+		r.With(a.requireOwner).Post("/agent", a.createAgent)
+		r.With(a.requireOwner).Delete("/agent/{agentID}", a.deleteAgent)
 
 		// Organization-level variables inherited by every workspace.
 		r.Get("/globalvar", a.listGlobalVariables)
-		r.Post("/globalvar", a.createGlobalVariable)
+		r.With(a.requireOwner).Post("/globalvar", a.createGlobalVariable)
 		r.Route("/globalvar/{globalVarID}", func(r chi.Router) {
 			r.Get("/", a.getGlobalVariable)
-			r.Patch("/", a.updateGlobalVariable)
-			r.Delete("/", a.deleteGlobalVariable)
+			r.With(a.requireOwner).Patch("/", a.updateGlobalVariable)
+			r.With(a.requireOwner).Delete("/", a.deleteGlobalVariable)
 		})
 	})
 
 	// Projects
 	r.Route("/project/{projectID}", func(r chi.Router) {
+		r.Use(a.projectScope)
 		r.Get("/", a.getProject)
-		r.Patch("/", a.updateProject)
-		r.Delete("/", a.deleteProject)
+		r.With(a.requireWrite(canManageWorkspace)).Patch("/", a.updateProject)
+		r.With(a.requireWrite(canManageWorkspace)).Delete("/", a.deleteProject)
 		r.Get("/workspace", a.listProjectWorkspaces)
 	})
 
 	// Variable collections: Settings > Collections, and the read-only
 	// "Collection Variables" table on the workspace page.
 	r.Route("/organization/{organizationID}/collection", func(r chi.Router) {
+		r.Use(a.organizationAccess)
 		r.Get("/", a.listCollections)
-		r.Post("/", a.createCollection)
+		r.With(a.requireWrite(canManageCollection)).Post("/", a.createCollection)
 		r.Route("/{collectionID}", func(r chi.Router) {
 			r.Get("/", a.getCollection)
-			r.Patch("/", a.updateCollection)
-			r.Delete("/", a.deleteCollection)
+			r.With(a.requireWrite(canManageCollection)).Patch("/", a.updateCollection)
+			r.With(a.requireWrite(canManageCollection)).Delete("/", a.deleteCollection)
 			r.Get("/item", a.listCollectionItems)
-			r.Post("/item", a.createCollectionItem)
+			r.With(a.requireWrite(canManageCollection)).Post("/item", a.createCollectionItem)
 			r.Route("/item/{itemID}", func(r chi.Router) {
-				r.Patch("/", a.updateCollectionItem)
-				r.Delete("/", a.deleteCollectionItem)
+				r.With(a.requireWrite(canManageCollection)).Patch("/", a.updateCollectionItem)
+				r.With(a.requireWrite(canManageCollection)).Delete("/", a.deleteCollectionItem)
 			})
 			r.Get("/reference", a.listCollectionReferences)
-			r.Post("/reference", a.createCollectionReference)
-			r.Delete("/reference/{referenceID}", a.deleteCollectionReference)
+			r.With(a.requireWrite(canManageCollection)).Post("/reference", a.createCollectionReference)
+			r.With(a.requireWrite(canManageCollection)).Delete("/reference/{referenceID}", a.deleteCollectionReference)
 		})
 	})
-	r.Get("/reference/{referenceID}/collection", a.getReferenceCollection)
+	r.With(a.referenceScope).Get("/reference/{referenceID}/collection", a.getReferenceCollection)
 
 	// Notification configurations are addressed by id at the root because the
 	// UI's editor and trigger sub-resource calls are not organization-nested.
 	r.Route("/notification_configuration/{configurationID}", func(r chi.Router) {
+		r.Use(a.notificationScope)
 		r.Get("/", a.getNotificationConfiguration)
-		r.Patch("/", a.updateNotificationConfiguration)
-		r.Delete("/", a.deleteNotificationConfiguration)
-		r.Post("/triggers", a.createNotificationTrigger)
-		r.Delete("/triggers/{triggerID}", a.deleteNotificationTrigger)
-		r.Patch("/relationships/templates", a.replaceNotificationTemplates)
+		r.With(a.requireWrite(canManageWorkspace)).Patch("/", a.updateNotificationConfiguration)
+		r.With(a.requireWrite(canManageWorkspace)).Delete("/", a.deleteNotificationConfiguration)
+		r.With(a.requireWrite(canManageWorkspace)).Post("/triggers", a.createNotificationTrigger)
+		r.With(a.requireWrite(canManageWorkspace)).Delete("/triggers/{triggerID}", a.deleteNotificationTrigger)
+		r.With(a.requireWrite(canManageWorkspace)).Patch("/relationships/templates", a.replaceNotificationTemplates)
 	})
 
 	// Workspaces
 	r.Route("/workspace/{workspaceID}", func(r chi.Router) {
+		r.Use(a.workspaceScope)
 		r.Get("/", a.getWorkspace)
-		r.Patch("/", a.updateWorkspace)
-		r.Delete("/", a.deleteWorkspace)
+		r.With(a.requireWrite(canManageWorkspace)).Patch("/", a.updateWorkspace)
+		r.With(a.requireWrite(canManageWorkspace)).Delete("/", a.deleteWorkspace)
 		r.Get("/variable", a.listVariables)
-		r.Post("/variable", a.createVariable)
+		r.With(a.requireWrite(canManageWorkspace)).Post("/variable", a.createVariable)
 	})
 
 	// The React UI reaches workspaces and their variables through the
@@ -232,40 +238,41 @@ func New(deps Deps) http.Handler {
 	r.Route("/organization/{organizationID}/workspace/{workspaceID}", func(r chi.Router) {
 		r.Use(a.workspaceInOrganization)
 		r.Get("/", a.getWorkspace)
-		r.Patch("/", a.updateWorkspace)
-		r.Delete("/", a.deleteWorkspace)
+		r.With(a.requireWrite(canManageWorkspace)).Patch("/", a.updateWorkspace)
+		r.With(a.requireWrite(canManageWorkspace)).Delete("/", a.deleteWorkspace)
 		r.Get("/variable", a.listVariables)
-		r.Post("/variable", a.createVariable)
-		r.Patch("/relationships/{relation}", a.updateWorkspaceRelationship)
+		r.With(a.requireWrite(canManageWorkspace)).Post("/variable", a.createVariable)
+		r.With(a.requireWrite(canManageWorkspace)).Patch("/relationships/{relation}", a.updateWorkspaceRelationship)
 		// Workspace access grants: Settings > Workspace > Access.
 		r.Get("/access", a.listWorkspaceAccess)
-		r.Post("/access", a.createWorkspaceAccess)
+		r.With(a.requireWrite(canManageWorkspace)).Post("/access", a.createWorkspaceAccess)
 		r.Route("/access/{accessID}", func(r chi.Router) {
 			r.Get("/", a.getWorkspaceAccess)
-			r.Patch("/", a.updateWorkspaceAccess)
-			r.Delete("/", a.deleteWorkspaceAccess)
+			r.With(a.requireWrite(canManageWorkspace)).Patch("/", a.updateWorkspaceAccess)
+			r.With(a.requireWrite(canManageWorkspace)).Delete("/", a.deleteWorkspaceAccess)
 		})
 		r.Get("/workspaceTag", a.listWorkspaceTags)
-		r.Post("/workspaceTag", a.createWorkspaceTag)
+		r.With(a.requireWrite(canManageWorkspace)).Post("/workspaceTag", a.createWorkspaceTag)
 		r.Get("/notificationConfiguration", a.listWorkspaceNotificationConfigurations)
-		r.Post("/notificationConfiguration", a.createWorkspaceNotificationConfiguration)
+		r.With(a.requireWrite(canManageWorkspace)).Post("/notificationConfiguration", a.createWorkspaceNotificationConfiguration)
 		r.Route("/workspaceTag/{workspaceTagID}", func(r chi.Router) {
-			r.Patch("/", a.updateWorkspaceTag)
-			r.Delete("/", a.deleteWorkspaceTag)
+			r.With(a.requireWrite(canManageWorkspace)).Patch("/", a.updateWorkspaceTag)
+			r.With(a.requireWrite(canManageWorkspace)).Delete("/", a.deleteWorkspaceTag)
 		})
 		r.Route("/variable/{variableID}", func(r chi.Router) {
 			r.Use(a.variableInWorkspace)
 			r.Get("/", a.getVariable)
-			r.Patch("/", a.updateVariable)
-			r.Delete("/", a.deleteVariable)
+			r.With(a.requireWrite(canManageWorkspace)).Patch("/", a.updateVariable)
+			r.With(a.requireWrite(canManageWorkspace)).Delete("/", a.deleteVariable)
 		})
 	})
 
 	// Variables
 	r.Route("/variable/{variableID}", func(r chi.Router) {
+		r.Use(a.variableScope)
 		r.Get("/", a.getVariable)
-		r.Patch("/", a.updateVariable)
-		r.Delete("/", a.deleteVariable)
+		r.With(a.requireWrite(canManageWorkspace)).Patch("/", a.updateVariable)
+		r.With(a.requireWrite(canManageWorkspace)).Delete("/", a.deleteVariable)
 	})
 
 	// Elide answers an unknown path with a JSON:API error rather than an empty

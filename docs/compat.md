@@ -392,9 +392,55 @@ Divergences: a duplicate `access.name` within a workspace violates upstream's
 which upstream lets surface as **500**; this API answers **409**. An unknown
 attribute in a PATCH is ignored
 here, while upstream answers **404 `Unknown attribute ...`**, as with templates.
-Writes are not permission-checked yet (#141); upstream gates them on the
-`manage workspace access` / `manage project access` permissions. Captures are
-in `docs/upstream/rest/workspace-access-*.json` and `project-access-*.json`.
+Writes are gated on the `manage workspace access` / `manage project access`
+permissions upstream annotates, which resolve to `manageWorkspace` here (see
+below). Captures are in `docs/upstream/rest/workspace-access-*.json` and
+`project-access-*.json`.
+
+### Permission enforcement
+
+Source: Elide's security annotations on the 2.34.3 resource classes, checked
+against a live upstream with owner, admin, write and read tokens.
+
+The caller is the **instance owner** when authentication is disabled, when the
+token is the development token (`TERRAKUBE_AUTH_TOKEN`), or when its `groups`
+contain `TERRAKUBE_ADMIN_GROUP` (default `TERRAKUBE_ADMIN`). The owner bypasses
+every check.
+
+Every other caller must match a `team.name`, an `access.name` or a
+`project_access.name` in the organization. A caller that matches none gets
+**403** `{"errors":[{"detail":"ReadPermission Denied"}]}` on every
+organization-scoped route, reads included; `GET /organization` answers an
+empty collection rather than an error. A matching caller may read every
+resource in that organization. Writes additionally need the permission
+upstream annotates:
+
+| Routes | Write permission |
+| --- | --- |
+| `vcs`, `ssh` | `manageVcs` |
+| `template` | `manageTemplate` |
+| `collection`, its items and references | `manageCollection` |
+| `workspace`, `project`, `tag`, `workspaceTag`, `variable`, `notificationConfiguration`, `access`, `projectAccess` | `manageWorkspace` |
+| `PATCH /organization/{org}/job/{id}` | `manageJob` |
+| `organization`, `team`, `agent`, `globalvar`, `action` | owner only |
+
+A workspace `access` row and its project's `project_access` rows add the five
+workspace permissions to the team set, so a grant can unlock a write without a
+team. Denied writes answer **403** with `CreatePermission Denied`,
+`UpdatePermission Denied` or `DeletePermission Denied` by method, matching the
+detail the UI displays.
+
+Root-level resources (`/workspace/{id}`, `/variable/{id}`,
+`/notification_configuration/{id}`, `/reference/{id}/collection`) resolve their
+organization from the resource, so a token cannot reach another organization's
+resource by id. `POST /operations` checks the organization or workspace each
+operation names. The GraphQL collections are scoped to the caller's
+organizations the same way, and the job-status subscriptions refuse a workspace
+or organization outside them.
+
+Divergence: upstream applies every `access` row of a workspace to every caller
+(see the permission endpoint note above); this API only applies rows naming one
+of the caller's groups, and enforces with the same filtered set.
 
 ### Terraform login — `/oauth`
 
@@ -522,8 +568,7 @@ bug recorded in the captures rather than copied.
 Actions. Ids are the editor's slugs (`terrakube.open-ai`), not UUIDs; the list
 answers the UI's `filter[action]=active==true;type=in=(...)` expression, reads
 are open, and writes exist because the UI's editor sends them (upstream
-restricts writes to superusers; this API does not enforce permissions yet,
-#141). Creating does not
+restricts writes to superusers, as this API does). Creating does not
 set `createdBy`/`updatedBy` because a static token carries no user identity, so
 they are null; timestamps are set.
 
@@ -535,9 +580,8 @@ binds a collection to a workspace in the same organization, and
 makes for each reference. Missing required attributes answer upstream's `409`
 data-integrity conflict (its Elide/primitive behaviour), an invalid category is
 `400`, and a collection created without `priority` gets `0` as upstream does.
-Upstream gates collection writes on a team permission; this API resolves those
-permissions for the UI (`/access-token/v1`) but does not enforce them yet
-(#141), so the routes are open behind the same bearer token.
+Upstream gates collection writes on a team's `manageCollection` permission,
+and this API enforces the same one.
 `GET /workspace/:id?include=reference` now emits the reference relationship and
 `included` rows, and workspace resources carry the audit attributes and
 `lastJobDate` upstream serialises.
@@ -548,9 +592,8 @@ write-only — requests accept `privateKey`, but no response echoes it, as
 upstream's `read private key` permission hides it. `agent` is the self-hosted
 agent pool the Agents screen and the workspace picker use: list, create and
 delete. Upstream requires no attribute beyond the JSON:API `type` on either, so
-a key without a name is accepted with `name: null`; upstream gates agent writes
-on superuser and ssh writes on a team permission, while this API resolves but
-does not yet enforce permissions (#141). `GET /workspace/:id?include=ssh,agent` now emits both `included` rows. Deleting
+a key without a name is accepted with `name: null`; agent writes are owner-only
+and ssh writes need `manageVcs`, as upstream. `GET /workspace/:id?include=ssh,agent` now emits both `included` rows. Deleting
 a key or pool a workspace still points at answers upstream's data-integrity
 `409` rather than leaving a dangling id. The ssh private key is stored
 plaintext, like variable values, until #54 lands.
@@ -561,9 +604,7 @@ entries carry: list, get, create, patch and delete under
 answers upstream's `409`); every permission is a boolean, missing ones default to
 false except `destroyJob`, which defaults to true as upstream does. `role` is a
 free string upstream does not validate, and null is accepted. Upstream gates
-team writes on superuser; this API resolves the stored permissions for the UI
-but does not enforce them yet (#141), so the routes are open behind the bearer
-token.
+team writes on superuser, as this API does.
 
 `notificationConfiguration` is the Settings > Notifications screen. A
 configuration is organization-wide or workspace-scoped (created under
@@ -584,7 +625,7 @@ attribute in a PATCH is ignored here (upstream `404 Unknown attribute`), the
 workspace relationship is emitted as JSON null (upstream emits `data:null` plus
 empty `triggers`/`templates`/`policySet` arrays), and the
 `/notification/v1/.../test` endpoints and actual delivery are not implemented
-yet (#52). Writes are open until RBAC lands (#44).
+yet (#52). Writes need `manageWorkspace`, as upstream.
 
 `template` is the Settings > Templates screen and the source of the workspace's
 `defaultTemplate`: list, get, create, patch and delete under
@@ -592,8 +633,8 @@ yet (#52). Writes are open until RBAC lands (#44).
 JSON:API `type`, so an empty `attributes` object answers `201` with nulls; an
 unknown id is `404` and a malformed one `400 Invalid value: x`. Deleting a
 template leaves `workspace.default_template` alone, as upstream does (no foreign
-key). Upstream gates writes on a team's manage-template permission; this API does not
-enforce permissions yet (#141). One divergence: an unknown attribute in a PATCH is ignored
+key). Upstream gates writes on a team's `manageTemplate` permission, and this
+API enforces the same one. One divergence: an unknown attribute in a PATCH is ignored
 here, while upstream answers `404 Unknown attribute`.
 
 `POST /operations` implements the JSON:API atomic operations extension the UI
