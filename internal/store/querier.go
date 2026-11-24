@@ -17,6 +17,7 @@ type Querier interface {
 	ClearWorkspaceVCS(ctx context.Context, vcsID *string) error
 	CountWorkspacesWithAgent(ctx context.Context, agentID *string) (int64, error)
 	CountWorkspacesWithSSHKey(ctx context.Context, sshID *string) (int64, error)
+	CreateAccess(ctx context.Context, arg CreateAccessParams) (Access, error)
 	CreateAction(ctx context.Context, arg CreateActionParams) (Action, error)
 	CreateAgent(ctx context.Context, arg CreateAgentParams) (Agent, error)
 	CreateArchive(ctx context.Context, arg CreateArchiveParams) (TempArchive, error)
@@ -32,6 +33,7 @@ type Querier interface {
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreatePat(ctx context.Context, arg CreatePatParams) (Pat, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
+	CreateProjectAccess(ctx context.Context, arg CreateProjectAccessParams) (ProjectAccess, error)
 	CreateReference(ctx context.Context, arg CreateReferenceParams) (Reference, error)
 	CreateSSHKey(ctx context.Context, arg CreateSSHKeyParams) (Ssh, error)
 	CreateStep(ctx context.Context, arg CreateStepParams) (Step, error)
@@ -42,6 +44,7 @@ type Querier interface {
 	CreateVariable(ctx context.Context, arg CreateVariableParams) (Variable, error)
 	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (Workspace, error)
 	CreateWorkspaceTag(ctx context.Context, arg CreateWorkspaceTagParams) (Workspacetag, error)
+	DeleteAccess(ctx context.Context, id string) error
 	DeleteAction(ctx context.Context, id string) error
 	DeleteAgent(ctx context.Context, id string) error
 	DeleteArchive(ctx context.Context, id string) error
@@ -54,6 +57,7 @@ type Querier interface {
 	DeleteNotificationTrigger(ctx context.Context, id string) error
 	DeleteOrganization(ctx context.Context, id string) error
 	DeleteProject(ctx context.Context, id string) error
+	DeleteProjectAccess(ctx context.Context, id string) error
 	DeleteReference(ctx context.Context, id string) error
 	DeleteSSHKey(ctx context.Context, id string) error
 	DeleteTag(ctx context.Context, id string) error
@@ -64,6 +68,7 @@ type Querier interface {
 	DeleteWorkspaceTag(ctx context.Context, id string) error
 	DenyCliAuthSession(ctx context.Context, id string) error
 	FailCliAuthSession(ctx context.Context, id string) error
+	GetAccess(ctx context.Context, id string) (Access, error)
 	GetAction(ctx context.Context, id string) (Action, error)
 	GetAgent(ctx context.Context, id string) (Agent, error)
 	GetArchive(ctx context.Context, id string) (GetArchiveRow, error)
@@ -86,6 +91,7 @@ type Querier interface {
 	// interrupted step instead of treating the job as finished.
 	GetPendingStepByJob(ctx context.Context, jobID int64) (Step, error)
 	GetProject(ctx context.Context, id string) (Project, error)
+	GetProjectAccess(ctx context.Context, id string) (ProjectAccess, error)
 	GetProjectByName(ctx context.Context, arg GetProjectByNameParams) (Project, error)
 	GetReference(ctx context.Context, id string) (Reference, error)
 	GetSSHKey(ctx context.Context, id string) (Ssh, error)
@@ -103,6 +109,7 @@ type Querier interface {
 	IssueCliAuthCode(ctx context.Context, arg IssueCliAuthCodeParams) error
 	// Workspace and project access grants. A row's name is the Dex group it
 	// grants, so the by-name lookups are the RBAC checks.
+	ListAccessByWorkspace(ctx context.Context, workspaceID string) ([]Access, error)
 	ListAccessByWorkspaceAndNames(ctx context.Context, arg ListAccessByWorkspaceAndNamesParams) ([]Access, error)
 	ListActions(ctx context.Context) ([]Action, error)
 	ListActiveJobsByOrganization(ctx context.Context, name string) ([]Job, error)
@@ -119,6 +126,7 @@ type Querier interface {
 	ListNotificationTriggersByConfiguration(ctx context.Context, configurationID string) ([]NotificationTrigger, error)
 	ListOrganizations(ctx context.Context) ([]Organization, error)
 	ListPatsByCreator(ctx context.Context, createdBy *string) ([]Pat, error)
+	ListProjectAccessByProject(ctx context.Context, projectID string) ([]ProjectAccess, error)
 	ListProjectAccessByProjectAndNames(ctx context.Context, arg ListProjectAccessByProjectAndNamesParams) ([]ProjectAccess, error)
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
 	ListReferencesByCollection(ctx context.Context, collectionID string) ([]Reference, error)
@@ -142,6 +150,7 @@ type Querier interface {
 	SoftDeletePat(ctx context.Context, arg SoftDeletePatParams) error
 	SoftDeleteWorkspace(ctx context.Context, id string) error
 	StampPatLastUsed(ctx context.Context, id string) error
+	UpdateAccess(ctx context.Context, arg UpdateAccessParams) (Access, error)
 	UpdateAction(ctx context.Context, arg UpdateActionParams) (Action, error)
 	UpdateCollection(ctx context.Context, arg UpdateCollectionParams) (Collection, error)
 	UpdateContentStatus(ctx context.Context, arg UpdateContentStatusParams) (Content, error)
@@ -154,6 +163,7 @@ type Querier interface {
 	UpdateNotificationConfiguration(ctx context.Context, arg UpdateNotificationConfigurationParams) (NotificationConfiguration, error)
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) (Organization, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
+	UpdateProjectAccess(ctx context.Context, arg UpdateProjectAccessParams) (ProjectAccess, error)
 	UpdateSSHKey(ctx context.Context, arg UpdateSSHKeyParams) (Ssh, error)
 	UpdateStepOutput(ctx context.Context, arg UpdateStepOutputParams) error
 	UpdateStepStatus(ctx context.Context, arg UpdateStepStatusParams) (Step, error)

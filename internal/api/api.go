@@ -94,6 +94,16 @@ func New(deps Deps) http.Handler {
 		// Projects and workspaces scoped to an organization.
 		r.Get("/project", a.listProjects)
 		r.Post("/project", a.createProject)
+		// Project access grants: Settings > Projects > Access.
+		r.Route("/project/{projectID}", func(r chi.Router) {
+			r.Get("/projectAccess", a.listProjectAccess)
+			r.Post("/projectAccess", a.createProjectAccess)
+			r.Route("/projectAccess/{projectAccessID}", func(r chi.Router) {
+				r.Get("/", a.getProjectAccess)
+				r.Patch("/", a.updateProjectAccess)
+				r.Delete("/", a.deleteProjectAccess)
+			})
+		})
 		r.Get("/workspace", a.listWorkspaces)
 		r.Post("/workspace", a.createWorkspace)
 
@@ -227,6 +237,14 @@ func New(deps Deps) http.Handler {
 		r.Get("/variable", a.listVariables)
 		r.Post("/variable", a.createVariable)
 		r.Patch("/relationships/{relation}", a.updateWorkspaceRelationship)
+		// Workspace access grants: Settings > Workspace > Access.
+		r.Get("/access", a.listWorkspaceAccess)
+		r.Post("/access", a.createWorkspaceAccess)
+		r.Route("/access/{accessID}", func(r chi.Router) {
+			r.Get("/", a.getWorkspaceAccess)
+			r.Patch("/", a.updateWorkspaceAccess)
+			r.Delete("/", a.deleteWorkspaceAccess)
+		})
 		r.Get("/workspaceTag", a.listWorkspaceTags)
 		r.Post("/workspaceTag", a.createWorkspaceTag)
 		r.Get("/notificationConfiguration", a.listWorkspaceNotificationConfigurations)

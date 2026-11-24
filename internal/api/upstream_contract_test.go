@@ -242,6 +242,70 @@ var replayedCaptures = map[string]replay{
 		body:    `{"data":{"type":"vcs","id":"aaaaaaaa-0000-4000-8000-000000000001"}}`,
 		querier: captureWorkspaceStore(),
 	},
+	"workspace-access-list": {
+		target:  "resource-query",
+		querier: &stubQuerier{workspaces: captureGrantWorkspaces()},
+	},
+	"workspace-access-create": {
+		target:  "resource-query",
+		method:  http.MethodPost,
+		body:    `{"data":{"type":"access","attributes":{"name":"capture-group","manageState":true,"manageWorkspace":true,"planJob":true,"approveJob":false,"role":"custom"}}}`,
+		querier: captureGrantStore(),
+	},
+	"workspace-access-get": {
+		target:  "resource-query",
+		querier: captureGrantStore(),
+	},
+	"workspace-access-patch": {
+		target:  "resource-query",
+		idFrom:  "workspace-access-get",
+		method:  http.MethodPatch,
+		body:    `{"data":{"type":"access","id":"{id}","attributes":{"role":"read"}}}`,
+		querier: captureGrantStore(),
+	},
+	"workspace-access-get-after-patch": {
+		target:  "resource-query",
+		querier: captureGrantStore(),
+	},
+	"workspace-access-delete": {
+		target:  "resource-query",
+		method:  http.MethodDelete,
+		querier: captureGrantStore(),
+	},
+	"workspace-access-get-after-delete": {
+		target:  "resource-query",
+		querier: &stubQuerier{workspaces: captureGrantWorkspaces(), err: pgx.ErrNoRows},
+	},
+	"project-access-list": {
+		target:  "resource-query",
+		querier: &stubQuerier{projects: captureGrantProjects()},
+	},
+	"project-access-create": {
+		target:  "resource-query",
+		method:  http.MethodPost,
+		body:    `{"data":{"type":"project_access","attributes":{"name":"capture-group","manageState":true,"manageWorkspace":true,"planJob":false,"approveJob":false,"role":"custom"}}}`,
+		querier: captureGrantStore(),
+	},
+	"project-access-get": {
+		target:  "resource-query",
+		querier: captureGrantStore(),
+	},
+	"project-access-patch": {
+		target:  "resource-query",
+		idFrom:  "project-access-get",
+		method:  http.MethodPatch,
+		body:    `{"data":{"type":"project_access","id":"{id}","attributes":{"role":"plan"}}}`,
+		querier: captureGrantStore(),
+	},
+	"project-access-delete": {
+		target:  "resource-query",
+		method:  http.MethodDelete,
+		querier: captureGrantStore(),
+	},
+	"project-access-get-after-delete": {
+		target:  "resource-query",
+		querier: &stubQuerier{projects: captureGrantProjects(), err: pgx.ErrNoRows},
+	},
 	"workspace-relationship-vcs-clear": {
 		target:  "resource-query",
 		method:  http.MethodPatch,
@@ -854,20 +918,6 @@ var deferredCaptures = map[string]string{
 	"access-token-permissions-workspace":            "same endpoint; accesstoken_test.go covers the workspace accumulation",
 	"access-token-permissions-workspace-team":       "same endpoint; accesstoken_test.go covers the team half",
 	"access-token-permissions-workspace-missing":    "same endpoint; accesstoken_test.go covers the missing-workspace case",
-	// Grant CRUD lands with #140; the captures above are its reference.
-	"workspace-access-list":             "the REST grant CRUD is the next #140 slice; GraphQL already reads the table",
-	"workspace-access-create":           "the REST grant CRUD is the next #140 slice",
-	"workspace-access-get":              "the REST grant CRUD is the next #140 slice",
-	"workspace-access-patch":            "the REST grant CRUD is the next #140 slice; upstream answers 204 with no body",
-	"workspace-access-get-after-patch":  "the REST grant CRUD is the next #140 slice",
-	"workspace-access-delete":           "the REST grant CRUD is the next #140 slice; DELETE carries no content type",
-	"workspace-access-get-after-delete": "the REST grant CRUD is the next #140 slice",
-	"project-access-list":               "the REST grant CRUD is the next #140 slice; GraphQL already reads the table",
-	"project-access-create":             "the REST grant CRUD is the next #140 slice",
-	"project-access-get":                "the REST grant CRUD is the next #140 slice",
-	"project-access-patch":              "the REST grant CRUD is the next #140 slice; upstream answers 204 with no body",
-	"project-access-delete":             "the REST grant CRUD is the next #140 slice; DELETE carries no content type",
-	"project-access-get-after-delete":   "the REST grant CRUD is the next #140 slice",
 }
 
 // The ids upstream's demo seed gave the captures; the job captures were taken
@@ -891,6 +941,8 @@ const (
 	capturedGvSecret       = "99999999-9999-4999-8999-999999999993"
 	capturedStepID         = "66666666-6666-4666-8666-666666666666"
 	capturedNotifyTemplate = "00000000-0000-4000-8000-000000000095"
+	capturedAccessID       = "0a9ea824-20e1-45bd-8d41-5859a16b152c"
+	capturedProjectAccess  = "ceeb8172-ab40-4960-b603-f6f2810b3e68"
 )
 
 func workspaceProjectBody(projectID string) string {
@@ -1469,6 +1521,16 @@ func assertSameResourceShape(t *testing.T, name string, theirs, mine any) {
 	if got, want := sortedKeys(myAttrs), sortedKeys(theirAttrs); strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("%s: attributes = %v, want %v", name, got, want)
 	}
+
+	// Most handlers omit relationships upstream serialises; grants must not,
+	// because the UI reads the parent from them.
+	if resourceType, _ := myResource["type"].(string); resourceType == "access" || resourceType == "project_access" {
+		theirRels, _ := theirResource["relationships"].(map[string]any)
+		myRels, _ := myResource["relationships"].(map[string]any)
+		if got, want := sortedKeys(myRels), sortedKeys(theirRels); strings.Join(got, ",") != strings.Join(want, ",") {
+			t.Errorf("%s: relationships = %v, want %v", name, got, want)
+		}
+	}
 }
 
 func sortedKeys(m map[string]any) []string {
@@ -2019,5 +2081,132 @@ func (s *stubQuerier) UpdateAction(_ context.Context, arg store.UpdateActionPara
 }
 
 func (s *stubQuerier) DeleteAction(context.Context, string) error {
+	return s.err
+}
+
+// captureGrantWorkspaces and captureGrantProjects give the grant replays the
+// parents the captured paths address; the capture request itself is built from
+// the path, so no other attribute matters.
+func captureGrantWorkspaces() []store.Workspace {
+	return []store.Workspace{{ID: capturedRelWS, OrganizationID: capturedRelOrg}}
+}
+
+func captureGrantProjects() []store.Project {
+	return []store.Project{{ID: capturedRelP1, OrganizationID: capturedRelOrg}}
+}
+
+func captureGrantStore() *stubQuerier {
+	return &stubQuerier{
+		workspaces:    captureGrantWorkspaces(),
+		projects:      captureGrantProjects(),
+		access:        []store.Access{captureAccessRow()},
+		projectAccess: []store.ProjectAccess{captureProjectAccessRow()},
+	}
+}
+
+func captureAccessRow() store.Access {
+	return store.Access{
+		ID: capturedAccessID, Name: "capture-group", ManageWorkspace: true, ManageState: true,
+		PlanJob: true, DestroyJob: true, Role: strPtr("custom"), WorkspaceID: capturedRelWS,
+	}
+}
+
+func captureProjectAccessRow() store.ProjectAccess {
+	return store.ProjectAccess{
+		ID: capturedProjectAccess, Name: strPtr("capture-group"), ManageWorkspace: true,
+		ManageState: true, DestroyJob: true, Role: strPtr("custom"), ProjectID: capturedRelP1,
+	}
+}
+
+func (s *stubQuerier) ListAccessByWorkspace(_ context.Context, workspaceID string) ([]store.Access, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	var out []store.Access
+	for _, access := range s.access {
+		if access.WorkspaceID == workspaceID {
+			out = append(out, access)
+		}
+	}
+	return out, nil
+}
+
+func (s *stubQuerier) GetAccess(_ context.Context, id string) (store.Access, error) {
+	if s.err != nil {
+		return store.Access{}, s.err
+	}
+	for _, access := range s.access {
+		if access.ID == id {
+			return access, nil
+		}
+	}
+	return store.Access{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateAccess(_ context.Context, arg store.CreateAccessParams) (store.Access, error) {
+	return store.Access{
+		ID: arg.ID, Name: arg.Name, ManageWorkspace: arg.ManageWorkspace,
+		ManageState: arg.ManageState, ManageJob: arg.ManageJob, PlanJob: arg.PlanJob,
+		ApproveJob: arg.ApproveJob, DestroyJob: arg.DestroyJob, Role: arg.Role,
+		WorkspaceID: arg.WorkspaceID,
+	}, s.err
+}
+
+func (s *stubQuerier) UpdateAccess(_ context.Context, arg store.UpdateAccessParams) (store.Access, error) {
+	s.updatedAccess = &arg
+	return store.Access{
+		ID: arg.ID, Name: arg.Name, ManageWorkspace: arg.ManageWorkspace,
+		ManageState: arg.ManageState, ManageJob: arg.ManageJob, PlanJob: arg.PlanJob,
+		ApproveJob: arg.ApproveJob, DestroyJob: arg.DestroyJob, Role: arg.Role,
+	}, s.err
+}
+
+func (s *stubQuerier) DeleteAccess(context.Context, string) error {
+	return s.err
+}
+
+func (s *stubQuerier) ListProjectAccessByProject(_ context.Context, projectID string) ([]store.ProjectAccess, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	var out []store.ProjectAccess
+	for _, access := range s.projectAccess {
+		if access.ProjectID == projectID {
+			out = append(out, access)
+		}
+	}
+	return out, nil
+}
+
+func (s *stubQuerier) GetProjectAccess(_ context.Context, id string) (store.ProjectAccess, error) {
+	if s.err != nil {
+		return store.ProjectAccess{}, s.err
+	}
+	for _, access := range s.projectAccess {
+		if access.ID == id {
+			return access, nil
+		}
+	}
+	return store.ProjectAccess{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) CreateProjectAccess(_ context.Context, arg store.CreateProjectAccessParams) (store.ProjectAccess, error) {
+	return store.ProjectAccess{
+		ID: arg.ID, Name: arg.Name, ManageWorkspace: arg.ManageWorkspace,
+		ManageState: arg.ManageState, ManageJob: arg.ManageJob, PlanJob: arg.PlanJob,
+		ApproveJob: arg.ApproveJob, DestroyJob: arg.DestroyJob, Role: arg.Role,
+		ProjectID: arg.ProjectID,
+	}, s.err
+}
+
+func (s *stubQuerier) UpdateProjectAccess(_ context.Context, arg store.UpdateProjectAccessParams) (store.ProjectAccess, error) {
+	return store.ProjectAccess{
+		ID: arg.ID, Name: arg.Name, ManageWorkspace: arg.ManageWorkspace,
+		ManageState: arg.ManageState, ManageJob: arg.ManageJob, PlanJob: arg.PlanJob,
+		ApproveJob: arg.ApproveJob, DestroyJob: arg.DestroyJob, Role: arg.Role,
+	}, s.err
+}
+
+func (s *stubQuerier) DeleteProjectAccess(context.Context, string) error {
 	return s.err
 }
