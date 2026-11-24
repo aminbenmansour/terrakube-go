@@ -251,6 +251,40 @@ func (q *Queries) ListAccessByWorkspaceAndNames(ctx context.Context, arg ListAcc
 	return items, nil
 }
 
+const listOrganizationIDsByGroupNames = `-- name: ListOrganizationIDsByGroupNames :many
+SELECT DISTINCT organization_id FROM team
+WHERE name = ANY($1::text[])
+UNION
+SELECT DISTINCT w.organization_id FROM access a
+JOIN workspace w ON w.id = a.workspace_id
+WHERE a.name = ANY($1::text[])
+UNION
+SELECT DISTINCT p.organization_id FROM project_access pa
+JOIN project p ON p.id = pa.project_id
+WHERE pa.name = ANY($1::text[])
+ORDER BY 1
+`
+
+func (q *Queries) ListOrganizationIDsByGroupNames(ctx context.Context, names []string) ([]string, error) {
+	rows, err := q.db.Query(ctx, listOrganizationIDsByGroupNames, names)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var organization_id string
+		if err := rows.Scan(&organization_id); err != nil {
+			return nil, err
+		}
+		items = append(items, organization_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProjectAccessByProject = `-- name: ListProjectAccessByProject :many
 SELECT id, name, manage_workspace, manage_state, manage_job, plan_job, approve_job, destroy_job, role, project_id FROM project_access WHERE project_id = $1 ORDER BY name, id
 `

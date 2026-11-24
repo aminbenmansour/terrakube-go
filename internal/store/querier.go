@@ -124,6 +124,7 @@ type Querier interface {
 	ListNotificationConfigurationsByOrganization(ctx context.Context, organizationID string) ([]NotificationConfiguration, error)
 	ListNotificationConfigurationsByWorkspace(ctx context.Context, workspaceID *string) ([]NotificationConfiguration, error)
 	ListNotificationTriggersByConfiguration(ctx context.Context, configurationID string) ([]NotificationTrigger, error)
+	ListOrganizationIDsByGroupNames(ctx context.Context, names []string) ([]string, error)
 	ListOrganizations(ctx context.Context) ([]Organization, error)
 	ListPatsByCreator(ctx context.Context, createdBy *string) ([]Pat, error)
 	ListProjectAccessByProject(ctx context.Context, projectID string) ([]ProjectAccess, error)
