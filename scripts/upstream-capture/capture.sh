@@ -24,6 +24,17 @@ request() {
   printf '%s\t%s\t%s\n' "$name" "$status" "$path" >> "$out/index.tsv"
 }
 
+# Like request, but with another PAT, for responses that depend on the groups
+# claim (team-derived permissions).
+request_as() {
+  local as="$1" name="$2" path="$3"
+  shift 3
+  local status
+  status="$(curl -g -sS -o "$out/${name}.json" -w '%{http_code}' \
+    -H "Authorization: Bearer ${as}" "$@" "${base}${path}")"
+  printf '%s\t%s\t%s\n' "$name" "$status" "$path" >> "$out/index.tsv"
+}
+
 # Without a token, to record what an unauthenticated caller sees.
 unauthenticated() {
   local name="$1" path="$2"
@@ -363,6 +374,22 @@ request organization-team-create "/api/v1/organization/${rel_org}/team" -X POST 
   --data '{"data":{"type":"team","attributes":{"name":"capture-team","manageWorkspace":true,"manageJob":true,"planJob":true,"approveJob":true,"role":"write"}}}'
 team_new="$(python3 -c "import json;print(json.load(open('$out/organization-team-create.json'))['data']['id'])")"
 request organization-team-get "/api/v1/organization/${rel_org}/team/${team_new}"
+
+# Permission endpoints the UI calls from every screen. They sit outside
+# /api/v1 and answer plain JSON with 202, not JSON:API. The group token is
+# minted while the team still has role=write, so the team answers show a
+# non-admin row and no instance-owner flags.
+group_token="$(PAT_GROUPS='capture-team' "$here/pat.py")"
+request access-token-current-teams '/access-token/v1/teams/current-teams'
+request access-token-permissions-organization "/access-token/v1/teams/permissions/organization/${rel_org}"
+request access-token-permissions-organization-unknown '/access-token/v1/teams/permissions/organization/00000000-0000-4000-8000-0000000000ff'
+request access-token-permissions-organization-bad-id '/access-token/v1/teams/permissions/organization/not-a-uuid'
+request_as "$group_token" access-token-permissions-organization-team "/access-token/v1/teams/permissions/organization/${rel_org}"
+request_as "$group_token" access-token-permissions-workspace-team "/access-token/v1/teams/permissions/organization/${rel_org}/workspace/${rel_ws}"
+request access-token-permissions-workspace "/access-token/v1/teams/permissions/organization/${rel_org}/workspace/${rel_ws}"
+request access-token-permissions-workspace-missing "/access-token/v1/teams/permissions/organization/${rel_org}/workspace/00000000-0000-4000-8000-0000000000ff"
+unauthenticated access-token-no-token '/access-token/v1/teams/current-teams'
+
 request organization-team-patch "/api/v1/organization/${rel_org}/team/${team_new}" -X PATCH \
   -H 'Content-Type: application/vnd.api+json' \
   --data "{\"data\":{\"type\":\"team\",\"id\":\"${team_new}\",\"attributes\":{\"role\":\"admin\",\"manageVcs\":true,\"destroyJob\":false}}}"
@@ -372,6 +399,45 @@ request organization-team-missing "/api/v1/organization/${rel_org}/team/00000000
 request organization-team-bad-id "/api/v1/organization/${rel_org}/team/not-a-uuid"
 request organization-team-delete "/api/v1/organization/${rel_org}/team/${team_new}" -X DELETE
 request organization-team-get-after-delete "/api/v1/organization/${rel_org}/team/${team_new}"
+
+# A read role proves the all-false half of the matrix without the owner group.
+# Setup and cleanup are not captures themselves.
+reader_team="$(curl -sS -H "Authorization: Bearer ${token}" -H 'Content-Type: application/vnd.api+json' \
+  -X POST "${base}/api/v1/organization/${rel_org}/team" \
+  --data '{"data":{"type":"team","attributes":{"name":"capture-reader","role":"read"}}}' \
+  | python3 -c "import json,sys;print(json.load(sys.stdin)['data']['id'])")"
+reader_token="$(PAT_GROUPS='capture-reader' "$here/pat.py")"
+request_as "$reader_token" access-token-permissions-organization-reader "/access-token/v1/teams/permissions/organization/${rel_org}"
+curl -sS -H "Authorization: Bearer ${token}" -X DELETE "${base}/api/v1/organization/${rel_org}/team/${reader_team}" >/dev/null
+
+# Workspace and project access grants: the team pickers on the workspace and
+# project screens. `access` and `project_access` are relationship resources
+# (rootLevel=false), so every path goes through the parent. A create that omits
+# destroyJob records upstream's primitive default of true.
+pg "delete from access where name = 'capture-group'; delete from project_access where name = 'capture-group'" >/dev/null
+request workspace-access-list "/api/v1/organization/${rel_org}/workspace/${rel_ws}/access"
+request workspace-access-create "/api/v1/organization/${rel_org}/workspace/${rel_ws}/access" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"access","attributes":{"name":"capture-group","manageState":true,"manageWorkspace":true,"planJob":true,"approveJob":false,"role":"custom"}}}'
+access_new="$(python3 -c "import json;print(json.load(open('$out/workspace-access-create.json'))['data']['id'])")"
+request workspace-access-get "/api/v1/organization/${rel_org}/workspace/${rel_ws}/access/${access_new}"
+request workspace-access-patch "/api/v1/organization/${rel_org}/workspace/${rel_ws}/access/${access_new}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"access\",\"id\":\"${access_new}\",\"attributes\":{\"role\":\"read\"}}}"
+request workspace-access-get-after-patch "/api/v1/organization/${rel_org}/workspace/${rel_ws}/access/${access_new}"
+request workspace-access-delete "/api/v1/organization/${rel_org}/workspace/${rel_ws}/access/${access_new}" -X DELETE
+request workspace-access-get-after-delete "/api/v1/organization/${rel_org}/workspace/${rel_ws}/access/${access_new}"
+request project-access-list "/api/v1/organization/${rel_org}/project/${rel_p1}/projectAccess"
+request project-access-create "/api/v1/organization/${rel_org}/project/${rel_p1}/projectAccess" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"project_access","attributes":{"name":"capture-group","manageState":true,"manageWorkspace":true,"planJob":false,"approveJob":false,"role":"custom"}}}'
+project_access_new="$(python3 -c "import json;print(json.load(open('$out/project-access-create.json'))['data']['id'])")"
+request project-access-get "/api/v1/organization/${rel_org}/project/${rel_p1}/projectAccess/${project_access_new}"
+request project-access-patch "/api/v1/organization/${rel_org}/project/${rel_p1}/projectAccess/${project_access_new}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"project_access\",\"id\":\"${project_access_new}\",\"attributes\":{\"role\":\"plan\"}}}"
+request project-access-delete "/api/v1/organization/${rel_org}/project/${rel_p1}/projectAccess/${project_access_new}" -X DELETE
+request project-access-get-after-delete "/api/v1/organization/${rel_org}/project/${rel_p1}/projectAccess/${project_access_new}"
 
 # Templates: Settings > Templates and the workspace default template picker.
 # Upstream requires no attribute, so the empty create is part of the contract.

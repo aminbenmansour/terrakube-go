@@ -2,14 +2,15 @@
 
 These files are verbatim responses from **upstream Terrakube 2.34.3** (the Java
 image `azbuilder/api-server:2.34.3`), captured on 2026-11-20 with its own demo
-seed data. They are the reference for `/api/v1`, not a reading of the OpenAPI
+seed data (the `access-token` and grant captures were added on 2026-11-24). They are the reference for `/api/v1`, not a reading of the OpenAPI
 spec: where the two disagree, these win.
 
 `index.tsv` is `name<TAB>status<TAB>path`. An empty file (`organization-no-token.json`)
 is an empty body, not a missing capture.
 
 They are not just reference material: `internal/api/upstream_contract_test.go`
-replays every capture against the handlers and compares the shape (status,
+replays every capture it can and lists the rest with a reason, so a capture
+cannot be ignored silently and compares the shape (status,
 top-level members, resource type, attribute key set). A capture that is
 neither replayed nor explicitly deferred with a reason fails the build. The
 tools that produced them are in
@@ -38,14 +39,16 @@ tools that produced them are in
 | `action` list filter | `filter[action]=active==true;type=in=('A','B')` | same |
 | `action` create / patch / delete | **201** with the resource / **204** / **204**; audit fields set from the PAT's user | same statuses; `createdBy`/`updatedBy` are null (no user in the token) |
 | `ssh` | organization-scoped CRUD; `privateKey` is never returned; delete in use **409** | same; no team permission check yet (#44) |
-| `agent` | list, create, delete; delete in use **409**; superuser-only writes | same routes and 409; writes open (no RBAC yet) |
+| `agent` | list, create, delete; delete in use **409**; superuser-only writes | same routes and 409; writes open (no RBAC enforcement yet) |
 | `vcs` | organization-scoped CRUD; `name`/`description`/`vcsType` required; invalid enum **400**; secrets never returned; delete unlinks its workspaces | same routes and statuses; secrets plaintext until #54 |
-| `team` | organization-scoped CRUD; `name` required; permission booleans, `destroyJob` default true; `role` unvalidated; superuser-only writes | same routes and defaults; writes open (no RBAC yet) |
+| `team` | organization-scoped CRUD; `name` required; permission booleans, `destroyJob` default true; `role` unvalidated; superuser-only writes | same routes and defaults; writes open (no RBAC enforcement yet) |
+| `access` / `project_access` | relationship resources (`rootLevel=false`): CRUD only under `/organization/{org}/workspace/{ws}/access` and `/project/{p}/projectAccess`; **201** with the resource, PATCH/DELETE **204**; omitted `destroyJob` is **true**; DELETE must send no content type | not served yet (#140); GraphQL already reads both tables |
+| `/access-token/v1/teams/*` | plain JSON, **202**; malformed organization id **500**; missing workspace still 202; owner group adds only `managePermission`/`managePolicies` | same 202 bodies outside `/api/v1`; malformed id **400**; 401 carries a JSON:API error where upstream's body is empty; only access rows naming one of the caller's groups apply |
 | `notificationConfiguration` / `notification_trigger` | org- or workspace-scoped; `name`/`channelType`/`destinationUrl` required (**409**), enums **400**, `signingSecret` never returned; triggers under the configuration; templates relationship replaced wholesale | same routes and statuses; `workspace` is `data:null` without upstream's empty to-many arrays; no test-send or delivery |
 | `template` | organization-scoped CRUD; no required attributes, so an empty create is **201**; unknown id **404**, malformed **400**; unknown PATCH attribute **404** | same routes and statuses; an unknown PATCH attribute is ignored |
 | `tag` | organization-scoped CRUD; optional name; duplicate name **500** | same routes and optional name; duplicate **409** (unique index) |
 | `workspacetag` | list/create/patch/delete under the workspace; missing/unknown `tagId` **409**; duplicate binding **500** | same routes and 409; duplicate binding **409** |
-| `collection` / `item` / `reference` | organization-scoped CRUD, `GET /reference/:id/collection?include=item`; writes gated on a team permission; missing required attribute **409**; no `priority` means **0** | same routes and statuses; writes are open (no RBAC yet) |
+| `collection` / `item` / `reference` | organization-scoped CRUD, `GET /reference/:id/collection?include=item`; writes gated on a team permission; missing required attribute **409**; no `priority` means **0** | same routes and statuses; writes are open (no RBAC enforcement yet) |
 | `POST /operations` (atomic) | `add`/`update`; `Content-Type` **and** `Accept` must be the atomic media type or **415**; an unsupported op is a no-op 200 | same shape and 415; an unsupported op is **400** and a failure is one error object, not an array of per-op results |
 | Resources | `type`, `id`, `attributes`, `relationships` | `type`, `id`, `attributes`, and `relationships` for the links that exist |
 | Error objects | `detail` only | `detail`, `status`, `title` |
