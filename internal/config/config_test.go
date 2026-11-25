@@ -97,6 +97,7 @@ func TestLoadDefaults(t *testing.T) {
 func TestLoadOverrides(t *testing.T) {
 	clearEnv(t)
 	t.Setenv("TERRAKUBE_ENV", "prod")
+	t.Setenv("TERRAKUBE_ENCRYPTION_KEYS", "dev:configured")
 	t.Setenv("TERRAKUBE_LOG_LEVEL", "debug")
 	t.Setenv("TERRAKUBE_AUTO_MIGRATE", "false")
 	t.Setenv("TERRAKUBE_STORAGE_TYPE", "s3")
@@ -150,6 +151,14 @@ func TestProductionRequiresEncryptionKeys(t *testing.T) {
 	t.Setenv("TERRAKUBE_ENCRYPTION_KEYS", "")
 	if _, err := Load(); err == nil {
 		t.Fatal("Load() with production and no keys = nil error, want error")
+	}
+}
+
+func TestProductionAliasRequiresEncryptionKeys(t *testing.T) {
+	t.Setenv("TERRAKUBE_ENV", "prod")
+	t.Setenv("TERRAKUBE_ENCRYPTION_KEYS", "")
+	if _, err := Load(); err == nil {
+		t.Fatal("Load() with prod and no keys = nil error, want error")
 	}
 }
 

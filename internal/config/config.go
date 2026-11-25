@@ -175,7 +175,7 @@ func Load() (Config, error) {
 	if cfg.RedisURL == "" {
 		return Config{}, fmt.Errorf("config: redis URL must not be empty")
 	}
-	if cfg.Env == "production" && strings.TrimSpace(cfg.EncryptionKeys) == "" {
+	if (cfg.Env == "prod" || cfg.Env == "production") && strings.TrimSpace(cfg.EncryptionKeys) == "" {
 		return Config{}, fmt.Errorf("config: TERRAKUBE_ENCRYPTION_KEYS is required when TERRAKUBE_ENV=production")
 	}
 
