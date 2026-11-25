@@ -112,7 +112,8 @@ available in this environment. `.data/` holds local state and is git-ignored.
 - The upstream UI uses GraphQL at `/graphql/api/v1` (plus graphql-ws
   `/subscriptions`) for most screens; only the organization list uses REST.
   M5 needs a GraphQL implementation, not just a WebSocket.
-- Secret columns are encrypted at rest; key rotation is still pending (#159).
+- Secret columns are encrypted at rest; `make rotate-keys` re-encrypts them
+  under the active key (see README).
 - M1 filtering, sorting and paging are in memory; move them into SQL before
   production.
 

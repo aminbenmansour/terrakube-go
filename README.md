@@ -160,9 +160,19 @@ Set `TERRAKUBE_STORAGE_TYPE=s3` for S3/MinIO.
 notification signing secrets at rest. `TERRAKUBE_ENCRYPTION_ACTIVE_KEY`
 selects the key for new writes (default: the first). `make db-migrate`
 encrypts existing plaintext rows; running it twice is safe. Production
-refuses to start without a keyring. Back up the keyring: a value sealed with
-a key you removed cannot be recovered, so keep old keys in the ring until
-every row has been re-encrypted.
+refuses to start without a keyring.
+
+To rotate keys without downtime:
+
+1. Add the new key to `TERRAKUBE_ENCRYPTION_KEYS` on every service and point
+   `TERRAKUBE_ENCRYPTION_ACTIVE_KEY` at it; restart the API and executor.
+2. `DRY_RUN=1 make rotate-keys` reports what is sealed under each key.
+3. `make rotate-keys` re-encrypts everything under the active key and exits
+   non-zero until nothing remains under an old key. Run one rotation at a time.
+4. Remove the old key from the ring and restart the services.
+
+Back up the keyring, and never remove a key before step 3 finishes: a value
+sealed with a key you removed cannot be recovered.
 
 ## Roadmap
 

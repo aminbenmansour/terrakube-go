@@ -665,8 +665,10 @@ Current M1 limitations (tracked for later milestones):
   `organization`, `project`, `reference`, `vcs`, `ssh` and `agent`; relationship
   writes exist only for the workspace's `project`, `vcs`, `ssh` and `agent`,
   and RSQL beyond `attr==value` / `attr==prefix*` is not implemented.
-- Secret columns are encrypted at rest (see Database). Key rotation and
-  retiring old keys are still pending (#159).
+- Secret columns are encrypted at rest (see Database). `make rotate-keys`
+  re-encrypts them under the active key and verifies that nothing remains
+  under an old key; it is an operator command, not an API endpoint, and
+  changes no schema.
 - `tag` and `workspacetag` are served both through the TFE tag-binding
   endpoints and through the Elide-style management routes.
 
