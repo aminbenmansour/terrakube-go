@@ -15,6 +15,7 @@ type Querier interface {
 	// Deleting a provider in use unlinks its workspaces instead of failing, which
 	// is what upstream does through the mapped relationship.
 	ClearWorkspaceVCS(ctx context.Context, vcsID *string) error
+	CountOrganizationsByName(ctx context.Context, arg CountOrganizationsByNameParams) (int64, error)
 	CountWorkspacesWithAgent(ctx context.Context, agentID *string) (int64, error)
 	CountWorkspacesWithSSHKey(ctx context.Context, sshID *string) (int64, error)
 	CreateAccess(ctx context.Context, arg CreateAccessParams) (Access, error)
@@ -130,6 +131,8 @@ type Querier interface {
 	ListNotificationTriggersByConfiguration(ctx context.Context, configurationID string) ([]NotificationTrigger, error)
 	ListOrganizationIDsByGroupNames(ctx context.Context, names []string) ([]string, error)
 	ListOrganizations(ctx context.Context) ([]Organization, error)
+	ListOrganizationsPage(ctx context.Context, arg ListOrganizationsPageParams) ([]Organization, error)
+	ListOrganizationsPageDesc(ctx context.Context, arg ListOrganizationsPageDescParams) ([]Organization, error)
 	ListPatsByCreator(ctx context.Context, createdBy *string) ([]Pat, error)
 	ListProjectAccessByProject(ctx context.Context, projectID string) ([]ProjectAccess, error)
 	ListProjectAccessByProjectAndNames(ctx context.Context, arg ListProjectAccessByProjectAndNamesParams) ([]ProjectAccess, error)

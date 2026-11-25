@@ -9,6 +9,26 @@ import (
 	"context"
 )
 
+const countOrganizationsByName = `-- name: CountOrganizationsByName :one
+SELECT count(*) FROM organization
+WHERE ($1::text[] IS NULL OR id = ANY($1::text[]))
+  AND ($2::text IS NULL OR lower(name) = $2)
+  AND ($3::text IS NULL OR lower(name) LIKE $3 ESCAPE '\')
+`
+
+type CountOrganizationsByNameParams struct {
+	AllowedIds []string `json:"allowed_ids"`
+	Name       *string  `json:"name"`
+	NamePrefix *string  `json:"name_prefix"`
+}
+
+func (q *Queries) CountOrganizationsByName(ctx context.Context, arg CountOrganizationsByNameParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countOrganizationsByName, arg.AllowedIds, arg.Name, arg.NamePrefix)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createOrganization = `-- name: CreateOrganization :one
 INSERT INTO organization (id, name, description, disabled, execution_mode, icon)
 VALUES ($1, $2, $3, $4, $5, $6)
@@ -96,6 +116,106 @@ SELECT id, name, description, disabled, execution_mode, icon FROM organization O
 
 func (q *Queries) ListOrganizations(ctx context.Context) ([]Organization, error) {
 	rows, err := q.db.Query(ctx, listOrganizations)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Organization{}
+	for rows.Next() {
+		var i Organization
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Disabled,
+			&i.ExecutionMode,
+			&i.Icon,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOrganizationsPage = `-- name: ListOrganizationsPage :many
+SELECT id, name, description, disabled, execution_mode, icon FROM organization
+WHERE ($1::text[] IS NULL OR id = ANY($1::text[]))
+  AND ($2::text IS NULL OR lower(name) = $2)
+  AND ($3::text IS NULL OR lower(name) LIKE $3 ESCAPE '\')
+ORDER BY lower(name), id
+LIMIT $5::bigint OFFSET $4::bigint
+`
+
+type ListOrganizationsPageParams struct {
+	AllowedIds []string `json:"allowed_ids"`
+	Name       *string  `json:"name"`
+	NamePrefix *string  `json:"name_prefix"`
+	Offset     int64    `json:"offset"`
+	Limit      *int64   `json:"limit"`
+}
+
+func (q *Queries) ListOrganizationsPage(ctx context.Context, arg ListOrganizationsPageParams) ([]Organization, error) {
+	rows, err := q.db.Query(ctx, listOrganizationsPage,
+		arg.AllowedIds,
+		arg.Name,
+		arg.NamePrefix,
+		arg.Offset,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Organization{}
+	for rows.Next() {
+		var i Organization
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Disabled,
+			&i.ExecutionMode,
+			&i.Icon,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOrganizationsPageDesc = `-- name: ListOrganizationsPageDesc :many
+SELECT id, name, description, disabled, execution_mode, icon FROM organization
+WHERE ($1::text[] IS NULL OR id = ANY($1::text[]))
+  AND ($2::text IS NULL OR lower(name) = $2)
+  AND ($3::text IS NULL OR lower(name) LIKE $3 ESCAPE '\')
+ORDER BY lower(name) DESC, id DESC
+LIMIT $5::bigint OFFSET $4::bigint
+`
+
+type ListOrganizationsPageDescParams struct {
+	AllowedIds []string `json:"allowed_ids"`
+	Name       *string  `json:"name"`
+	NamePrefix *string  `json:"name_prefix"`
+	Offset     int64    `json:"offset"`
+	Limit      *int64   `json:"limit"`
+}
+
+func (q *Queries) ListOrganizationsPageDesc(ctx context.Context, arg ListOrganizationsPageDescParams) ([]Organization, error) {
+	rows, err := q.db.Query(ctx, listOrganizationsPageDesc,
+		arg.AllowedIds,
+		arg.Name,
+		arg.NamePrefix,
+		arg.Offset,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
