@@ -73,3 +73,47 @@ RETURNING *;
 
 -- name: SoftDeleteWorkspace :exec
 UPDATE workspace SET deleted = true, updated_date = now() WHERE id = $1;
+
+-- name: ListWorkspacesPage :many
+SELECT * FROM workspace
+WHERE organization_id = $1 AND deleted = false
+  AND (sqlc.narg('name')::text IS NULL OR lower(name) = sqlc.narg('name'))
+  AND (sqlc.narg('name_prefix')::text IS NULL OR lower(name) LIKE sqlc.narg('name_prefix') ESCAPE '\')
+ORDER BY lower(name), id
+LIMIT sqlc.narg('limit')::bigint OFFSET sqlc.arg('offset')::bigint;
+
+-- name: ListWorkspacesPageDesc :many
+SELECT * FROM workspace
+WHERE organization_id = $1 AND deleted = false
+  AND (sqlc.narg('name')::text IS NULL OR lower(name) = sqlc.narg('name'))
+  AND (sqlc.narg('name_prefix')::text IS NULL OR lower(name) LIKE sqlc.narg('name_prefix') ESCAPE '\')
+ORDER BY lower(name) DESC, id DESC
+LIMIT sqlc.narg('limit')::bigint OFFSET sqlc.arg('offset')::bigint;
+
+-- name: CountWorkspacesByName :one
+SELECT count(*) FROM workspace
+WHERE organization_id = $1 AND deleted = false
+  AND (sqlc.narg('name')::text IS NULL OR lower(name) = sqlc.narg('name'))
+  AND (sqlc.narg('name_prefix')::text IS NULL OR lower(name) LIKE sqlc.narg('name_prefix') ESCAPE '\');
+
+-- name: ListWorkspacesByProjectPage :many
+SELECT * FROM workspace
+WHERE project_id = $1 AND deleted = false
+  AND (sqlc.narg('name')::text IS NULL OR lower(name) = sqlc.narg('name'))
+  AND (sqlc.narg('name_prefix')::text IS NULL OR lower(name) LIKE sqlc.narg('name_prefix') ESCAPE '\')
+ORDER BY lower(name), id
+LIMIT sqlc.narg('limit')::bigint OFFSET sqlc.arg('offset')::bigint;
+
+-- name: ListWorkspacesByProjectPageDesc :many
+SELECT * FROM workspace
+WHERE project_id = $1 AND deleted = false
+  AND (sqlc.narg('name')::text IS NULL OR lower(name) = sqlc.narg('name'))
+  AND (sqlc.narg('name_prefix')::text IS NULL OR lower(name) LIKE sqlc.narg('name_prefix') ESCAPE '\')
+ORDER BY lower(name) DESC, id DESC
+LIMIT sqlc.narg('limit')::bigint OFFSET sqlc.arg('offset')::bigint;
+
+-- name: CountWorkspacesByProjectName :one
+SELECT count(*) FROM workspace
+WHERE project_id = $1 AND deleted = false
+  AND (sqlc.narg('name')::text IS NULL OR lower(name) = sqlc.narg('name'))
+  AND (sqlc.narg('name_prefix')::text IS NULL OR lower(name) LIKE sqlc.narg('name_prefix') ESCAPE '\');
