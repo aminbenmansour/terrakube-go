@@ -39,7 +39,22 @@ func (a *API) listWorkspaces(w http.ResponseWriter, r *http.Request) {
 	}
 
 	q := parseList(r, "workspace")
-	items, err := a.deps.Store.ListWorkspacesByOrganization(r.Context(), orgID)
+	exact, prefix := q.nameFilter()
+	limit, offset := q.pageWindow()
+
+	var (
+		items []store.Workspace
+		err   error
+	)
+	if q.SortDesc {
+		items, err = a.deps.Store.ListWorkspacesPageDesc(r.Context(), store.ListWorkspacesPageDescParams{
+			OrganizationID: orgID, Name: exact, NamePrefix: prefix, Limit: limit, Offset: offset,
+		})
+	} else {
+		items, err = a.deps.Store.ListWorkspacesPage(r.Context(), store.ListWorkspacesPageParams{
+			OrganizationID: orgID, Name: exact, NamePrefix: prefix, Limit: limit, Offset: offset,
+		})
+	}
 	if err != nil {
 		if !a.writeStoreError(w, "list workspaces", err) {
 			a.internalError(w, "list workspaces", err)
@@ -47,12 +62,24 @@ func (a *API) listWorkspaces(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page, total := filterSortPage(items, q, func(ws store.Workspace) string { return ws.Name })
-	resources := make([]jsonapi.Resource, 0, len(page))
-	for _, ws := range page {
+	var total int64
+	if q.Totals {
+		total, err = a.deps.Store.CountWorkspacesByName(r.Context(), store.CountWorkspacesByNameParams{
+			OrganizationID: orgID, Name: exact, NamePrefix: prefix,
+		})
+		if err != nil {
+			if !a.writeStoreError(w, "count workspaces", err) {
+				a.internalError(w, "count workspaces", err)
+			}
+			return
+		}
+	}
+
+	resources := make([]jsonapi.Resource, 0, len(items))
+	for _, ws := range items {
 		resources = append(resources, workspaceResource(ws))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, total, q.page(), jsonapi.ParseFieldsets(r))
+	jsonapi.WriteCollection(w, http.StatusOK, resources, int(total), q.page(), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) listProjectWorkspaces(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +91,23 @@ func (a *API) listProjectWorkspaces(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items, err := a.deps.Store.ListWorkspacesByProject(r.Context(), &projectID)
+	q := parseList(r, "workspace")
+	exact, prefix := q.nameFilter()
+	limit, offset := q.pageWindow()
+
+	var (
+		items []store.Workspace
+		err   error
+	)
+	if q.SortDesc {
+		items, err = a.deps.Store.ListWorkspacesByProjectPageDesc(r.Context(), store.ListWorkspacesByProjectPageDescParams{
+			ProjectID: &projectID, Name: exact, NamePrefix: prefix, Limit: limit, Offset: offset,
+		})
+	} else {
+		items, err = a.deps.Store.ListWorkspacesByProjectPage(r.Context(), store.ListWorkspacesByProjectPageParams{
+			ProjectID: &projectID, Name: exact, NamePrefix: prefix, Limit: limit, Offset: offset,
+		})
+	}
 	if err != nil {
 		if !a.writeStoreError(w, "list project workspaces", err) {
 			a.internalError(w, "list project workspaces", err)
@@ -72,11 +115,24 @@ func (a *API) listProjectWorkspaces(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var total int64
+	if q.Totals {
+		total, err = a.deps.Store.CountWorkspacesByProjectName(r.Context(), store.CountWorkspacesByProjectNameParams{
+			ProjectID: &projectID, Name: exact, NamePrefix: prefix,
+		})
+		if err != nil {
+			if !a.writeStoreError(w, "count project workspaces", err) {
+				a.internalError(w, "count project workspaces", err)
+			}
+			return
+		}
+	}
+
 	resources := make([]jsonapi.Resource, 0, len(items))
 	for _, ws := range items {
 		resources = append(resources, workspaceResource(ws))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, len(resources), jsonapi.Page{}, jsonapi.ParseFieldsets(r))
+	jsonapi.WriteCollection(w, http.StatusOK, resources, int(total), q.page(), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) getWorkspace(w http.ResponseWriter, r *http.Request) {
