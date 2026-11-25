@@ -218,6 +218,50 @@ func (q *Queries) ListVCSSecrets(ctx context.Context) ([]ListVCSSecretsRow, erro
 	return items, nil
 }
 
+const listVCSSecretsAfter = `-- name: ListVCSSecretsAfter :many
+SELECT id, client_secret, access_token, refresh_token, private_key
+FROM vcs WHERE id > $1 ORDER BY id LIMIT $2
+`
+
+type ListVCSSecretsAfterParams struct {
+	ID    string `json:"id"`
+	Limit int32  `json:"limit"`
+}
+
+type ListVCSSecretsAfterRow struct {
+	ID           string  `json:"id"`
+	ClientSecret *string `json:"client_secret"`
+	AccessToken  *string `json:"access_token"`
+	RefreshToken *string `json:"refresh_token"`
+	PrivateKey   *string `json:"private_key"`
+}
+
+func (q *Queries) ListVCSSecretsAfter(ctx context.Context, arg ListVCSSecretsAfterParams) ([]ListVCSSecretsAfterRow, error) {
+	rows, err := q.db.Query(ctx, listVCSSecretsAfter, arg.ID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListVCSSecretsAfterRow{}
+	for rows.Next() {
+		var i ListVCSSecretsAfterRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ClientSecret,
+			&i.AccessToken,
+			&i.RefreshToken,
+			&i.PrivateKey,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listWorkspaceIDsByVCS = `-- name: ListWorkspaceIDsByVCS :many
 SELECT id FROM workspace WHERE vcs_id = $1 ORDER BY name, id
 `

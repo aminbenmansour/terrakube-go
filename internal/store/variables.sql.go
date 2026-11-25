@@ -116,6 +116,40 @@ func (q *Queries) ListVariableSecrets(ctx context.Context) ([]ListVariableSecret
 	return items, nil
 }
 
+const listVariableSecretsAfter = `-- name: ListVariableSecretsAfter :many
+SELECT id, variable_value FROM variable WHERE id > $1 ORDER BY id LIMIT $2
+`
+
+type ListVariableSecretsAfterParams struct {
+	ID    string `json:"id"`
+	Limit int32  `json:"limit"`
+}
+
+type ListVariableSecretsAfterRow struct {
+	ID            string `json:"id"`
+	VariableValue string `json:"variable_value"`
+}
+
+func (q *Queries) ListVariableSecretsAfter(ctx context.Context, arg ListVariableSecretsAfterParams) ([]ListVariableSecretsAfterRow, error) {
+	rows, err := q.db.Query(ctx, listVariableSecretsAfter, arg.ID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListVariableSecretsAfterRow{}
+	for rows.Next() {
+		var i ListVariableSecretsAfterRow
+		if err := rows.Scan(&i.ID, &i.VariableValue); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listVariablesByWorkspace = `-- name: ListVariablesByWorkspace :many
 SELECT id, variable_key, variable_value, variable_description, variable_category, sensitive, hcl, incomplete, workspace_id FROM variable WHERE workspace_id = $1 ORDER BY variable_key
 `

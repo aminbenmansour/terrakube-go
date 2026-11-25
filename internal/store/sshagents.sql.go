@@ -223,6 +223,40 @@ func (q *Queries) ListSSHKeySecrets(ctx context.Context) ([]ListSSHKeySecretsRow
 	return items, nil
 }
 
+const listSSHKeySecretsAfter = `-- name: ListSSHKeySecretsAfter :many
+SELECT id, private_key FROM ssh WHERE id > $1 ORDER BY id LIMIT $2
+`
+
+type ListSSHKeySecretsAfterParams struct {
+	ID    string `json:"id"`
+	Limit int32  `json:"limit"`
+}
+
+type ListSSHKeySecretsAfterRow struct {
+	ID         string  `json:"id"`
+	PrivateKey *string `json:"private_key"`
+}
+
+func (q *Queries) ListSSHKeySecretsAfter(ctx context.Context, arg ListSSHKeySecretsAfterParams) ([]ListSSHKeySecretsAfterRow, error) {
+	rows, err := q.db.Query(ctx, listSSHKeySecretsAfter, arg.ID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSSHKeySecretsAfterRow{}
+	for rows.Next() {
+		var i ListSSHKeySecretsAfterRow
+		if err := rows.Scan(&i.ID, &i.PrivateKey); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSSHKeysByOrganization = `-- name: ListSSHKeysByOrganization :many
 SELECT id, name, description, private_key, ssh_type, created_date, updated_date, created_by, updated_by, organization_id FROM ssh WHERE organization_id = $1 ORDER BY name, id
 `

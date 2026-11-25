@@ -112,6 +112,40 @@ func (q *Queries) ListGlobalVariableSecrets(ctx context.Context) ([]ListGlobalVa
 	return items, nil
 }
 
+const listGlobalVariableSecretsAfter = `-- name: ListGlobalVariableSecretsAfter :many
+SELECT id, variable_value FROM globalvar WHERE id > $1 ORDER BY id LIMIT $2
+`
+
+type ListGlobalVariableSecretsAfterParams struct {
+	ID    string `json:"id"`
+	Limit int32  `json:"limit"`
+}
+
+type ListGlobalVariableSecretsAfterRow struct {
+	ID            string `json:"id"`
+	VariableValue string `json:"variable_value"`
+}
+
+func (q *Queries) ListGlobalVariableSecretsAfter(ctx context.Context, arg ListGlobalVariableSecretsAfterParams) ([]ListGlobalVariableSecretsAfterRow, error) {
+	rows, err := q.db.Query(ctx, listGlobalVariableSecretsAfter, arg.ID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListGlobalVariableSecretsAfterRow{}
+	for rows.Next() {
+		var i ListGlobalVariableSecretsAfterRow
+		if err := rows.Scan(&i.ID, &i.VariableValue); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listGlobalVariablesByOrganization = `-- name: ListGlobalVariablesByOrganization :many
 SELECT id, variable_key, variable_value, variable_description, sensitive, hcl, variable_category, organization_id FROM globalvar WHERE organization_id = $1 ORDER BY variable_key
 `
