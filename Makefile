@@ -23,7 +23,7 @@ help: ## Show this help
 
 all: build ## Build every binary
 
-build: api executor registry migrate ## Build every binary
+build: api executor registry migrate rotatekeys ## Build every binary
 
 api: ## Build the API server
 	@mkdir -p $(BIN_DIR)
@@ -40,6 +40,10 @@ registry: ## Build the registry
 migrate: ## Build the migration command
 	@mkdir -p $(BIN_DIR)
 	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/terrakube-migrate ./cmd/migrate
+
+rotatekeys: ## Build the secret key rotation command
+	@mkdir -p $(BIN_DIR)
+	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/terrakube-rotatekeys ./cmd/rotatekeys
 
 test: ## Run the unit tests
 	$(GO) test ./...
@@ -88,6 +92,9 @@ run-registry: ## Run the registry from source
 
 db-migrate: ## Apply database migrations
 	$(GO) run ./cmd/migrate
+
+rotate-keys: ## Re-encrypt secrets under the active key (DRY_RUN=1 to preview)
+	$(GO) run ./cmd/rotatekeys $(if $(DRY_RUN),-dry-run,)
 
 docker-build: ## Build the container image (SERVICE=api|executor|registry)
 	$(PODMAN) build --build-arg SERVICE=$(or $(SERVICE),api) -t terrakube-$(or $(SERVICE),api):$(VERSION) -f deploy/docker/Dockerfile .
