@@ -20,12 +20,16 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/auth"
 	"github.com/aminbenmansour/terrakube-go/internal/httpapi"
 	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
+	"github.com/aminbenmansour/terrakube-go/internal/rsql"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 )
 
 // Deps are the collaborators the management API needs.
 type Deps struct {
-	Store     store.Querier
+	Store store.Querier
+	// Lists runs the filtered list queries. New falls back to Store when it
+	// implements store.Lister, and the list handlers need one of the two.
+	Lists     store.Lister
 	Logger    *slog.Logger
 	PublicURL string
 	AuthToken string
@@ -56,6 +60,9 @@ const MountPrefix = "/api/v1"
 
 // New builds the /api/v1 router.
 func New(deps Deps) http.Handler {
+	if deps.Lists == nil {
+		deps.Lists, _ = deps.Store.(store.Lister)
+	}
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
@@ -375,11 +382,10 @@ func (a *API) internalError(w http.ResponseWriter, operation string, err error) 
 
 // listQuery is the supported subset of Elide's collection parameters.
 type listQuery struct {
-	FilterValue  string
-	FilterPrefix bool
-	SortDesc     bool
-	PageSize     int
-	PageNumber   int
+	Filter     rsql.Node
+	Sorts      []store.SortKey
+	PageSize   int
+	PageNumber int
 	// Paged records that the request carried a page parameter at all, because
 	// Elide emits meta.page only then.
 	Paged  bool
@@ -397,26 +403,6 @@ func (q listQuery) page() jsonapi.Page {
 	return jsonapi.Page{Number: q.PageNumber, Limit: q.PageSize, Totals: q.Totals}
 }
 
-// nameFilter turns the supported filter[type]=name==... forms into SQL
-// parameters: a lowercased exact value, or a LIKE pattern with the caller's
-// wildcards escaped so a name containing % or _ stays a literal.
-func (q listQuery) nameFilter() (exact, prefix *string) {
-	if q.FilterValue == "" {
-		return nil, nil
-	}
-	if !q.FilterPrefix {
-		value := strings.ToLower(q.FilterValue)
-		return &value, nil
-	}
-	pattern := prefixPattern(q.FilterValue)
-	return nil, &pattern
-}
-
-// prefixPattern builds the LIKE pattern for a case-insensitive name prefix.
-func prefixPattern(value string) string {
-	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(strings.ToLower(value)) + "%"
-}
-
 // pageWindow maps page[size]/page[number] onto LIMIT/OFFSET. A nil limit means
 // the request carried no page size, which Elide answers with every record.
 func (q listQuery) pageWindow() (*int64, int64) {
@@ -427,8 +413,6 @@ func (q listQuery) pageWindow() (*int64, int64) {
 	return &limit, int64(q.PageNumber-1) * limit
 }
 
-// parseList reads filter[type], sort and page[*] from the query string. Unknown
-// filters are ignored until they are explicitly implemented.
 // parseInclude turns a comma-separated include parameter into a set. Unknown
 // relationships are ignored: the UI sends every relationship it knows about,
 // including ones whose tables we do not have yet.
@@ -442,24 +426,27 @@ func parseInclude(r *http.Request) map[string]bool {
 	return want
 }
 
-func parseList(r *http.Request, filterType string) listQuery {
+// parseList reads filter[type], sort and page[*] from the query string. A
+// filter the RSQL parser rejects is an error the handler answers with 400.
+func parseList(r *http.Request, filterType string) (listQuery, error) {
 	values := r.URL.Query()
 
 	q := listQuery{PageNumber: 1}
 	if raw := values.Get("filter[" + filterType + "]"); raw != "" {
-		if _, value, ok := strings.Cut(raw, "=="); ok {
-			value = strings.TrimSpace(value)
-			if strings.HasSuffix(value, "*") {
-				q.FilterPrefix = true
-				value = strings.TrimSuffix(value, "*")
-			}
-			q.FilterValue = strings.Trim(value, `"`)
+		filter, err := rsql.Parse(raw)
+		if err != nil {
+			return q, err
 		}
+		q.Filter = filter
 	}
 
-	switch values.Get("sort") {
-	case "-name":
-		q.SortDesc = true
+	for _, key := range strings.Split(values.Get("sort"), ",") {
+		key = strings.TrimSpace(key)
+		desc := strings.HasPrefix(key, "-")
+		key = strings.TrimPrefix(key, "-")
+		if key != "" {
+			q.Sorts = append(q.Sorts, store.SortKey{Column: key, Desc: desc})
+		}
 	}
 
 	if raw := values.Get("page[size]"); raw != "" {
@@ -480,7 +467,7 @@ func parseList(r *http.Request, filterType string) listQuery {
 		q.PageSize = elideDefaultPageLimit
 	}
 
-	return q
+	return q, nil
 }
 
 func param(r *http.Request, name string) string {

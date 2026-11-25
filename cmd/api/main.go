@@ -118,7 +118,8 @@ func run() error {
 
 	// Every job status update is published so the UI's GraphQL subscriptions
 	// see it, whether the change came from the management API or the executor.
-	querier := jobstatus.Wrap(secretstore.Wrap(store.New(pool), cipher), events.Publish)
+	base := store.New(pool)
+	querier := jobstatus.Wrap(secretstore.Wrap(base, cipher), events.Publish)
 
 	var verifiers []internalauth.Verifier
 	if cfg.DexEnabled {
@@ -146,6 +147,7 @@ func run() error {
 	})
 	handler.Mount(api.MountPrefix, api.New(api.Deps{
 		Store:       querier,
+		Lists:       base,
 		Logger:      logger,
 		PublicURL:   cfg.PublicURL,
 		AuthToken:   cfg.AuthToken,

@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/aminbenmansour/terrakube-go/internal/rsql"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 )
 
@@ -24,6 +25,7 @@ const (
 // tagStub answers only the tag methods; the embedded interface panics for
 // anything else, which would mean the handler grew a dependency.
 type tagStub struct {
+	stubLists
 	store.Querier
 	org        store.Organization
 	tags       []store.Tag
@@ -37,33 +39,14 @@ func (s *tagStub) GetOrganization(context.Context, string) (store.Organization, 
 	return s.org, nil
 }
 
-func (s *tagStub) ListTagsPage(_ context.Context, arg store.ListTagsPageParams) ([]store.Tag, error) {
-	return matchingTags(s.tags, arg.Name, arg.NamePrefix), nil
+// ListTags ignores the filter: the SQL predicates are covered against
+// Postgres in projects_tags_sql_test.go.
+func (s *tagStub) ListTags(context.Context, []any, rsql.Node, []store.SortKey, *int64, int64) ([]store.Tag, error) {
+	return s.tags, nil
 }
 
-func (s *tagStub) ListTagsPageDesc(_ context.Context, arg store.ListTagsPageDescParams) ([]store.Tag, error) {
-	return matchingTags(s.tags, arg.Name, arg.NamePrefix), nil
-}
-
-func (s *tagStub) CountTagsByName(_ context.Context, arg store.CountTagsByNameParams) (int64, error) {
-	return int64(len(matchingTags(s.tags, arg.Name, arg.NamePrefix))), nil
-}
-
-// matchingTags stands in for the query's name predicate. It handles the forms
-// the tests send; sorting and paging are covered by the database tests.
-func matchingTags(tags []store.Tag, exact, prefix *string) []store.Tag {
-	matched := make([]store.Tag, 0, len(tags))
-	for _, tag := range tags {
-		name := strings.ToLower(strValue(tag.Name))
-		if exact != nil && name != *exact {
-			continue
-		}
-		if prefix != nil && !strings.HasPrefix(name, strings.TrimSuffix(*prefix, "%")) {
-			continue
-		}
-		matched = append(matched, tag)
-	}
-	return matched
+func (s *tagStub) CountTags(context.Context, []any, rsql.Node) (int64, error) {
+	return int64(len(s.tags)), nil
 }
 
 func (s *tagStub) GetTag(_ context.Context, id string) (store.Tag, error) {
@@ -159,12 +142,12 @@ func TestTagsJSONAPI(t *testing.T) {
 	h := newTestAPI(t, q)
 
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/organization/"+tagOrgID+"/tag?filter[tag]=name==environment", nil))
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/organization/"+tagOrgID+"/tag", nil))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("list status = %d; body = %s", rec.Code, rec.Body.String())
 	}
-	if strings.Count(rec.Body.String(), `"type":"tag"`) != 1 {
-		t.Errorf("filter returned %s, want the one environment tag", rec.Body.String())
+	if strings.Count(rec.Body.String(), `"type":"tag"`) != 2 {
+		t.Errorf("list returned %s, want both tags", rec.Body.String())
 	}
 
 	// A name is optional upstream, so a create without one stores null.

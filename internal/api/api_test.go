@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/aminbenmansour/terrakube-go/internal/rsql"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 )
 
@@ -48,8 +49,9 @@ type stubQuerier struct {
 	notificationTemplates map[string][]string
 	err                   error
 	created               *store.CreateOrganizationParams
-	orgPage               *store.ListOrganizationsPageParams
-	orgPageDesc           *store.ListOrganizationsPageDescParams
+	orgSorts              []store.SortKey
+	orgLimit              *int64
+	orgOffset             int64
 	orgTotal              int64
 	createdAction         *store.CreateActionParams
 	updatedAction         *store.UpdateActionParams
@@ -57,69 +59,84 @@ type stubQuerier struct {
 	updatedAccess         *store.UpdateAccessParams
 }
 
-func (s *stubQuerier) ListOrganizationsPage(_ context.Context, arg store.ListOrganizationsPageParams) ([]store.Organization, error) {
-	s.orgPage = &arg
-	return s.visibleOrganizations(arg.AllowedIds), s.err
+func (s *stubQuerier) ListOrganizations(_ context.Context, scope []any, _ rsql.Node, sorts []store.SortKey, limit *int64, offset int64) ([]store.Organization, error) {
+	s.orgSorts, s.orgLimit, s.orgOffset = sorts, limit, offset
+	return s.visibleOrganizations(scopeIDs(scope)), s.err
 }
 
-func (s *stubQuerier) ListOrganizationsPageDesc(_ context.Context, arg store.ListOrganizationsPageDescParams) ([]store.Organization, error) {
-	s.orgPageDesc = &arg
-	return s.visibleOrganizations(arg.AllowedIds), s.err
-}
-
-func (s *stubQuerier) CountOrganizationsByName(_ context.Context, arg store.CountOrganizationsByNameParams) (int64, error) {
+func (s *stubQuerier) CountOrganizations(_ context.Context, scope []any, _ rsql.Node) (int64, error) {
 	if s.orgTotal != 0 {
 		return s.orgTotal, s.err
 	}
-	return int64(len(s.visibleOrganizations(arg.AllowedIds))), s.err
+	return int64(len(s.visibleOrganizations(scopeIDs(scope)))), s.err
 }
 
-func (s *stubQuerier) ListProjectsPage(_ context.Context, _ store.ListProjectsPageParams) ([]store.Project, error) {
+func (s *stubQuerier) ListProjects(context.Context, []any, rsql.Node, []store.SortKey, *int64, int64) ([]store.Project, error) {
 	return s.projects, s.err
 }
 
-func (s *stubQuerier) ListProjectsPageDesc(_ context.Context, _ store.ListProjectsPageDescParams) ([]store.Project, error) {
-	return s.projects, s.err
-}
-
-func (s *stubQuerier) CountProjectsByName(context.Context, store.CountProjectsByNameParams) (int64, error) {
+func (s *stubQuerier) CountProjects(context.Context, []any, rsql.Node) (int64, error) {
 	return int64(len(s.projects)), s.err
 }
 
-func (s *stubQuerier) ListTagsPage(_ context.Context, arg store.ListTagsPageParams) ([]store.Tag, error) {
-	return matchingTags(s.tags, arg.Name, arg.NamePrefix), s.err
+func (s *stubQuerier) ListTags(context.Context, []any, rsql.Node, []store.SortKey, *int64, int64) ([]store.Tag, error) {
+	return s.tags, s.err
 }
 
-func (s *stubQuerier) ListTagsPageDesc(_ context.Context, arg store.ListTagsPageDescParams) ([]store.Tag, error) {
-	return matchingTags(s.tags, arg.Name, arg.NamePrefix), s.err
+func (s *stubQuerier) CountTags(context.Context, []any, rsql.Node) (int64, error) {
+	return int64(len(s.tags)), s.err
 }
 
-func (s *stubQuerier) CountTagsByName(_ context.Context, arg store.CountTagsByNameParams) (int64, error) {
-	return int64(len(matchingTags(s.tags, arg.Name, arg.NamePrefix))), s.err
-}
-
-func (s *stubQuerier) ListWorkspacesPage(context.Context, store.ListWorkspacesPageParams) ([]store.Workspace, error) {
+func (s *stubQuerier) ListWorkspaces(context.Context, []any, rsql.Node, []store.SortKey, *int64, int64) ([]store.Workspace, error) {
 	return s.workspaces, s.err
 }
 
-func (s *stubQuerier) ListWorkspacesPageDesc(context.Context, store.ListWorkspacesPageDescParams) ([]store.Workspace, error) {
-	return s.workspaces, s.err
-}
-
-func (s *stubQuerier) CountWorkspacesByName(context.Context, store.CountWorkspacesByNameParams) (int64, error) {
+func (s *stubQuerier) CountWorkspaces(context.Context, []any, rsql.Node) (int64, error) {
 	return int64(len(s.workspaces)), s.err
 }
 
-func (s *stubQuerier) ListWorkspacesByProjectPage(context.Context, store.ListWorkspacesByProjectPageParams) ([]store.Workspace, error) {
+func (s *stubQuerier) ListProjectWorkspaces(context.Context, []any, rsql.Node, []store.SortKey, *int64, int64) ([]store.Workspace, error) {
 	return s.workspaces, s.err
 }
 
-func (s *stubQuerier) ListWorkspacesByProjectPageDesc(context.Context, store.ListWorkspacesByProjectPageDescParams) ([]store.Workspace, error) {
-	return s.workspaces, s.err
-}
-
-func (s *stubQuerier) CountWorkspacesByProjectName(context.Context, store.CountWorkspacesByProjectNameParams) (int64, error) {
+func (s *stubQuerier) CountProjectWorkspaces(context.Context, []any, rsql.Node) (int64, error) {
 	return int64(len(s.workspaces)), s.err
+}
+
+// stubLists gives a fake that only exercises non-list endpoints the whole
+// list surface. Override the method a test needs.
+type stubLists struct{}
+
+func (stubLists) ListOrganizations(context.Context, []any, rsql.Node, []store.SortKey, *int64, int64) ([]store.Organization, error) {
+	return nil, nil
+}
+func (stubLists) CountOrganizations(context.Context, []any, rsql.Node) (int64, error) { return 0, nil }
+func (stubLists) ListProjects(context.Context, []any, rsql.Node, []store.SortKey, *int64, int64) ([]store.Project, error) {
+	return nil, nil
+}
+func (stubLists) CountProjects(context.Context, []any, rsql.Node) (int64, error) { return 0, nil }
+func (stubLists) ListTags(context.Context, []any, rsql.Node, []store.SortKey, *int64, int64) ([]store.Tag, error) {
+	return nil, nil
+}
+func (stubLists) CountTags(context.Context, []any, rsql.Node) (int64, error) { return 0, nil }
+func (stubLists) ListWorkspaces(context.Context, []any, rsql.Node, []store.SortKey, *int64, int64) ([]store.Workspace, error) {
+	return nil, nil
+}
+func (stubLists) CountWorkspaces(context.Context, []any, rsql.Node) (int64, error) { return 0, nil }
+func (stubLists) ListProjectWorkspaces(context.Context, []any, rsql.Node, []store.SortKey, *int64, int64) ([]store.Workspace, error) {
+	return nil, nil
+}
+func (stubLists) CountProjectWorkspaces(context.Context, []any, rsql.Node) (int64, error) {
+	return 0, nil
+}
+
+// scopeIDs unwraps the organization scope argument, which is nil for an owner.
+func scopeIDs(scope []any) []string {
+	if len(scope) != 1 {
+		return nil
+	}
+	ids, _ := scope[0].([]string)
+	return ids
 }
 
 // visibleOrganizations stands in for the query's allowed_ids predicate. The
@@ -200,11 +217,11 @@ func TestListOrganizationsJSONAPI(t *testing.T) {
 		t.Errorf("meta.page = %+v, want number 1, limit 1, totalPages 2, totalRecords 2", doc.Meta.Page)
 	}
 
-	if q.orgPageDesc == nil {
-		t.Fatal("sort=-name did not reach the store as the descending query")
+	if !slices.Equal(q.orgSorts, []store.SortKey{{Column: "name", Desc: true}}) {
+		t.Errorf("sorts = %+v, want name descending", q.orgSorts)
 	}
-	if q.orgPageDesc.Limit == nil || *q.orgPageDesc.Limit != 1 || q.orgPageDesc.Offset != 0 {
-		t.Errorf("page window = limit %v offset %d, want limit 1 offset 0", q.orgPageDesc.Limit, q.orgPageDesc.Offset)
+	if q.orgLimit == nil || *q.orgLimit != 1 || q.orgOffset != 0 {
+		t.Errorf("page window = limit %v offset %d, want limit 1 offset 0", q.orgLimit, q.orgOffset)
 	}
 }
 
@@ -355,8 +372,8 @@ func TestPageNumberWithoutSizeUsesElideDefaultLimit(t *testing.T) {
 	if len(doc.Data) != 0 {
 		t.Errorf("data = %v, want empty second page at the default limit", doc.Data)
 	}
-	if q.orgPage == nil || q.orgPage.Limit == nil || *q.orgPage.Limit != 10000 || q.orgPage.Offset != 10000 {
-		t.Errorf("page window = %+v, want limit 10000 offset 10000", q.orgPage)
+	if q.orgLimit == nil || *q.orgLimit != 10000 || q.orgOffset != 10000 {
+		t.Errorf("page window = limit %v offset %d, want limit 10000 offset 10000", q.orgLimit, q.orgOffset)
 	}
 }
 
