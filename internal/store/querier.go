@@ -18,6 +18,8 @@ type Querier interface {
 	CountOrganizationsByName(ctx context.Context, arg CountOrganizationsByNameParams) (int64, error)
 	CountProjectsByName(ctx context.Context, arg CountProjectsByNameParams) (int64, error)
 	CountTagsByName(ctx context.Context, arg CountTagsByNameParams) (int64, error)
+	CountWorkspacesByName(ctx context.Context, arg CountWorkspacesByNameParams) (int64, error)
+	CountWorkspacesByProjectName(ctx context.Context, arg CountWorkspacesByProjectNameParams) (int64, error)
 	CountWorkspacesWithAgent(ctx context.Context, agentID *string) (int64, error)
 	CountWorkspacesWithSSHKey(ctx context.Context, sshID *string) (int64, error)
 	CreateAccess(ctx context.Context, arg CreateAccessParams) (Access, error)
@@ -162,6 +164,10 @@ type Querier interface {
 	ListWorkspaceTagsByWorkspace(ctx context.Context, workspaceID string) ([]Workspacetag, error)
 	ListWorkspacesByOrganization(ctx context.Context, organizationID string) ([]Workspace, error)
 	ListWorkspacesByProject(ctx context.Context, projectID *string) ([]Workspace, error)
+	ListWorkspacesByProjectPage(ctx context.Context, arg ListWorkspacesByProjectPageParams) ([]Workspace, error)
+	ListWorkspacesByProjectPageDesc(ctx context.Context, arg ListWorkspacesByProjectPageDescParams) ([]Workspace, error)
+	ListWorkspacesPage(ctx context.Context, arg ListWorkspacesPageParams) ([]Workspace, error)
+	ListWorkspacesPageDesc(ctx context.Context, arg ListWorkspacesPageDescParams) ([]Workspace, error)
 	SetCliAuthSessionIdentity(ctx context.Context, arg SetCliAuthSessionIdentityParams) error
 	SetGlobalVariableSecret(ctx context.Context, arg SetGlobalVariableSecretParams) error
 	SetJobOverrideSource(ctx context.Context, arg SetJobOverrideSourceParams) (Job, error)
