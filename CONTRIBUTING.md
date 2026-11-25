@@ -60,6 +60,9 @@ Use conventional commit subjects and keep changes focused. This repository
 uses stacked PRs; see `.opencode/skills/stacked-prs/SKILL.md`. Never push
 `main`, force-push shared history, or merge a PR without approval.
 
+Never squash merge. Merge with a merge commit (`gh pr merge --merge`) so the
+branch's individual commits stay in the history.
+
 ## License
 
 Apache-2.0. The API and schema are derived from upstream Terrakube; keep the

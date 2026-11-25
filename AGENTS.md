@@ -120,6 +120,9 @@ available in this environment. `.data/` holds local state and is git-ignored.
 ## Git and PRs
 
 - Work in a feature branch; never commit directly to `main`.
+- **Never squash merge.** Merge every PR with a merge commit
+  (`gh pr merge --merge`), so the branch's individual commits stay in the
+  history. No `--squash`, no `--rebase`, no "Squash and merge" in the UI.
 - This repository uses stacked PRs: each layer builds on the previous branch.
   See `.opencode/skills/stacked-prs/SKILL.md`.
 - Do not push, force-push, rewrite shared history, or open/merge PRs without
