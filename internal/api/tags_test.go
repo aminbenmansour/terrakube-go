@@ -37,8 +37,33 @@ func (s *tagStub) GetOrganization(context.Context, string) (store.Organization, 
 	return s.org, nil
 }
 
-func (s *tagStub) ListTagsByOrganization(context.Context, string) ([]store.Tag, error) {
-	return s.tags, nil
+func (s *tagStub) ListTagsPage(_ context.Context, arg store.ListTagsPageParams) ([]store.Tag, error) {
+	return matchingTags(s.tags, arg.Name, arg.NamePrefix), nil
+}
+
+func (s *tagStub) ListTagsPageDesc(_ context.Context, arg store.ListTagsPageDescParams) ([]store.Tag, error) {
+	return matchingTags(s.tags, arg.Name, arg.NamePrefix), nil
+}
+
+func (s *tagStub) CountTagsByName(_ context.Context, arg store.CountTagsByNameParams) (int64, error) {
+	return int64(len(matchingTags(s.tags, arg.Name, arg.NamePrefix))), nil
+}
+
+// matchingTags stands in for the query's name predicate. It handles the forms
+// the tests send; sorting and paging are covered by the database tests.
+func matchingTags(tags []store.Tag, exact, prefix *string) []store.Tag {
+	matched := make([]store.Tag, 0, len(tags))
+	for _, tag := range tags {
+		name := strings.ToLower(strValue(tag.Name))
+		if exact != nil && name != *exact {
+			continue
+		}
+		if prefix != nil && !strings.HasPrefix(name, strings.TrimSuffix(*prefix, "%")) {
+			continue
+		}
+		matched = append(matched, tag)
+	}
+	return matched
 }
 
 func (s *tagStub) GetTag(_ context.Context, id string) (store.Tag, error) {

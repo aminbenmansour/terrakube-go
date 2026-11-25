@@ -63,20 +63,48 @@ func (a *API) listTags(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	items, err := a.deps.Store.ListTagsByOrganization(r.Context(), orgID)
+	q := parseList(r, "tag")
+	exact, prefix := q.nameFilter()
+	limit, offset := q.pageWindow()
+
+	var (
+		items []store.Tag
+		err   error
+	)
+	if q.SortDesc {
+		items, err = a.deps.Store.ListTagsPageDesc(r.Context(), store.ListTagsPageDescParams{
+			OrganizationID: orgID, Name: exact, NamePrefix: prefix, Limit: limit, Offset: offset,
+		})
+	} else {
+		items, err = a.deps.Store.ListTagsPage(r.Context(), store.ListTagsPageParams{
+			OrganizationID: orgID, Name: exact, NamePrefix: prefix, Limit: limit, Offset: offset,
+		})
+	}
 	if err != nil {
 		if !a.writeStoreError(w, "list tags", err) {
 			a.internalError(w, "list tags", err)
 		}
 		return
 	}
-	q := parseList(r, "tag")
-	page, total := filterSortPage(items, q, func(tag store.Tag) string { return strValue(tag.Name) })
-	resources := make([]jsonapi.Resource, 0, len(page))
-	for _, tag := range page {
+
+	var total int64
+	if q.Totals {
+		total, err = a.deps.Store.CountTagsByName(r.Context(), store.CountTagsByNameParams{
+			OrganizationID: orgID, Name: exact, NamePrefix: prefix,
+		})
+		if err != nil {
+			if !a.writeStoreError(w, "count tags", err) {
+				a.internalError(w, "count tags", err)
+			}
+			return
+		}
+	}
+
+	resources := make([]jsonapi.Resource, 0, len(items))
+	for _, tag := range items {
 		resources = append(resources, tagResource(tag))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, total, q.page(), jsonapi.ParseFieldsets(r))
+	jsonapi.WriteCollection(w, http.StatusOK, resources, int(total), q.page(), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) createTag(w http.ResponseWriter, r *http.Request) {
