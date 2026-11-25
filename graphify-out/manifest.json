@@ -1,8 +1,8 @@
 {
   ".github/workflows/ci.yml": {
-    "mtime": 1795204497.0498853,
-    "seen": 1795204593.3215168,
-    "ast_hash": "aa9134b36199f5f2260f7c026f877b45",
+    "mtime": 1795613590.4773908,
+    "seen": 1795613629.48176,
+    "ast_hash": "c2e8d3c0f1d2686b7b4f64451ba15fb2",
     "semantic_hash": ""
   },
   "cmd/api/main.go": {
@@ -2664,9 +2664,9 @@
     "semantic_hash": ""
   },
   "internal/secretstore/rotate_test.go": {
-    "mtime": 1795612547.791791,
-    "seen": 1795612557.392977,
-    "ast_hash": "e31b247ff6b1586e81f3a69899fae840",
+    "mtime": 1795613565.9092057,
+    "seen": 1795613629.4862957,
+    "ast_hash": "ba765ac94c4899bf72dbc3bda6d4a76d",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-25-secret-key-rotation.md": {
