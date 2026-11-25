@@ -48,7 +48,7 @@ func TestOrganizationListMatchesInMemory(t *testing.T) {
 		"page[size]=3&page[number]=3&page[totals]",
 	} {
 		t.Run(query, func(t *testing.T) {
-			got, meta := getOrganizationNames(t, handler, "/organization?"+query)
+			got, meta := getNames(t, handler, "/organization?"+query)
 
 			q := parseList(httptest.NewRequest(http.MethodGet, "/organization?"+query, nil), "organization")
 			want, total := filterSortPage(rows, q, func(o store.Organization) string { return o.Name })
@@ -82,7 +82,7 @@ func TestOrganizationListSQLFilters(t *testing.T) {
 		{"page[size]=2&page[number]=4", []string{}},
 	} {
 		t.Run(tc.query, func(t *testing.T) {
-			got, _ := getOrganizationNames(t, handler, "/organization?"+tc.query)
+			got, _ := getNames(t, handler, "/organization?"+tc.query)
 			if !slices.Equal(got, tc.want) {
 				t.Errorf("names = %v, want %v", got, tc.want)
 			}
@@ -90,7 +90,7 @@ func TestOrganizationListSQLFilters(t *testing.T) {
 	}
 
 	t.Run("page totals count the filtered set", func(t *testing.T) {
-		_, meta := getOrganizationNames(t, handler,
+		_, meta := getNames(t, handler,
 			"/organization?filter[organization]=name==a*&page[size]=1&page[totals]")
 		if meta.TotalRecords != 1 || meta.TotalPages != 1 {
 			t.Errorf("meta = %+v, want totalRecords 1, totalPages 1", meta)
@@ -161,7 +161,7 @@ type pageMeta struct {
 	TotalRecords int `json:"totalRecords"`
 }
 
-func getOrganizationNames(t *testing.T, handler http.Handler, target string) ([]string, pageMeta) {
+func getNames(t *testing.T, handler http.Handler, target string) ([]string, pageMeta) {
 	t.Helper()
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, target, nil))
@@ -186,4 +186,20 @@ func getOrganizationNames(t *testing.T, handler http.Handler, target string) ([]
 		names = append(names, resource.Attributes.Name)
 	}
 	return names, doc.Meta.Page
+}
+
+func createListOrganization(t *testing.T, q *store.Queries, name string) store.Organization {
+	t.Helper()
+	org, err := q.CreateOrganization(t.Context(), store.CreateOrganizationParams{
+		ID: uuid.NewString(), Name: name, ExecutionMode: "remote",
+	})
+	if err != nil {
+		t.Fatalf("create organization %q: %v", name, err)
+	}
+	return org
+}
+
+// newListRequest builds the request parseList reads its parameters from.
+func newListRequest(target string) *http.Request {
+	return httptest.NewRequest(http.MethodGet, target, nil)
 }
