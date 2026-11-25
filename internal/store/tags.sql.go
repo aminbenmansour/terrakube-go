@@ -9,6 +9,26 @@ import (
 	"context"
 )
 
+const countTagsByName = `-- name: CountTagsByName :one
+SELECT count(*) FROM tag
+WHERE organization_id = $1
+  AND ($2::text IS NULL OR coalesce(lower(name), '') = $2)
+  AND ($3::text IS NULL OR coalesce(lower(name), '') LIKE $3 ESCAPE '\')
+`
+
+type CountTagsByNameParams struct {
+	OrganizationID string  `json:"organization_id"`
+	Name           *string `json:"name"`
+	NamePrefix     *string `json:"name_prefix"`
+}
+
+func (q *Queries) CountTagsByName(ctx context.Context, arg CountTagsByNameParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countTagsByName, arg.OrganizationID, arg.Name, arg.NamePrefix)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createTag = `-- name: CreateTag :one
 INSERT INTO tag (id, name, created_date, updated_date, organization_id)
 VALUES ($1, $2, now(), now(), $3)
@@ -149,6 +169,108 @@ func (q *Queries) GetWorkspaceTag(ctx context.Context, id string) (Workspacetag,
 		&i.UpdatedBy,
 	)
 	return i, err
+}
+
+const listTagsPage = `-- name: ListTagsPage :many
+SELECT id, name, organization_id, created_date, created_by, updated_date, updated_by FROM tag
+WHERE organization_id = $1
+  AND ($2::text IS NULL OR coalesce(lower(name), '') = $2)
+  AND ($3::text IS NULL OR coalesce(lower(name), '') LIKE $3 ESCAPE '\')
+ORDER BY coalesce(lower(name), ''), id
+LIMIT $5::bigint OFFSET $4::bigint
+`
+
+type ListTagsPageParams struct {
+	OrganizationID string  `json:"organization_id"`
+	Name           *string `json:"name"`
+	NamePrefix     *string `json:"name_prefix"`
+	Offset         int64   `json:"offset"`
+	Limit          *int64  `json:"limit"`
+}
+
+func (q *Queries) ListTagsPage(ctx context.Context, arg ListTagsPageParams) ([]Tag, error) {
+	rows, err := q.db.Query(ctx, listTagsPage,
+		arg.OrganizationID,
+		arg.Name,
+		arg.NamePrefix,
+		arg.Offset,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Tag{}
+	for rows.Next() {
+		var i Tag
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.OrganizationID,
+			&i.CreatedDate,
+			&i.CreatedBy,
+			&i.UpdatedDate,
+			&i.UpdatedBy,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTagsPageDesc = `-- name: ListTagsPageDesc :many
+SELECT id, name, organization_id, created_date, created_by, updated_date, updated_by FROM tag
+WHERE organization_id = $1
+  AND ($2::text IS NULL OR coalesce(lower(name), '') = $2)
+  AND ($3::text IS NULL OR coalesce(lower(name), '') LIKE $3 ESCAPE '\')
+ORDER BY coalesce(lower(name), '') DESC, id DESC
+LIMIT $5::bigint OFFSET $4::bigint
+`
+
+type ListTagsPageDescParams struct {
+	OrganizationID string  `json:"organization_id"`
+	Name           *string `json:"name"`
+	NamePrefix     *string `json:"name_prefix"`
+	Offset         int64   `json:"offset"`
+	Limit          *int64  `json:"limit"`
+}
+
+func (q *Queries) ListTagsPageDesc(ctx context.Context, arg ListTagsPageDescParams) ([]Tag, error) {
+	rows, err := q.db.Query(ctx, listTagsPageDesc,
+		arg.OrganizationID,
+		arg.Name,
+		arg.NamePrefix,
+		arg.Offset,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Tag{}
+	for rows.Next() {
+		var i Tag
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.OrganizationID,
+			&i.CreatedDate,
+			&i.CreatedBy,
+			&i.UpdatedDate,
+			&i.UpdatedBy,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateTag = `-- name: UpdateTag :one

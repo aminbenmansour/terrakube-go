@@ -32,3 +32,25 @@ SELECT * FROM workspacetag WHERE id = $1;
 
 -- name: DeleteWorkspaceTag :exec
 DELETE FROM workspacetag WHERE id = $1;
+
+-- name: ListTagsPage :many
+SELECT * FROM tag
+WHERE organization_id = $1
+  AND (sqlc.narg('name')::text IS NULL OR coalesce(lower(name), '') = sqlc.narg('name'))
+  AND (sqlc.narg('name_prefix')::text IS NULL OR coalesce(lower(name), '') LIKE sqlc.narg('name_prefix') ESCAPE '\')
+ORDER BY coalesce(lower(name), ''), id
+LIMIT sqlc.narg('limit')::bigint OFFSET sqlc.arg('offset')::bigint;
+
+-- name: ListTagsPageDesc :many
+SELECT * FROM tag
+WHERE organization_id = $1
+  AND (sqlc.narg('name')::text IS NULL OR coalesce(lower(name), '') = sqlc.narg('name'))
+  AND (sqlc.narg('name_prefix')::text IS NULL OR coalesce(lower(name), '') LIKE sqlc.narg('name_prefix') ESCAPE '\')
+ORDER BY coalesce(lower(name), '') DESC, id DESC
+LIMIT sqlc.narg('limit')::bigint OFFSET sqlc.arg('offset')::bigint;
+
+-- name: CountTagsByName :one
+SELECT count(*) FROM tag
+WHERE organization_id = $1
+  AND (sqlc.narg('name')::text IS NULL OR coalesce(lower(name), '') = sqlc.narg('name'))
+  AND (sqlc.narg('name_prefix')::text IS NULL OR coalesce(lower(name), '') LIKE sqlc.narg('name_prefix') ESCAPE '\');

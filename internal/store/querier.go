@@ -16,6 +16,8 @@ type Querier interface {
 	// is what upstream does through the mapped relationship.
 	ClearWorkspaceVCS(ctx context.Context, vcsID *string) error
 	CountOrganizationsByName(ctx context.Context, arg CountOrganizationsByNameParams) (int64, error)
+	CountProjectsByName(ctx context.Context, arg CountProjectsByNameParams) (int64, error)
+	CountTagsByName(ctx context.Context, arg CountTagsByNameParams) (int64, error)
 	CountWorkspacesWithAgent(ctx context.Context, agentID *string) (int64, error)
 	CountWorkspacesWithSSHKey(ctx context.Context, sshID *string) (int64, error)
 	CreateAccess(ctx context.Context, arg CreateAccessParams) (Access, error)
@@ -136,6 +138,8 @@ type Querier interface {
 	ListProjectAccessByProject(ctx context.Context, projectID string) ([]ProjectAccess, error)
 	ListProjectAccessByProjectAndNames(ctx context.Context, arg ListProjectAccessByProjectAndNamesParams) ([]ProjectAccess, error)
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
+	ListProjectsPage(ctx context.Context, arg ListProjectsPageParams) ([]Project, error)
+	ListProjectsPageDesc(ctx context.Context, arg ListProjectsPageDescParams) ([]Project, error)
 	ListReferencesByCollection(ctx context.Context, collectionID string) ([]Reference, error)
 	ListReferencesByWorkspace(ctx context.Context, workspaceID string) ([]Reference, error)
 	ListSSHKeySecrets(ctx context.Context) ([]ListSSHKeySecretsRow, error)
@@ -143,6 +147,8 @@ type Querier interface {
 	ListSSHKeysByOrganization(ctx context.Context, organizationID string) ([]Ssh, error)
 	ListStepsByJob(ctx context.Context, jobID int64) ([]Step, error)
 	ListTagsByOrganization(ctx context.Context, organizationID string) ([]Tag, error)
+	ListTagsPage(ctx context.Context, arg ListTagsPageParams) ([]Tag, error)
+	ListTagsPageDesc(ctx context.Context, arg ListTagsPageDescParams) ([]Tag, error)
 	ListTeamsByOrganization(ctx context.Context, organizationID string) ([]Team, error)
 	ListTeamsByOrganizationAndNames(ctx context.Context, arg ListTeamsByOrganizationAndNamesParams) ([]Team, error)
 	ListTemplatesByOrganization(ctx context.Context, organizationID string) ([]Template, error)
