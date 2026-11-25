@@ -281,9 +281,15 @@ module, provider, schedule, agent, webhook and policy objects.
 
 Query conventions:
 
-- `filter[type]=...` uses RSQL: `name==prod*`, `status=in=(failed,cancelled)`,
-  `a==1;b==2` (AND), comma between expressions (OR).
-- `sort=name`, `sort=-name`.
+- `filter[type]=...` uses RSQL: `==`, `!=`, `=in=(...)`, `=out=(...)`,
+  `=isnull=true|false`, `=ini=`/`=outi=` (case-insensitive), `=lt=`, `=le=`,
+  `=gt=`, `=ge=`, `*` as the wildcard, `;` (AND), `,` (OR) and parentheses.
+  `==` is case-sensitive; the UI's name search uses `=ini='*term*'`. A filter
+  naming an attribute we do not model is ignored whole, so a relationship
+  filter (`workspaceTag.tagId`, `job.status`) widens instead of hiding rows. A
+  malformed expression is a `400`. Semicolons must be URL-encoded (`%3B`).
+- `sort=name`, `sort=-name`, or comma-separated keys (`sort=name,-id`); `name`
+  compares case-insensitively and `id` is the tiebreaker.
 - `page[size]`, `page[number]`, `page[totals]`. Any page parameter makes Elide
   emit `meta.page` (`{number, limit}`, default limit 10000); `page[totals]` adds
   `totalPages` and `totalRecords`. No page parameter means no `meta` at all.
@@ -656,16 +662,21 @@ JSON:API error object where upstream answers an array of per-operation results.
 
 Current M1 limitations (tracked for later milestones):
 
-- Filters, sorting and paging run in SQL for the organization, project, tag and
-  workspace lists. The organization list also applies the caller's membership
-  restriction in the query, so `page[totals]` counts only visible rows.
+- Filters, sorts and paging run in SQL for the organization, project, tag and
+  workspace lists. Sortable attributes are `name` and `id` everywhere, plus
+  `lastJobDate` on workspaces; modeled filter attributes are `name`,
+  `description`, `id`, and for workspaces also `lastJobStatus`,
+  `policyComplianceStatus`, `project.id` and `lastJobDate`. Relationship filters
+  need EXISTS subqueries and are ignored for now, as is the `action` catalog,
+  which keeps its own in-memory two-term parser. The organization list also
+  applies the caller's membership restriction in the query, so `page[totals]`
+  counts only visible rows.
 - Authentication is a static bearer token (`TERRAKUBE_AUTH_TOKEN`), a Dex JWT
   with `TERRAKUBE_DEX_ENABLED=true`, or a personal access token issued at
   `/pat/v1` (see above). Team and executor tokens are not implemented yet.
 - `include=` is implemented only for the workspace's `variable`,
   `organization`, `project`, `reference`, `vcs`, `ssh` and `agent`; relationship
-  writes exist only for the workspace's `project`, `vcs`, `ssh` and `agent`,
-  and RSQL beyond `attr==value` / `attr==prefix*` is not implemented.
+  writes exist only for the workspace's `project`, `vcs`, `ssh` and `agent`.
 - Secret columns are encrypted at rest (see Database). `make rotate-keys`
   re-encrypts them under the active key and verifies that nothing remains
   under an old key; it is an operator command, not an API endpoint, and
