@@ -1,6 +1,3 @@
--- name: ListOrganizations :many
-SELECT * FROM organization ORDER BY name;
-
 -- name: GetOrganization :one
 SELECT * FROM organization WHERE id = $1;
 

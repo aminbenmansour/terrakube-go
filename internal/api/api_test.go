@@ -48,14 +48,46 @@ type stubQuerier struct {
 	notificationTemplates map[string][]string
 	err                   error
 	created               *store.CreateOrganizationParams
+	orgPage               *store.ListOrganizationsPageParams
+	orgPageDesc           *store.ListOrganizationsPageDescParams
+	orgTotal              int64
 	createdAction         *store.CreateActionParams
 	updatedAction         *store.UpdateActionParams
 	deletedAction         string
 	updatedAccess         *store.UpdateAccessParams
 }
 
-func (s *stubQuerier) ListOrganizations(context.Context) ([]store.Organization, error) {
-	return s.orgs, s.err
+func (s *stubQuerier) ListOrganizationsPage(_ context.Context, arg store.ListOrganizationsPageParams) ([]store.Organization, error) {
+	s.orgPage = &arg
+	return s.visibleOrganizations(arg.AllowedIds), s.err
+}
+
+func (s *stubQuerier) ListOrganizationsPageDesc(_ context.Context, arg store.ListOrganizationsPageDescParams) ([]store.Organization, error) {
+	s.orgPageDesc = &arg
+	return s.visibleOrganizations(arg.AllowedIds), s.err
+}
+
+func (s *stubQuerier) CountOrganizationsByName(_ context.Context, arg store.CountOrganizationsByNameParams) (int64, error) {
+	if s.orgTotal != 0 {
+		return s.orgTotal, s.err
+	}
+	return int64(len(s.visibleOrganizations(arg.AllowedIds))), s.err
+}
+
+// visibleOrganizations stands in for the query's allowed_ids predicate. The
+// name filter, sort and paging belong to Postgres; the SQL itself is covered by
+// the database tests in organizations_sql_test.go.
+func (s *stubQuerier) visibleOrganizations(allowed []string) []store.Organization {
+	if allowed == nil {
+		return s.orgs
+	}
+	visible := make([]store.Organization, 0, len(s.orgs))
+	for _, org := range s.orgs {
+		if slices.Contains(allowed, org.ID) {
+			visible = append(visible, org)
+		}
+	}
+	return visible
 }
 
 func (s *stubQuerier) GetOrganization(context.Context, string) (store.Organization, error) {
@@ -76,10 +108,12 @@ func newTestAPI(t *testing.T, q store.Querier) http.Handler {
 }
 
 func TestListOrganizationsJSONAPI(t *testing.T) {
-	q := &stubQuerier{orgs: []store.Organization{
-		{ID: "1", Name: "alpha", ExecutionMode: "remote"},
-		{ID: "2", Name: "beta", ExecutionMode: "remote"},
-	}}
+	// The store returns the page it was asked for; the handler must pass the
+	// descending order and the window through.
+	q := &stubQuerier{
+		orgs:     []store.Organization{{ID: "2", Name: "beta", ExecutionMode: "remote"}},
+		orgTotal: 2,
+	}
 	handler := newTestAPI(t, q)
 
 	req := httptest.NewRequest(http.MethodGet, "/organization?sort=-name&page[size]=1&page[number]=1&page[totals]", nil)
@@ -116,6 +150,13 @@ func TestListOrganizationsJSONAPI(t *testing.T) {
 	}
 	if doc.Meta.Page.TotalRecords != 2 || doc.Meta.Page.TotalPages != 2 || doc.Meta.Page.Limit != 1 || doc.Meta.Page.Number != 1 {
 		t.Errorf("meta.page = %+v, want number 1, limit 1, totalPages 2, totalRecords 2", doc.Meta.Page)
+	}
+
+	if q.orgPageDesc == nil {
+		t.Fatal("sort=-name did not reach the store as the descending query")
+	}
+	if q.orgPageDesc.Limit == nil || *q.orgPageDesc.Limit != 1 || q.orgPageDesc.Offset != 0 {
+		t.Errorf("page window = limit %v offset %d, want limit 1 offset 0", q.orgPageDesc.Limit, q.orgPageDesc.Offset)
 	}
 }
 
@@ -237,10 +278,9 @@ func TestUnknownCollectionIsJSONAPI(t *testing.T) {
 }
 
 func TestPageNumberWithoutSizeUsesElideDefaultLimit(t *testing.T) {
-	q := &stubQuerier{orgs: []store.Organization{
-		{ID: "1", Name: "alpha"},
-		{ID: "2", Name: "beta"},
-	}}
+	// A second page at the default limit is past the end of two rows, so the
+	// store returns nothing; what matters here is the window it was asked for.
+	q := &stubQuerier{}
 	handler := newTestAPI(t, q)
 
 	req := httptest.NewRequest(http.MethodGet, "/organization?page[number]=2", nil)
@@ -266,6 +306,9 @@ func TestPageNumberWithoutSizeUsesElideDefaultLimit(t *testing.T) {
 	}
 	if len(doc.Data) != 0 {
 		t.Errorf("data = %v, want empty second page at the default limit", doc.Data)
+	}
+	if q.orgPage == nil || q.orgPage.Limit == nil || *q.orgPage.Limit != 10000 || q.orgPage.Offset != 10000 {
+		t.Errorf("page window = %+v, want limit 10000 offset 10000", q.orgPage)
 	}
 }
 
