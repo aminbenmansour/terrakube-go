@@ -10,57 +10,44 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/aminbenmansour/terrakube-go/internal/dbtest"
+	"github.com/aminbenmansour/terrakube-go/internal/rsql"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 )
 
 // seedOrganizations inserts rows whose lowercase names sort the same way under
-// every collation, so the SQL order and filterSortPage agree.
+// every collation.
 func seedOrganizations(t *testing.T) (*store.Queries, []store.Organization) {
 	t.Helper()
 	q := store.New(dbtest.Pool(t))
 	names := []string{"alpha", "bravo", "charlie", "delta", "echo", "foxtrot"}
 	rows := make([]store.Organization, 0, len(names))
 	for _, name := range names {
-		org, err := q.CreateOrganization(t.Context(), store.CreateOrganizationParams{
-			ID: uuid.NewString(), Name: name, ExecutionMode: "remote",
-		})
-		if err != nil {
-			t.Fatalf("create organization %q: %v", name, err)
-		}
-		rows = append(rows, org)
+		rows = append(rows, createListOrganization(t, q, name))
 	}
 	return q, rows
 }
 
-// TestOrganizationListMatchesInMemory checks the SQL window against the helper
-// the other list endpoints still use: the endpoint was cut over without a
-// behaviour change.
-func TestOrganizationListMatchesInMemory(t *testing.T) {
-	q, rows := seedOrganizations(t)
+func TestOrganizationListSortsAndPages(t *testing.T) {
+	q, _ := seedOrganizations(t)
 	handler := newTestAPI(t, q)
 
-	for _, query := range []string{
-		"",
-		"sort=-name",
-		"sort=-name&page[size]=2&page[number]=2",
-		"filter[organization]=name==bravo",
-		"filter[organization]=name==ch*",
-		"page[size]=3&page[number]=3&page[totals]",
+	for _, tc := range []struct {
+		query string
+		want  []string
+		total int
+	}{
+		{"", []string{"alpha", "bravo", "charlie", "delta", "echo", "foxtrot"}, 0},
+		{"sort=-name", []string{"foxtrot", "echo", "delta", "charlie", "bravo", "alpha"}, 0},
+		{"sort=-name&page[size]=2&page[number]=2", []string{"delta", "charlie"}, 0},
+		{"page[size]=3&page[number]=3&page[totals]", []string{}, 6},
 	} {
-		t.Run(query, func(t *testing.T) {
-			got, meta := getNames(t, handler, "/organization?"+query)
-
-			q := parseList(httptest.NewRequest(http.MethodGet, "/organization?"+query, nil), "organization")
-			want, total := filterSortPage(rows, q, func(o store.Organization) string { return o.Name })
-			wantNames := make([]string, 0, len(want))
-			for _, org := range want {
-				wantNames = append(wantNames, org.Name)
+		t.Run(tc.query, func(t *testing.T) {
+			got, meta := getNames(t, handler, "/organization?"+tc.query)
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("names = %v, want %v", got, tc.want)
 			}
-			if !slices.Equal(got, wantNames) {
-				t.Fatalf("names = %v, want %v", got, wantNames)
-			}
-			if q.Totals && meta.TotalRecords != total {
-				t.Errorf("totalRecords = %d, want %d", meta.TotalRecords, total)
+			if tc.total != 0 && meta.TotalRecords != tc.total {
+				t.Errorf("totalRecords = %d, want %d", meta.TotalRecords, tc.total)
 			}
 		})
 	}
@@ -74,9 +61,12 @@ func TestOrganizationListSQLFilters(t *testing.T) {
 		query string
 		want  []string
 	}{
-		// Equality is case-insensitive, as the in-memory filter was.
-		{"filter[organization]=name==BRAVO", []string{"bravo"}},
+		// Equality is case-sensitive, as Elide's == is.
+		{"filter[organization]=name==bravo", []string{"bravo"}},
+		{"filter[organization]=name==BRAVO", []string{}},
+		{"filter[organization]=name=ini='*BRAVO*'", []string{"bravo"}},
 		{"filter[organization]=name==ch*", []string{"charlie"}},
+		{"filter[organization]=name!=alpha%3Bname!=bravo", []string{"charlie", "delta", "echo", "foxtrot"}},
 		{"filter[organization]=name==nobody", []string{}},
 		{"page[size]=2&page[number]=3", []string{"echo", "foxtrot"}},
 		{"page[size]=2&page[number]=4", []string{}},
@@ -98,16 +88,26 @@ func TestOrganizationListSQLFilters(t *testing.T) {
 	})
 }
 
-// TestOrganizationListPrefiltersByAllowedIDs covers the membership restriction
-// that used to run in Go: it belongs in the query so totals and pages count
-// only visible rows.
+func TestOrganizationListRejectsMalformedFilter(t *testing.T) {
+	handler := newTestAPI(t, &stubQuerier{})
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/organization?filter[organization]=name==", nil))
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body = %s", rec.Code, rec.Body.String())
+	}
+	if !json.Valid(rec.Body.Bytes()) {
+		t.Errorf("body is not JSON: %s", rec.Body.Bytes())
+	}
+}
+
+// TestOrganizationListPrefiltersByAllowedIDs covers the membership restriction:
+// it belongs in the query so totals and pages count only visible rows.
 func TestOrganizationListPrefiltersByAllowedIDs(t *testing.T) {
 	q, rows := seedOrganizations(t)
 	visible := []string{rows[1].ID, rows[3].ID}
 
-	items, err := q.ListOrganizationsPage(t.Context(), store.ListOrganizationsPageParams{
-		AllowedIds: visible,
-	})
+	items, err := q.ListOrganizations(t.Context(), []any{visible}, nil, nil, nil, 0)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -119,38 +119,45 @@ func TestOrganizationListPrefiltersByAllowedIDs(t *testing.T) {
 		t.Errorf("names = %v, want %v", got, want)
 	}
 
-	none, err := q.ListOrganizationsPage(t.Context(), store.ListOrganizationsPageParams{
-		AllowedIds: []string{},
-	})
+	none, err := q.ListOrganizations(t.Context(), []any{[]string{}}, nil, nil, nil, 0)
 	if err != nil {
 		t.Fatalf("list with an empty allow list: %v", err)
 	}
 	if len(none) != 0 {
 		t.Errorf("names = %v, want none", none)
 	}
+
+	all, err := q.ListOrganizations(t.Context(), []any{nil}, nil, nil, nil, 0)
+	if err != nil {
+		t.Fatalf("list as owner: %v", err)
+	}
+	if len(all) != len(rows) {
+		t.Errorf("owner sees %d organizations, want %d", len(all), len(rows))
+	}
 }
 
-// TestOrganizationListEscapesWildcards keeps a name containing % or _ a literal
-// when it is used as a prefix.
+// TestOrganizationListEscapesWildcards keeps a name containing % or _ a literal.
 func TestOrganizationListEscapesWildcards(t *testing.T) {
 	q := store.New(dbtest.Pool(t))
 	for _, name := range []string{"a%b", "a_b", "axb"} {
-		if _, err := q.CreateOrganization(t.Context(), store.CreateOrganizationParams{
-			ID: uuid.NewString(), Name: name, ExecutionMode: "remote",
-		}); err != nil {
-			t.Fatalf("create %q: %v", name, err)
-		}
+		createListOrganization(t, q, name)
 	}
 
-	pattern := prefixPattern("a%")
-	items, err := q.ListOrganizationsPage(t.Context(), store.ListOrganizationsPageParams{
-		NamePrefix: &pattern,
-	})
-	if err != nil {
-		t.Fatalf("list: %v", err)
-	}
-	if len(items) != 1 || items[0].Name != "a%b" {
-		t.Errorf("items = %+v, want only a%%b", items)
+	for filter, want := range map[string]string{
+		"name==a%*": "a%b",
+		"name==a_*": "a_b",
+	} {
+		node, err := rsql.Parse(filter)
+		if err != nil {
+			t.Fatalf("parse %q: %v", filter, err)
+		}
+		items, err := q.ListOrganizations(t.Context(), []any{nil}, node, nil, nil, 0)
+		if err != nil {
+			t.Fatalf("list %q: %v", filter, err)
+		}
+		if len(items) != 1 || items[0].Name != want {
+			t.Errorf("%s = %+v, want only %s", filter, items, want)
+		}
 	}
 }
 
@@ -197,9 +204,4 @@ func createListOrganization(t *testing.T, q *store.Queries, name string) store.O
 		t.Fatalf("create organization %q: %v", name, err)
 	}
 	return org
-}
-
-// newListRequest builds the request parseList reads its parameters from.
-func newListRequest(target string) *http.Request {
-	return httptest.NewRequest(http.MethodGet, target, nil)
 }

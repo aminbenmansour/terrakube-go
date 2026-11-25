@@ -51,62 +51,57 @@ func seedWorkspaces(t *testing.T) (*store.Queries, store.Organization, store.Pro
 	return q, org, project, rows
 }
 
-func TestWorkspaceListMatchesInMemory(t *testing.T) {
-	q, org, _, rows := seedWorkspaces(t)
+func TestWorkspaceListSortsAndFilters(t *testing.T) {
+	q, org, _, _ := seedWorkspaces(t)
 	handler := newTestAPI(t, q)
 
-	for _, query := range []string{
-		"",
-		"sort=-name",
-		"sort=-name&page[size]=2&page[number]=2",
-		"filter[workspace]=name==bravo",
-		"filter[workspace]=name==ch*",
-		"page[size]=3&page[number]=2&page[totals]",
+	for _, tc := range []struct {
+		query string
+		want  []string
+	}{
+		{"", []string{"alpha", "bravo", "charlie", "delta", "echo"}},
+		{"sort=-name", []string{"echo", "delta", "charlie", "bravo", "alpha"}},
+		{"sort=-name&page[size]=2&page[number]=2", []string{"charlie", "bravo"}},
+		{"filter[workspace]=name==bravo", []string{"bravo"}},
+		{"filter[workspace]=name==ch*", []string{"charlie"}},
+		{"filter[workspace]=(name=ini='*a*',name=ini='*e*')",
+			[]string{"alpha", "bravo", "charlie", "delta", "echo"}},
+		{"filter[workspace]=project.id=isnull=true", []string{"echo"}},
+		{"filter[workspace]=project.id=isnull=false", []string{"alpha", "bravo", "charlie", "delta"}},
+		{"page[size]=3&page[number]=2&page[totals]", []string{"delta", "echo"}},
 	} {
-		t.Run(query, func(t *testing.T) {
-			got, meta := getNames(t, handler, "/organization/"+org.ID+"/workspace?"+query)
-
-			q := parseList(newListRequest("/organization/"+org.ID+"/workspace?"+query), "workspace")
-			want, total := filterSortPage(rows, q, func(ws store.Workspace) string { return ws.Name })
-			wantNames := make([]string, 0, len(want))
-			for _, ws := range want {
-				wantNames = append(wantNames, ws.Name)
+		t.Run(tc.query, func(t *testing.T) {
+			got, meta := getNames(t, handler, "/organization/"+org.ID+"/workspace?"+tc.query)
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("names = %v, want %v", got, tc.want)
 			}
-			if !slices.Equal(got, wantNames) {
-				t.Fatalf("names = %v, want %v", got, wantNames)
-			}
-			if q.Totals && meta.TotalRecords != total {
-				t.Errorf("totalRecords = %d, want %d", meta.TotalRecords, total)
+			if tc.query == "page[size]=3&page[number]=2&page[totals]" && meta.TotalRecords != 5 {
+				t.Errorf("totalRecords = %d, want 5", meta.TotalRecords)
 			}
 		})
 	}
 }
 
-func TestProjectWorkspaceListMatchesInMemory(t *testing.T) {
-	q, _, project, rows := seedWorkspaces(t)
+func TestProjectWorkspaceListSortsAndFilters(t *testing.T) {
+	q, _, project, _ := seedWorkspaces(t)
 	handler := newTestAPI(t, q)
 
-	// The project list holds the four workspaces assigned to it; "echo" belongs
-	// to the organization only and "gone" is soft-deleted.
-	inProject := rows[:4]
-	for _, query := range []string{
-		"",
-		"sort=-name",
-		"page[size]=2&page[number]=2",
-		"filter[workspace]=name==ch*",
+	// "echo" belongs to the organization only and "gone" is soft-deleted.
+	for _, tc := range []struct {
+		query string
+		want  []string
+	}{
+		{"", []string{"alpha", "bravo", "charlie", "delta"}},
+		{"sort=-name", []string{"delta", "charlie", "bravo", "alpha"}},
+		{"page[size]=2&page[number]=2", []string{"charlie", "delta"}},
+		{"filter[workspace]=name==ch*", []string{"charlie"}},
+		{"filter[workspace]=id=isnull=false", []string{"alpha", "bravo", "charlie", "delta"}},
 	} {
-		t.Run(query, func(t *testing.T) {
-			target := "/project/" + project.ID + "/workspace?" + query
+		t.Run(tc.query, func(t *testing.T) {
+			target := "/project/" + project.ID + "/workspace?" + tc.query
 			got, _ := getNames(t, handler, target)
-
-			q := parseList(newListRequest(target), "workspace")
-			want, _ := filterSortPage(inProject, q, func(ws store.Workspace) string { return ws.Name })
-			wantNames := make([]string, 0, len(want))
-			for _, ws := range want {
-				wantNames = append(wantNames, ws.Name)
-			}
-			if !slices.Equal(got, wantNames) {
-				t.Fatalf("names = %v, want %v", got, wantNames)
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("names = %v, want %v", got, tc.want)
 			}
 		})
 	}

@@ -114,8 +114,10 @@ available in this environment. `.data/` holds local state and is git-ignored.
   M5 needs a GraphQL implementation, not just a WebSocket.
 - Secret columns are encrypted at rest; `make rotate-keys` re-encrypts them
   under the active key (see README).
-- List filtering, sorting and paging run in SQL for organizations, projects,
-  tags and workspaces; the remaining collections ignore those parameters.
+- List filtering (RSQL), sorting and paging run in SQL for organizations,
+  projects, tags and workspaces. A filter naming an attribute we do not model is
+  ignored whole, so relationship filters widen rather than hide rows; the
+  remaining collections ignore these parameters.
 
 ## Git and PRs
 

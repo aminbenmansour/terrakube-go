@@ -315,3 +315,61 @@ func (s ListSpec) orderBy(sorts []SortKey) string {
 	}
 	return strings.Join(parts, ", ")
 }
+
+// The list handlers reach the store through an interface, and Go does not allow
+// a generic method there, so each list gets a concrete wrapper.
+
+// Lister is the list surface the management API depends on. *Queries has these
+// methods; tests can fake them.
+type Lister interface {
+	ListOrganizations(ctx context.Context, scope []any, filter rsql.Node, sorts []SortKey, limit *int64, offset int64) ([]Organization, error)
+	CountOrganizations(ctx context.Context, scope []any, filter rsql.Node) (int64, error)
+	ListProjects(ctx context.Context, scope []any, filter rsql.Node, sorts []SortKey, limit *int64, offset int64) ([]Project, error)
+	CountProjects(ctx context.Context, scope []any, filter rsql.Node) (int64, error)
+	ListTags(ctx context.Context, scope []any, filter rsql.Node, sorts []SortKey, limit *int64, offset int64) ([]Tag, error)
+	CountTags(ctx context.Context, scope []any, filter rsql.Node) (int64, error)
+	ListWorkspaces(ctx context.Context, scope []any, filter rsql.Node, sorts []SortKey, limit *int64, offset int64) ([]Workspace, error)
+	CountWorkspaces(ctx context.Context, scope []any, filter rsql.Node) (int64, error)
+	ListProjectWorkspaces(ctx context.Context, scope []any, filter rsql.Node, sorts []SortKey, limit *int64, offset int64) ([]Workspace, error)
+	CountProjectWorkspaces(ctx context.Context, scope []any, filter rsql.Node) (int64, error)
+}
+
+func (q *Queries) ListOrganizations(ctx context.Context, scope []any, filter rsql.Node, sorts []SortKey, limit *int64, offset int64) ([]Organization, error) {
+	return q.ListPage[Organization](ctx, OrganizationList, scope, filter, sorts, limit, offset)
+}
+
+func (q *Queries) CountOrganizations(ctx context.Context, scope []any, filter rsql.Node) (int64, error) {
+	return q.CountList(ctx, OrganizationList, scope, filter)
+}
+
+func (q *Queries) ListProjects(ctx context.Context, scope []any, filter rsql.Node, sorts []SortKey, limit *int64, offset int64) ([]Project, error) {
+	return q.ListPage[Project](ctx, ProjectList, scope, filter, sorts, limit, offset)
+}
+
+func (q *Queries) CountProjects(ctx context.Context, scope []any, filter rsql.Node) (int64, error) {
+	return q.CountList(ctx, ProjectList, scope, filter)
+}
+
+func (q *Queries) ListTags(ctx context.Context, scope []any, filter rsql.Node, sorts []SortKey, limit *int64, offset int64) ([]Tag, error) {
+	return q.ListPage[Tag](ctx, TagList, scope, filter, sorts, limit, offset)
+}
+
+func (q *Queries) CountTags(ctx context.Context, scope []any, filter rsql.Node) (int64, error) {
+	return q.CountList(ctx, TagList, scope, filter)
+}
+
+func (q *Queries) ListWorkspaces(ctx context.Context, scope []any, filter rsql.Node, sorts []SortKey, limit *int64, offset int64) ([]Workspace, error) {
+	return q.ListPage[Workspace](ctx, WorkspaceList, scope, filter, sorts, limit, offset)
+}
+
+func (q *Queries) CountWorkspaces(ctx context.Context, scope []any, filter rsql.Node) (int64, error) {
+	return q.CountList(ctx, WorkspaceList, scope, filter)
+}
+
+func (q *Queries) ListProjectWorkspaces(ctx context.Context, scope []any, filter rsql.Node, sorts []SortKey, limit *int64, offset int64) ([]Workspace, error) {
+	return q.ListPage[Workspace](ctx, ProjectWorkspaceList, scope, filter, sorts, limit, offset)
+}
+
+func (q *Queries) CountProjectWorkspaces(ctx context.Context, scope []any, filter rsql.Node) (int64, error) {
+	return q.CountList(ctx, ProjectWorkspaceList, scope, filter)
+}

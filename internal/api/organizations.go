@@ -19,7 +19,11 @@ type organizationAttrs struct {
 }
 
 func (a *API) listOrganizations(w http.ResponseWriter, r *http.Request) {
-	q := parseList(r, "organization")
+	q, err := parseList(r, "organization")
+	if err != nil {
+		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Filter", err.Error())
+		return
+	}
 
 	// Upstream filters the list to the caller's organizations; a token with no
 	// matching group sees an empty collection, not an error. The restriction is
@@ -38,22 +42,8 @@ func (a *API) listOrganizations(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	exact, prefix := q.nameFilter()
 	limit, offset := q.pageWindow()
-
-	var (
-		items []store.Organization
-		err   error
-	)
-	if q.SortDesc {
-		items, err = a.deps.Store.ListOrganizationsPageDesc(r.Context(), store.ListOrganizationsPageDescParams{
-			AllowedIds: allowed, Name: exact, NamePrefix: prefix, Limit: limit, Offset: offset,
-		})
-	} else {
-		items, err = a.deps.Store.ListOrganizationsPage(r.Context(), store.ListOrganizationsPageParams{
-			AllowedIds: allowed, Name: exact, NamePrefix: prefix, Limit: limit, Offset: offset,
-		})
-	}
+	items, err := a.deps.Lists.ListOrganizations(r.Context(), []any{allowed}, q.Filter, q.Sorts, limit, offset)
 	if err != nil {
 		if !a.writeStoreError(w, "list organizations", err) {
 			a.internalError(w, "list organizations", err)
@@ -63,9 +53,7 @@ func (a *API) listOrganizations(w http.ResponseWriter, r *http.Request) {
 
 	var total int64
 	if q.Totals {
-		total, err = a.deps.Store.CountOrganizationsByName(r.Context(), store.CountOrganizationsByNameParams{
-			AllowedIds: allowed, Name: exact, NamePrefix: prefix,
-		})
+		total, err = a.deps.Lists.CountOrganizations(r.Context(), []any{allowed}, q.Filter)
 		if err != nil {
 			if !a.writeStoreError(w, "count organizations", err) {
 				a.internalError(w, "count organizations", err)

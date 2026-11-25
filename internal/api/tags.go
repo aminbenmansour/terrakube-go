@@ -63,23 +63,13 @@ func (a *API) listTags(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	q := parseList(r, "tag")
-	exact, prefix := q.nameFilter()
-	limit, offset := q.pageWindow()
-
-	var (
-		items []store.Tag
-		err   error
-	)
-	if q.SortDesc {
-		items, err = a.deps.Store.ListTagsPageDesc(r.Context(), store.ListTagsPageDescParams{
-			OrganizationID: orgID, Name: exact, NamePrefix: prefix, Limit: limit, Offset: offset,
-		})
-	} else {
-		items, err = a.deps.Store.ListTagsPage(r.Context(), store.ListTagsPageParams{
-			OrganizationID: orgID, Name: exact, NamePrefix: prefix, Limit: limit, Offset: offset,
-		})
+	q, err := parseList(r, "tag")
+	if err != nil {
+		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Filter", err.Error())
+		return
 	}
+	limit, offset := q.pageWindow()
+	items, err := a.deps.Lists.ListTags(r.Context(), []any{orgID}, q.Filter, q.Sorts, limit, offset)
 	if err != nil {
 		if !a.writeStoreError(w, "list tags", err) {
 			a.internalError(w, "list tags", err)
@@ -89,9 +79,7 @@ func (a *API) listTags(w http.ResponseWriter, r *http.Request) {
 
 	var total int64
 	if q.Totals {
-		total, err = a.deps.Store.CountTagsByName(r.Context(), store.CountTagsByNameParams{
-			OrganizationID: orgID, Name: exact, NamePrefix: prefix,
-		})
+		total, err = a.deps.Lists.CountTags(r.Context(), []any{orgID}, q.Filter)
 		if err != nil {
 			if !a.writeStoreError(w, "count tags", err) {
 				a.internalError(w, "count tags", err)

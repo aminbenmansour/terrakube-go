@@ -9,26 +9,6 @@ import (
 	"context"
 )
 
-const countProjectsByName = `-- name: CountProjectsByName :one
-SELECT count(*) FROM project
-WHERE organization_id = $1
-  AND ($2::text IS NULL OR lower(name) = $2)
-  AND ($3::text IS NULL OR lower(name) LIKE $3 ESCAPE '\')
-`
-
-type CountProjectsByNameParams struct {
-	OrganizationID string  `json:"organization_id"`
-	Name           *string `json:"name"`
-	NamePrefix     *string `json:"name_prefix"`
-}
-
-func (q *Queries) CountProjectsByName(ctx context.Context, arg CountProjectsByNameParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countProjectsByName, arg.OrganizationID, arg.Name, arg.NamePrefix)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createProject = `-- name: CreateProject :one
 INSERT INTO project (id, name, description, organization_id)
 VALUES ($1, $2, $3, $4)
@@ -111,102 +91,6 @@ SELECT id, name, description, organization_id FROM project WHERE organization_id
 
 func (q *Queries) ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error) {
 	rows, err := q.db.Query(ctx, listProjectsByOrganization, organizationID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Project{}
-	for rows.Next() {
-		var i Project
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Description,
-			&i.OrganizationID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listProjectsPage = `-- name: ListProjectsPage :many
-SELECT id, name, description, organization_id FROM project
-WHERE organization_id = $1
-  AND ($2::text IS NULL OR lower(name) = $2)
-  AND ($3::text IS NULL OR lower(name) LIKE $3 ESCAPE '\')
-ORDER BY lower(name), id
-LIMIT $5::bigint OFFSET $4::bigint
-`
-
-type ListProjectsPageParams struct {
-	OrganizationID string  `json:"organization_id"`
-	Name           *string `json:"name"`
-	NamePrefix     *string `json:"name_prefix"`
-	Offset         int64   `json:"offset"`
-	Limit          *int64  `json:"limit"`
-}
-
-func (q *Queries) ListProjectsPage(ctx context.Context, arg ListProjectsPageParams) ([]Project, error) {
-	rows, err := q.db.Query(ctx, listProjectsPage,
-		arg.OrganizationID,
-		arg.Name,
-		arg.NamePrefix,
-		arg.Offset,
-		arg.Limit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Project{}
-	for rows.Next() {
-		var i Project
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Description,
-			&i.OrganizationID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listProjectsPageDesc = `-- name: ListProjectsPageDesc :many
-SELECT id, name, description, organization_id FROM project
-WHERE organization_id = $1
-  AND ($2::text IS NULL OR lower(name) = $2)
-  AND ($3::text IS NULL OR lower(name) LIKE $3 ESCAPE '\')
-ORDER BY lower(name) DESC, id DESC
-LIMIT $5::bigint OFFSET $4::bigint
-`
-
-type ListProjectsPageDescParams struct {
-	OrganizationID string  `json:"organization_id"`
-	Name           *string `json:"name"`
-	NamePrefix     *string `json:"name_prefix"`
-	Offset         int64   `json:"offset"`
-	Limit          *int64  `json:"limit"`
-}
-
-func (q *Queries) ListProjectsPageDesc(ctx context.Context, arg ListProjectsPageDescParams) ([]Project, error) {
-	rows, err := q.db.Query(ctx, listProjectsPageDesc,
-		arg.OrganizationID,
-		arg.Name,
-		arg.NamePrefix,
-		arg.Offset,
-		arg.Limit,
-	)
 	if err != nil {
 		return nil, err
 	}

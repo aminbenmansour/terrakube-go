@@ -23,23 +23,13 @@ func (a *API) listProjects(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	q := parseList(r, "project")
-	exact, prefix := q.nameFilter()
-	limit, offset := q.pageWindow()
-
-	var (
-		items []store.Project
-		err   error
-	)
-	if q.SortDesc {
-		items, err = a.deps.Store.ListProjectsPageDesc(r.Context(), store.ListProjectsPageDescParams{
-			OrganizationID: orgID, Name: exact, NamePrefix: prefix, Limit: limit, Offset: offset,
-		})
-	} else {
-		items, err = a.deps.Store.ListProjectsPage(r.Context(), store.ListProjectsPageParams{
-			OrganizationID: orgID, Name: exact, NamePrefix: prefix, Limit: limit, Offset: offset,
-		})
+	q, err := parseList(r, "project")
+	if err != nil {
+		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Filter", err.Error())
+		return
 	}
+	limit, offset := q.pageWindow()
+	items, err := a.deps.Lists.ListProjects(r.Context(), []any{orgID}, q.Filter, q.Sorts, limit, offset)
 	if err != nil {
 		if !a.writeStoreError(w, "list projects", err) {
 			a.internalError(w, "list projects", err)
@@ -49,9 +39,7 @@ func (a *API) listProjects(w http.ResponseWriter, r *http.Request) {
 
 	var total int64
 	if q.Totals {
-		total, err = a.deps.Store.CountProjectsByName(r.Context(), store.CountProjectsByNameParams{
-			OrganizationID: orgID, Name: exact, NamePrefix: prefix,
-		})
+		total, err = a.deps.Lists.CountProjects(r.Context(), []any{orgID}, q.Filter)
 		if err != nil {
 			if !a.writeStoreError(w, "count projects", err) {
 				a.internalError(w, "count projects", err)
