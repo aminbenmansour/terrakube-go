@@ -45,6 +45,10 @@ SELECT id FROM workspace WHERE vcs_id = $1 ORDER BY name, id;
 -- name: ListVCSSecrets :many
 SELECT id, client_secret, access_token, refresh_token, private_key FROM vcs;
 
+-- name: ListVCSSecretsAfter :many
+SELECT id, client_secret, access_token, refresh_token, private_key
+FROM vcs WHERE id > $1 ORDER BY id LIMIT $2;
+
 -- name: SetVCSSecrets :exec
 UPDATE vcs
 SET client_secret = $2, access_token = $3, refresh_token = $4, private_key = $5

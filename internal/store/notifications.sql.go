@@ -306,6 +306,41 @@ func (q *Queries) ListNotificationSecrets(ctx context.Context) ([]ListNotificati
 	return items, nil
 }
 
+const listNotificationSecretsAfter = `-- name: ListNotificationSecretsAfter :many
+SELECT id, signing_secret FROM notification_configuration
+WHERE id > $1 ORDER BY id LIMIT $2
+`
+
+type ListNotificationSecretsAfterParams struct {
+	ID    string `json:"id"`
+	Limit int32  `json:"limit"`
+}
+
+type ListNotificationSecretsAfterRow struct {
+	ID            string  `json:"id"`
+	SigningSecret *string `json:"signing_secret"`
+}
+
+func (q *Queries) ListNotificationSecretsAfter(ctx context.Context, arg ListNotificationSecretsAfterParams) ([]ListNotificationSecretsAfterRow, error) {
+	rows, err := q.db.Query(ctx, listNotificationSecretsAfter, arg.ID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListNotificationSecretsAfterRow{}
+	for rows.Next() {
+		var i ListNotificationSecretsAfterRow
+		if err := rows.Scan(&i.ID, &i.SigningSecret); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listNotificationTriggersByConfiguration = `-- name: ListNotificationTriggersByConfiguration :many
 SELECT id, job_status, configuration_id, created_date, created_by, updated_date, updated_by FROM notification_trigger WHERE configuration_id = $1 ORDER BY created_date, id
 `
