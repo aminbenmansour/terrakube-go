@@ -110,37 +110,6 @@ func (q *Queries) GetOrganizationByName(ctx context.Context, name string) (Organ
 	return i, err
 }
 
-const listOrganizations = `-- name: ListOrganizations :many
-SELECT id, name, description, disabled, execution_mode, icon FROM organization ORDER BY name
-`
-
-func (q *Queries) ListOrganizations(ctx context.Context) ([]Organization, error) {
-	rows, err := q.db.Query(ctx, listOrganizations)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Organization{}
-	for rows.Next() {
-		var i Organization
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Description,
-			&i.Disabled,
-			&i.ExecutionMode,
-			&i.Icon,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listOrganizationsPage = `-- name: ListOrganizationsPage :many
 SELECT id, name, description, disabled, execution_mode, icon FROM organization
 WHERE ($1::text[] IS NULL OR id = ANY($1::text[]))

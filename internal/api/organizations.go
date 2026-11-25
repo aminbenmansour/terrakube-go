@@ -21,16 +21,10 @@ type organizationAttrs struct {
 func (a *API) listOrganizations(w http.ResponseWriter, r *http.Request) {
 	q := parseList(r, "organization")
 
-	items, err := a.deps.Store.ListOrganizations(r.Context())
-	if err != nil {
-		if !a.writeStoreError(w, "list organizations", err) {
-			a.internalError(w, "list organizations", err)
-		}
-		return
-	}
-
 	// Upstream filters the list to the caller's organizations; a token with no
-	// matching group sees an empty collection, not an error.
+	// matching group sees an empty collection, not an error. The restriction is
+	// part of the query so paging and totals count only visible rows.
+	var allowed []string
 	if !a.callerIsOwner(r) {
 		identity, _ := auth.IdentityFromContext(r.Context())
 		ids, err := a.deps.Store.ListOrganizationIDsByGroupNames(r.Context(), identity.Groups)
@@ -38,25 +32,53 @@ func (a *API) listOrganizations(w http.ResponseWriter, r *http.Request) {
 			a.internalError(w, "list organizations", err)
 			return
 		}
-		visible := make(map[string]bool, len(ids))
-		for _, id := range ids {
-			visible[id] = true
+		allowed = ids
+		if allowed == nil {
+			allowed = []string{}
 		}
-		visibleItems := items[:0]
-		for _, org := range items {
-			if visible[org.ID] {
-				visibleItems = append(visibleItems, org)
-			}
-		}
-		items = visibleItems
 	}
 
-	page, total := filterSortPage(items, q, func(o store.Organization) string { return o.Name })
-	resources := make([]jsonapi.Resource, 0, len(page))
-	for _, org := range page {
+	exact, prefix := q.nameFilter()
+	limit, offset := q.pageWindow()
+
+	var (
+		items []store.Organization
+		err   error
+	)
+	if q.SortDesc {
+		items, err = a.deps.Store.ListOrganizationsPageDesc(r.Context(), store.ListOrganizationsPageDescParams{
+			AllowedIds: allowed, Name: exact, NamePrefix: prefix, Limit: limit, Offset: offset,
+		})
+	} else {
+		items, err = a.deps.Store.ListOrganizationsPage(r.Context(), store.ListOrganizationsPageParams{
+			AllowedIds: allowed, Name: exact, NamePrefix: prefix, Limit: limit, Offset: offset,
+		})
+	}
+	if err != nil {
+		if !a.writeStoreError(w, "list organizations", err) {
+			a.internalError(w, "list organizations", err)
+		}
+		return
+	}
+
+	var total int64
+	if q.Totals {
+		total, err = a.deps.Store.CountOrganizationsByName(r.Context(), store.CountOrganizationsByNameParams{
+			AllowedIds: allowed, Name: exact, NamePrefix: prefix,
+		})
+		if err != nil {
+			if !a.writeStoreError(w, "count organizations", err) {
+				a.internalError(w, "count organizations", err)
+			}
+			return
+		}
+	}
+
+	resources := make([]jsonapi.Resource, 0, len(items))
+	for _, org := range items {
 		resources = append(resources, organizationResource(org))
 	}
-	jsonapi.WriteCollection(w, http.StatusOK, resources, total, q.page(), jsonapi.ParseFieldsets(r))
+	jsonapi.WriteCollection(w, http.StatusOK, resources, int(total), q.page(), jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) getOrganization(w http.ResponseWriter, r *http.Request) {

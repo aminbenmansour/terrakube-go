@@ -1,8 +1,8 @@
 {
   ".github/workflows/ci.yml": {
-    "mtime": 1795613590.4773908,
-    "seen": 1795613629.48176,
-    "ast_hash": "c2e8d3c0f1d2686b7b4f64451ba15fb2",
+    "mtime": 1795618468.296634,
+    "seen": 1795618481.2817323,
+    "ast_hash": "7a7e2758660b5cfad8be229adbd1b43b",
     "semantic_hash": ""
   },
   "cmd/api/main.go": {
@@ -42,21 +42,21 @@
     "semantic_hash": ""
   },
   "internal/api/api.go": {
-    "mtime": 1795562698.5583158,
-    "seen": 1795563030.1297727,
-    "ast_hash": "974717887a411701814dd35cc693d9ea",
+    "mtime": 1795615623.4513292,
+    "seen": 1795615761.9869914,
+    "ast_hash": "6632f0ba3a5e4a7f086fa94822dc7348",
     "semantic_hash": ""
   },
   "internal/api/api_test.go": {
-    "mtime": 1795562698.5583725,
-    "seen": 1795563030.129774,
-    "ast_hash": "f2f3b61351dcdbabc0ec04cd066958e6",
+    "mtime": 1795615539.0196836,
+    "seen": 1795615761.9869928,
+    "ast_hash": "059246b0c5c8048c1d6f3378ac09f9c0",
     "semantic_hash": ""
   },
   "internal/api/organizations.go": {
-    "mtime": 1795562698.558536,
-    "seen": 1795563030.1300385,
-    "ast_hash": "abf368dda2227a73fd8b04d152f94251",
+    "mtime": 1795615502.3024027,
+    "seen": 1795615761.9872031,
+    "ast_hash": "95be459fba204dc1f85bede3e6d96fa6",
     "semantic_hash": ""
   },
   "internal/api/projects.go": {
@@ -180,39 +180,39 @@
     "semantic_hash": "2aa0aa7b1f0622471b4b82f8f5df9350"
   },
   "internal/store/content.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3931108,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9886239,
     "ast_hash": "b3c5913649d672f7dcb81946287379ac",
     "semantic_hash": "b3c5913649d672f7dcb81946287379ac"
   },
   "internal/store/db.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3931124,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9886248,
     "ast_hash": "648e346100def55720b5154f3397df7c",
     "semantic_hash": "648e346100def55720b5154f3397df7c"
   },
   "internal/store/models.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3931153,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.988627,
     "ast_hash": "cbb4f321c72834fe2fa56c9a02d92464",
     "semantic_hash": ""
   },
   "internal/store/organizations.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3931189,
-    "ast_hash": "5e48973a8db4c866758a974401fddb15",
-    "semantic_hash": "5e48973a8db4c866758a974401fddb15"
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.988629,
+    "ast_hash": "f0201439d01e2c0bb811007a0cdc14fb",
+    "semantic_hash": ""
   },
   "internal/store/projects.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3931217,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9886305,
     "ast_hash": "971b76d08b6c2022c9e3dbaa69f03ab9",
     "semantic_hash": "971b76d08b6c2022c9e3dbaa69f03ab9"
   },
   "internal/store/querier.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3931231,
-    "ast_hash": "e28ae103675102e92a1abdd8d3973cdc",
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9886315,
+    "ast_hash": "573e1d4bce5f856a4ec06069940e654b",
     "semantic_hash": ""
   },
   "internal/store/queries/content.sql": {
@@ -224,8 +224,8 @@
   "internal/store/queries/organizations.sql": {
     "mtime": 1794699723.3168921,
     "seen": 1794958734.1019266,
-    "ast_hash": "74088504779c97b8a9de929584af940f",
-    "semantic_hash": "74088504779c97b8a9de929584af940f"
+    "ast_hash": "",
+    "semantic_hash": ""
   },
   "internal/store/queries/projects.sql": {
     "mtime": 1794699723.316938,
@@ -258,26 +258,26 @@
     "semantic_hash": ""
   },
   "internal/store/state.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3934112,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.988751,
     "ast_hash": "26fc7e307bea4344f818f6dca5ad7475",
     "semantic_hash": ""
   },
   "internal/store/tags.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3934128,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.988752,
     "ast_hash": "963d280e211f49ddfab6e504b7bcfec3",
     "semantic_hash": ""
   },
   "internal/store/variables.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.393418,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9887547,
     "ast_hash": "2e9e2ad5f1a16499bf10d89ae7433d5c",
     "semantic_hash": ""
   },
   "internal/store/workspaces.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3934212,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9887564,
     "ast_hash": "2d0057f116bcaacdc3223086b8447fe4",
     "semantic_hash": ""
   },
@@ -522,9 +522,9 @@
     "semantic_hash": "19031c04d29f72dabe80c42134d3a5e0"
   },
   "AGENTS.md": {
-    "mtime": 1795612547.7909315,
-    "seen": 1795612557.3953109,
-    "ast_hash": "7293cecc1b2f193a3afb81b23bcccbd3",
+    "mtime": 1795618468.3192832,
+    "seen": 1795618481.287643,
+    "ast_hash": "ac9e9a42ca07cc15d89caa02e3cfd45d",
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
@@ -534,15 +534,15 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1795612547.7911417,
-    "seen": 1795612557.3953383,
+    "mtime": 1795613839.492738,
+    "seen": 1795615761.9896185,
     "ast_hash": "62104dd9f8863743635c9616e2c63693",
     "semantic_hash": ""
   },
   "docs/compat.md": {
-    "mtime": 1795612547.791614,
-    "seen": 1795612557.3953402,
-    "ast_hash": "9d7fd767996f62d910b9ae471d1f5784",
+    "mtime": 1795618468.319563,
+    "seen": 1795618481.2876663,
+    "ast_hash": "fc690c66ffab34295a74c70afd7d3279",
     "semantic_hash": ""
   },
   "internal/executor/executor.go": {
@@ -1242,8 +1242,8 @@
     "semantic_hash": ""
   },
   "internal/store/globalvars.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3931139,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9886262,
     "ast_hash": "853b9b0b9eac0878866018d9cfefcf52",
     "semantic_hash": ""
   },
@@ -1422,8 +1422,8 @@
     "semantic_hash": ""
   },
   "internal/store/actions.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.393106,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9886205,
     "ast_hash": "f3fb0a4d218ea91b5409acf7ffdc372f",
     "semantic_hash": ""
   },
@@ -1560,8 +1560,8 @@
     "semantic_hash": ""
   },
   "internal/store/collections.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3931093,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9886227,
     "ast_hash": "f9ea47c7c08346cab5fabf153493d9d6",
     "semantic_hash": ""
   },
@@ -1662,8 +1662,8 @@
     "semantic_hash": ""
   },
   "internal/store/sshagents.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.393409,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9887497,
     "ast_hash": "34a7fc50f1ab52474dad4122d737a0bc",
     "semantic_hash": ""
   },
@@ -1932,8 +1932,8 @@
     "semantic_hash": ""
   },
   "internal/store/vcs.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3934195,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9887557,
     "ast_hash": "43a12a2db0aa87fd4b6e6942a5ca0114",
     "semantic_hash": ""
   },
@@ -2022,8 +2022,8 @@
     "semantic_hash": ""
   },
   "internal/store/templates.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3934164,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9887536,
     "ast_hash": "98af6d1ac44e33b105dfb928365ec218",
     "semantic_hash": ""
   },
@@ -2106,8 +2106,8 @@
     "semantic_hash": ""
   },
   "internal/store/teams.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.393415,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9887528,
     "ast_hash": "03b857871c24701692499787eeb1eea9",
     "semantic_hash": ""
   },
@@ -2244,8 +2244,8 @@
     "semantic_hash": ""
   },
   "internal/store/notifications.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3931174,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.988628,
     "ast_hash": "06d607fe0074b0c567cf424f2b889997",
     "semantic_hash": ""
   },
@@ -2316,8 +2316,8 @@
     "semantic_hash": ""
   },
   "internal/store/pat.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3931203,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9886298,
     "ast_hash": "99c31ff7fd4bb33637a49aed71a883b8",
     "semantic_hash": ""
   },
@@ -2376,8 +2376,8 @@
     "semantic_hash": ""
   },
   "internal/store/cli_auth_sessions.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3931074,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9886215,
     "ast_hash": "b9fa7a8de6d084251de101bb695e273f",
     "semantic_hash": ""
   },
@@ -2532,8 +2532,8 @@
     "semantic_hash": ""
   },
   "internal/store/access.sql.go": {
-    "mtime": 1795612330.9990191,
-    "seen": 1795612557.3931036,
+    "mtime": 1795615755.7083406,
+    "seen": 1795615761.9886196,
     "ast_hash": "1736e1060467a10a00872445b0a082de",
     "semantic_hash": ""
   },
@@ -2652,33 +2652,45 @@
     "semantic_hash": ""
   },
   "cmd/rotatekeys/main.go": {
-    "mtime": 1795612547.791211,
-    "seen": 1795612557.383778,
+    "mtime": 1795613839.492738,
+    "seen": 1795615761.984025,
     "ast_hash": "f0c8e5b31417c43fe13e77ad46341bf7",
     "semantic_hash": ""
   },
   "internal/secretstore/rotate.go": {
-    "mtime": 1795612547.7917001,
-    "seen": 1795612557.3929749,
+    "mtime": 1795613839.5049143,
+    "seen": 1795615761.9885242,
     "ast_hash": "20c5d2ed6a5a90c4422b4e8b9556c4f2",
     "semantic_hash": ""
   },
   "internal/secretstore/rotate_test.go": {
-    "mtime": 1795613565.9092057,
-    "seen": 1795613629.4862957,
-    "ast_hash": "ba765ac94c4899bf72dbc3bda6d4a76d",
+    "mtime": 1795615590.9530807,
+    "seen": 1795615761.9885254,
+    "ast_hash": "41ee69b109f9b574bb07dd500d47cc27",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-11-25-secret-key-rotation.md": {
-    "mtime": 1795612268.0923958,
-    "seen": 1795612557.3954098,
+    "mtime": 1795613814.7534168,
+    "seen": 1795615761.989665,
     "ast_hash": "65b0e769ef73db0df08910edb9156cd8",
     "semantic_hash": ""
   },
   "docs/superpowers/specs/2026-11-25-secret-key-rotation-design.md": {
-    "mtime": 1795612129.24902,
-    "seen": 1795612557.3954465,
+    "mtime": 1795613814.7534168,
+    "seen": 1795615761.989694,
     "ast_hash": "35017ad4b995f3671ba9813a66b83ddc",
+    "semantic_hash": ""
+  },
+  "internal/api/organizations_sql_test.go": {
+    "mtime": 1795618468.2723129,
+    "seen": 1795618481.284933,
+    "ast_hash": "06b825036eb2665d48bff55edc92d357",
+    "semantic_hash": ""
+  },
+  "internal/dbtest/dbtest.go": {
+    "mtime": 1795615568.7129107,
+    "seen": 1795615761.9877338,
+    "ast_hash": "3670da38c604644ab9344f8c4a1e2adc",
     "semantic_hash": ""
   }
 }

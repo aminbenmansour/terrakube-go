@@ -397,6 +397,36 @@ func (q listQuery) page() jsonapi.Page {
 	return jsonapi.Page{Number: q.PageNumber, Limit: q.PageSize, Totals: q.Totals}
 }
 
+// nameFilter turns the supported filter[type]=name==... forms into SQL
+// parameters: a lowercased exact value, or a LIKE pattern with the caller's
+// wildcards escaped so a name containing % or _ stays a literal.
+func (q listQuery) nameFilter() (exact, prefix *string) {
+	if q.FilterValue == "" {
+		return nil, nil
+	}
+	if !q.FilterPrefix {
+		value := strings.ToLower(q.FilterValue)
+		return &value, nil
+	}
+	pattern := prefixPattern(q.FilterValue)
+	return nil, &pattern
+}
+
+// prefixPattern builds the LIKE pattern for a case-insensitive name prefix.
+func prefixPattern(value string) string {
+	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(strings.ToLower(value)) + "%"
+}
+
+// pageWindow maps page[size]/page[number] onto LIMIT/OFFSET. A nil limit means
+// the request carried no page size, which Elide answers with every record.
+func (q listQuery) pageWindow() (*int64, int64) {
+	if !q.Paged || q.PageSize == 0 {
+		return nil, 0
+	}
+	limit := int64(q.PageSize)
+	return &limit, int64(q.PageNumber-1) * limit
+}
+
 // parseList reads filter[type], sort and page[*] from the query string. Unknown
 // filters are ignored until they are explicitly implemented.
 // parseInclude turns a comma-separated include parameter into a set. Unknown

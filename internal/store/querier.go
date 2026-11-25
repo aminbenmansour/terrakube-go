@@ -130,7 +130,6 @@ type Querier interface {
 	ListNotificationSecretsAfter(ctx context.Context, arg ListNotificationSecretsAfterParams) ([]ListNotificationSecretsAfterRow, error)
 	ListNotificationTriggersByConfiguration(ctx context.Context, configurationID string) ([]NotificationTrigger, error)
 	ListOrganizationIDsByGroupNames(ctx context.Context, names []string) ([]string, error)
-	ListOrganizations(ctx context.Context) ([]Organization, error)
 	ListOrganizationsPage(ctx context.Context, arg ListOrganizationsPageParams) ([]Organization, error)
 	ListOrganizationsPageDesc(ctx context.Context, arg ListOrganizationsPageDescParams) ([]Organization, error)
 	ListPatsByCreator(ctx context.Context, createdBy *string) ([]Pat, error)
