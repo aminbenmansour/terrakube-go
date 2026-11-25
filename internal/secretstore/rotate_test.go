@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aminbenmansour/terrakube-go/internal/db"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
@@ -21,25 +22,44 @@ func openRotationTest(t *testing.T) (context.Context, *store.Queries) {
 	if dsn == "" {
 		t.Skip("TERRAKUBE_TEST_DATABASE_URL is not set")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	t.Cleanup(cancel)
-	pool, err := db.NewPool(ctx, dsn)
+
+	// Rotation scans whole tables and decrypts every envelope. Give it a fresh
+	// database so a developer's dev rows sealed under a key outside this test's
+	// ring cannot make the suite fail.
+	poolCfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		t.Fatalf("connect database: %v", err)
+		t.Fatalf("parse test database URL: %v", err)
+	}
+	name := "terrakube_rotation_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	quoted := pgx.Identifier{name}.Sanitize()
+	adminCfg := poolCfg.ConnConfig.Copy()
+	adminCfg.Database = "postgres"
+	admin, err := pgx.ConnectConfig(ctx, adminCfg)
+	if err != nil {
+		t.Fatalf("connect admin database: %v", err)
+	}
+	if _, err := admin.Exec(ctx, "CREATE DATABASE "+quoted); err != nil {
+		_ = admin.Close(context.Background())
+		t.Fatalf("create test database: %v", err)
+	}
+	// Registered before pool.Close so the pool closes first (cleanups run LIFO).
+	t.Cleanup(func() {
+		_, _ = admin.Exec(context.Background(), "DROP DATABASE IF EXISTS "+quoted)
+		_ = admin.Close(context.Background())
+	})
+
+	poolCfg.ConnConfig.Database = name
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		t.Fatalf("connect test database: %v", err)
 	}
 	t.Cleanup(pool.Close)
 	if err := db.Migrate(ctx, pool, migrations.Files, "."); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	// Rotation scans whole tables. A repeatable-read snapshot keeps rows other
-	// packages commit during the test out of the counts, and the rollback keeps
-	// their rows out of our writes.
-	tx, err := pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead})
-	if err != nil {
-		t.Fatalf("begin transaction: %v", err)
-	}
-	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
-	return ctx, store.New(tx)
+	return ctx, store.New(pool)
 }
 
 func rotationWorkspace(t *testing.T, ctx context.Context, q *store.Queries) (orgID, wsID string) {
