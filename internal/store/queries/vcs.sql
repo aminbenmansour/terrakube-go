@@ -41,3 +41,15 @@ UPDATE workspace SET vcs_id = NULL WHERE vcs_id = $1;
 
 -- name: ListWorkspaceIDsByVCS :many
 SELECT id FROM workspace WHERE vcs_id = $1 ORDER BY name, id;
+
+-- name: ListVCSSecrets :many
+SELECT id, client_secret, access_token, refresh_token, private_key FROM vcs;
+
+-- name: SetVCSSecrets :exec
+UPDATE vcs
+SET client_secret = $2, access_token = $3, refresh_token = $4, private_key = $5
+WHERE id = $1
+  AND client_secret IS NOT DISTINCT FROM $6
+  AND access_token IS NOT DISTINCT FROM $7
+  AND refresh_token IS NOT DISTINCT FROM $8
+  AND private_key IS NOT DISTINCT FROM $9;

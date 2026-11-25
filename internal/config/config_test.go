@@ -35,6 +35,8 @@ var allKeys = []string{
 	"TERRAKUBE_STORAGE_S3_ACCESS_KEY_ID",
 	"TERRAKUBE_STORAGE_S3_SECRET_ACCESS_KEY",
 	"TERRAKUBE_STORAGE_S3_USE_PATH_STYLE",
+	"TERRAKUBE_ENCRYPTION_KEYS",
+	"TERRAKUBE_ENCRYPTION_ACTIVE_KEY",
 }
 
 func clearEnv(t *testing.T) {
@@ -95,6 +97,7 @@ func TestLoadDefaults(t *testing.T) {
 func TestLoadOverrides(t *testing.T) {
 	clearEnv(t)
 	t.Setenv("TERRAKUBE_ENV", "prod")
+	t.Setenv("TERRAKUBE_ENCRYPTION_KEYS", "dev:configured")
 	t.Setenv("TERRAKUBE_LOG_LEVEL", "debug")
 	t.Setenv("TERRAKUBE_AUTO_MIGRATE", "false")
 	t.Setenv("TERRAKUBE_STORAGE_TYPE", "s3")
@@ -140,6 +143,30 @@ func TestLoadOverrides(t *testing.T) {
 	}
 	if cfg.TerraformLoginDefaultDays != 14 || cfg.TerraformLoginMaxDays != 90 {
 		t.Errorf("login days = %d/%d, want 14/90", cfg.TerraformLoginDefaultDays, cfg.TerraformLoginMaxDays)
+	}
+}
+
+func TestProductionRequiresEncryptionKeys(t *testing.T) {
+	t.Setenv("TERRAKUBE_ENV", "production")
+	t.Setenv("TERRAKUBE_ENCRYPTION_KEYS", "")
+	if _, err := Load(); err == nil {
+		t.Fatal("Load() with production and no keys = nil error, want error")
+	}
+}
+
+func TestProductionAliasRequiresEncryptionKeys(t *testing.T) {
+	t.Setenv("TERRAKUBE_ENV", "prod")
+	t.Setenv("TERRAKUBE_ENCRYPTION_KEYS", "")
+	if _, err := Load(); err == nil {
+		t.Fatal("Load() with prod and no keys = nil error, want error")
+	}
+}
+
+func TestDevelopmentAllowsMissingEncryptionKeys(t *testing.T) {
+	t.Setenv("TERRAKUBE_ENV", "dev")
+	t.Setenv("TERRAKUBE_ENCRYPTION_KEYS", "")
+	if _, err := Load(); err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
 	}
 }
 

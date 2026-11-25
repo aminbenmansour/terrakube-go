@@ -155,6 +155,15 @@ Terrakube uses an environment variable, the Go services accept it as an alias
 Storage defaults to the local filesystem (`TERRAKUBE_STORAGE_LOCAL_PATH`).
 Set `TERRAKUBE_STORAGE_TYPE=s3` for S3/MinIO.
 
+`TERRAKUBE_ENCRYPTION_KEYS` is a comma-separated `id:base64key` keyring
+(32-byte keys) used to encrypt variable values, VCS/SSH credentials and
+notification signing secrets at rest. `TERRAKUBE_ENCRYPTION_ACTIVE_KEY`
+selects the key for new writes (default: the first). `make db-migrate`
+encrypts existing plaintext rows; running it twice is safe. Production
+refuses to start without a keyring. Back up the keyring: a value sealed with
+a key you removed cannot be recovered, so keep old keys in the ring until
+every row has been re-encrypted.
+
 ## Roadmap
 
 | Milestone | Scope | Status |

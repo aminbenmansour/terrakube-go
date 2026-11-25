@@ -194,6 +194,35 @@ func (q *Queries) ListAgentsByOrganization(ctx context.Context, organizationID s
 	return items, nil
 }
 
+const listSSHKeySecrets = `-- name: ListSSHKeySecrets :many
+SELECT id, private_key FROM ssh
+`
+
+type ListSSHKeySecretsRow struct {
+	ID         string  `json:"id"`
+	PrivateKey *string `json:"private_key"`
+}
+
+func (q *Queries) ListSSHKeySecrets(ctx context.Context) ([]ListSSHKeySecretsRow, error) {
+	rows, err := q.db.Query(ctx, listSSHKeySecrets)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSSHKeySecretsRow{}
+	for rows.Next() {
+		var i ListSSHKeySecretsRow
+		if err := rows.Scan(&i.ID, &i.PrivateKey); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSSHKeysByOrganization = `-- name: ListSSHKeysByOrganization :many
 SELECT id, name, description, private_key, ssh_type, created_date, updated_date, created_by, updated_by, organization_id FROM ssh WHERE organization_id = $1 ORDER BY name, id
 `
@@ -227,6 +256,21 @@ func (q *Queries) ListSSHKeysByOrganization(ctx context.Context, organizationID 
 		return nil, err
 	}
 	return items, nil
+}
+
+const setSSHKeySecret = `-- name: SetSSHKeySecret :exec
+UPDATE ssh SET private_key = $2 WHERE id = $1 AND private_key = $3
+`
+
+type SetSSHKeySecretParams struct {
+	ID           string  `json:"id"`
+	PrivateKey   *string `json:"private_key"`
+	PrivateKey_2 *string `json:"private_key_2"`
+}
+
+func (q *Queries) SetSSHKeySecret(ctx context.Context, arg SetSSHKeySecretParams) error {
+	_, err := q.db.Exec(ctx, setSSHKeySecret, arg.ID, arg.PrivateKey, arg.PrivateKey_2)
+	return err
 }
 
 const updateSSHKey = `-- name: UpdateSSHKey :one

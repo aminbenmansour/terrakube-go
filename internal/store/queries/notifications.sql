@@ -51,3 +51,9 @@ DELETE FROM notification_configuration_template WHERE configuration_id = $1;
 
 -- name: AddNotificationConfigurationTemplate :exec
 INSERT INTO notification_configuration_template (configuration_id, template_id) VALUES ($1, $2);
+
+-- name: ListNotificationSecrets :many
+SELECT id, signing_secret FROM notification_configuration;
+
+-- name: SetNotificationSecret :exec
+UPDATE notification_configuration SET signing_secret = $2 WHERE id = $1 AND signing_secret = $3;

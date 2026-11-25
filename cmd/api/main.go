@@ -22,6 +22,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/logging"
 	"github.com/aminbenmansour/terrakube-go/internal/pat"
 	"github.com/aminbenmansour/terrakube-go/internal/queue"
+	"github.com/aminbenmansour/terrakube-go/internal/secretstore"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 	"github.com/aminbenmansour/terrakube-go/internal/tfe"
@@ -47,6 +48,14 @@ func run() error {
 	logger := logging.New(cfg.LogLevel, cfg.Env)
 	slog.SetDefault(logger)
 
+	cipher, err := secretstore.NewCipher(cfg.EncryptionKeys, cfg.EncryptionActiveKey)
+	if err != nil {
+		return fmt.Errorf("configure secret encryption: %w", err)
+	}
+	if cipher == nil {
+		logger.Warn("secret encryption is disabled: set TERRAKUBE_ENCRYPTION_KEYS")
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -61,6 +70,15 @@ func run() error {
 			return err
 		}
 		logger.Info("database migrations applied")
+		if cipher != nil {
+			changed, err := secretstore.Backfill(ctx, store.New(pool), cipher)
+			if err != nil {
+				return fmt.Errorf("backfill secret encryption: %w", err)
+			}
+			if changed > 0 {
+				logger.Info("encrypted plaintext secrets", "rows", changed)
+			}
+		}
 	}
 
 	q, err := queue.New(cfg.RedisURL)
@@ -100,7 +118,7 @@ func run() error {
 
 	// Every job status update is published so the UI's GraphQL subscriptions
 	// see it, whether the change came from the management API or the executor.
-	querier := jobstatus.Wrap(store.New(pool), events.Publish)
+	querier := jobstatus.Wrap(secretstore.Wrap(store.New(pool), cipher), events.Publish)
 
 	var verifiers []internalauth.Verifier
 	if cfg.DexEnabled {

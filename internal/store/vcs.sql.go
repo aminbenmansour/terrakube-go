@@ -180,6 +180,44 @@ func (q *Queries) ListVCSByOrganization(ctx context.Context, organizationID stri
 	return items, nil
 }
 
+const listVCSSecrets = `-- name: ListVCSSecrets :many
+SELECT id, client_secret, access_token, refresh_token, private_key FROM vcs
+`
+
+type ListVCSSecretsRow struct {
+	ID           string  `json:"id"`
+	ClientSecret *string `json:"client_secret"`
+	AccessToken  *string `json:"access_token"`
+	RefreshToken *string `json:"refresh_token"`
+	PrivateKey   *string `json:"private_key"`
+}
+
+func (q *Queries) ListVCSSecrets(ctx context.Context) ([]ListVCSSecretsRow, error) {
+	rows, err := q.db.Query(ctx, listVCSSecrets)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListVCSSecretsRow{}
+	for rows.Next() {
+		var i ListVCSSecretsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ClientSecret,
+			&i.AccessToken,
+			&i.RefreshToken,
+			&i.PrivateKey,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listWorkspaceIDsByVCS = `-- name: ListWorkspaceIDsByVCS :many
 SELECT id FROM workspace WHERE vcs_id = $1 ORDER BY name, id
 `
@@ -202,6 +240,43 @@ func (q *Queries) ListWorkspaceIDsByVCS(ctx context.Context, vcsID *string) ([]s
 		return nil, err
 	}
 	return items, nil
+}
+
+const setVCSSecrets = `-- name: SetVCSSecrets :exec
+UPDATE vcs
+SET client_secret = $2, access_token = $3, refresh_token = $4, private_key = $5
+WHERE id = $1
+  AND client_secret IS NOT DISTINCT FROM $6
+  AND access_token IS NOT DISTINCT FROM $7
+  AND refresh_token IS NOT DISTINCT FROM $8
+  AND private_key IS NOT DISTINCT FROM $9
+`
+
+type SetVCSSecretsParams struct {
+	ID             string  `json:"id"`
+	ClientSecret   *string `json:"client_secret"`
+	AccessToken    *string `json:"access_token"`
+	RefreshToken   *string `json:"refresh_token"`
+	PrivateKey     *string `json:"private_key"`
+	ClientSecret_2 *string `json:"client_secret_2"`
+	AccessToken_2  *string `json:"access_token_2"`
+	RefreshToken_2 *string `json:"refresh_token_2"`
+	PrivateKey_2   *string `json:"private_key_2"`
+}
+
+func (q *Queries) SetVCSSecrets(ctx context.Context, arg SetVCSSecretsParams) error {
+	_, err := q.db.Exec(ctx, setVCSSecrets,
+		arg.ID,
+		arg.ClientSecret,
+		arg.AccessToken,
+		arg.RefreshToken,
+		arg.PrivateKey,
+		arg.ClientSecret_2,
+		arg.AccessToken_2,
+		arg.RefreshToken_2,
+		arg.PrivateKey_2,
+	)
+	return err
 }
 
 const updateVCS = `-- name: UpdateVCS :one

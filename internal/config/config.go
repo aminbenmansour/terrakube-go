@@ -34,6 +34,12 @@ type Config struct {
 	UploadTicketSecret  string
 	// PATSecret signs personal access tokens; empty leaves /pat/v1 disabled.
 	PATSecret string
+	// EncryptionKeys is the comma-separated id:base64key keyring for secret
+	// columns. Empty disables encryption outside production.
+	EncryptionKeys string
+	// EncryptionActiveKey selects the key used for new ciphertext. Empty uses
+	// the first key in the ring.
+	EncryptionActiveKey string
 	// AdminGroup is the group (or email) allowed to act as instance owner,
 	// upstream's io.terrakube.owner.
 	AdminGroup        string
@@ -109,6 +115,8 @@ func Load() (Config, error) {
 		InternalTokenSecret:       envFirst([]string{"TERRAKUBE_INTERNAL_TOKEN_SECRET", "IO_TERRAKUBE_TOKEN_INTERNAL"}, ""),
 		UploadTicketSecret:        env("TERRAKUBE_UPLOAD_TICKET_SECRET", ""),
 		PATSecret:                 env("TERRAKUBE_PAT_SECRET", ""),
+		EncryptionKeys:            env("TERRAKUBE_ENCRYPTION_KEYS", ""),
+		EncryptionActiveKey:       env("TERRAKUBE_ENCRYPTION_ACTIVE_KEY", ""),
 		AdminGroup:                env("TERRAKUBE_ADMIN_GROUP", "TERRAKUBE_ADMIN"),
 		StateMaxSizeBytes:         envInt64([]string{"TERRAKUBE_STATE_MAX_SIZE_BYTES", "IO_TERRAKUBE_STATE_MAX_SIZE_BYTES"}, 104857600),
 		ShutdownTimeout:           envDuration("TERRAKUBE_SHUTDOWN_TIMEOUT", 15*time.Second),
@@ -166,6 +174,9 @@ func Load() (Config, error) {
 	}
 	if cfg.RedisURL == "" {
 		return Config{}, fmt.Errorf("config: redis URL must not be empty")
+	}
+	if (cfg.Env == "prod" || cfg.Env == "production") && strings.TrimSpace(cfg.EncryptionKeys) == "" {
+		return Config{}, fmt.Errorf("config: TERRAKUBE_ENCRYPTION_KEYS is required when TERRAKUBE_ENV=production")
 	}
 
 	return cfg, nil
