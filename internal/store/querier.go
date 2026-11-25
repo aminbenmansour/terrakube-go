@@ -15,11 +15,6 @@ type Querier interface {
 	// Deleting a provider in use unlinks its workspaces instead of failing, which
 	// is what upstream does through the mapped relationship.
 	ClearWorkspaceVCS(ctx context.Context, vcsID *string) error
-	CountOrganizationsByName(ctx context.Context, arg CountOrganizationsByNameParams) (int64, error)
-	CountProjectsByName(ctx context.Context, arg CountProjectsByNameParams) (int64, error)
-	CountTagsByName(ctx context.Context, arg CountTagsByNameParams) (int64, error)
-	CountWorkspacesByName(ctx context.Context, arg CountWorkspacesByNameParams) (int64, error)
-	CountWorkspacesByProjectName(ctx context.Context, arg CountWorkspacesByProjectNameParams) (int64, error)
 	CountWorkspacesWithAgent(ctx context.Context, agentID *string) (int64, error)
 	CountWorkspacesWithSSHKey(ctx context.Context, sshID *string) (int64, error)
 	CreateAccess(ctx context.Context, arg CreateAccessParams) (Access, error)
@@ -134,14 +129,10 @@ type Querier interface {
 	ListNotificationSecretsAfter(ctx context.Context, arg ListNotificationSecretsAfterParams) ([]ListNotificationSecretsAfterRow, error)
 	ListNotificationTriggersByConfiguration(ctx context.Context, configurationID string) ([]NotificationTrigger, error)
 	ListOrganizationIDsByGroupNames(ctx context.Context, names []string) ([]string, error)
-	ListOrganizationsPage(ctx context.Context, arg ListOrganizationsPageParams) ([]Organization, error)
-	ListOrganizationsPageDesc(ctx context.Context, arg ListOrganizationsPageDescParams) ([]Organization, error)
 	ListPatsByCreator(ctx context.Context, createdBy *string) ([]Pat, error)
 	ListProjectAccessByProject(ctx context.Context, projectID string) ([]ProjectAccess, error)
 	ListProjectAccessByProjectAndNames(ctx context.Context, arg ListProjectAccessByProjectAndNamesParams) ([]ProjectAccess, error)
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
-	ListProjectsPage(ctx context.Context, arg ListProjectsPageParams) ([]Project, error)
-	ListProjectsPageDesc(ctx context.Context, arg ListProjectsPageDescParams) ([]Project, error)
 	ListReferencesByCollection(ctx context.Context, collectionID string) ([]Reference, error)
 	ListReferencesByWorkspace(ctx context.Context, workspaceID string) ([]Reference, error)
 	ListSSHKeySecrets(ctx context.Context) ([]ListSSHKeySecretsRow, error)
@@ -149,8 +140,6 @@ type Querier interface {
 	ListSSHKeysByOrganization(ctx context.Context, organizationID string) ([]Ssh, error)
 	ListStepsByJob(ctx context.Context, jobID int64) ([]Step, error)
 	ListTagsByOrganization(ctx context.Context, organizationID string) ([]Tag, error)
-	ListTagsPage(ctx context.Context, arg ListTagsPageParams) ([]Tag, error)
-	ListTagsPageDesc(ctx context.Context, arg ListTagsPageDescParams) ([]Tag, error)
 	ListTeamsByOrganization(ctx context.Context, organizationID string) ([]Team, error)
 	ListTeamsByOrganizationAndNames(ctx context.Context, arg ListTeamsByOrganizationAndNamesParams) ([]Team, error)
 	ListTemplatesByOrganization(ctx context.Context, organizationID string) ([]Template, error)
@@ -164,10 +153,6 @@ type Querier interface {
 	ListWorkspaceTagsByWorkspace(ctx context.Context, workspaceID string) ([]Workspacetag, error)
 	ListWorkspacesByOrganization(ctx context.Context, organizationID string) ([]Workspace, error)
 	ListWorkspacesByProject(ctx context.Context, projectID *string) ([]Workspace, error)
-	ListWorkspacesByProjectPage(ctx context.Context, arg ListWorkspacesByProjectPageParams) ([]Workspace, error)
-	ListWorkspacesByProjectPageDesc(ctx context.Context, arg ListWorkspacesByProjectPageDescParams) ([]Workspace, error)
-	ListWorkspacesPage(ctx context.Context, arg ListWorkspacesPageParams) ([]Workspace, error)
-	ListWorkspacesPageDesc(ctx context.Context, arg ListWorkspacesPageDescParams) ([]Workspace, error)
 	SetCliAuthSessionIdentity(ctx context.Context, arg SetCliAuthSessionIdentityParams) error
 	SetGlobalVariableSecret(ctx context.Context, arg SetGlobalVariableSecretParams) error
 	SetJobOverrideSource(ctx context.Context, arg SetJobOverrideSourceParams) (Job, error)
