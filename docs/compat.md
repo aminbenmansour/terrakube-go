@@ -656,10 +656,11 @@ JSON:API error object where upstream answers an array of per-operation results.
 
 Current M1 limitations (tracked for later milestones):
 
-- Filters, sorting and paging run in SQL for the organization list, including
-  the caller's membership restriction, so `page[totals]` counts only visible
-  rows. The project, tag and workspace lists still filter in memory over the
-  full collection; that must become SQL before production use (#55).
+- Filters, sorting and paging run in SQL for the organization, project and tag
+  lists. The organization list also applies the caller's membership restriction
+  in the query, so `page[totals]` counts only visible rows. The workspace list
+  still filters in memory over the full collection; that must become SQL before
+  production use (#55).
 - Authentication is a static bearer token (`TERRAKUBE_AUTH_TOKEN`), a Dex JWT
   with `TERRAKUBE_DEX_ENABLED=true`, or a personal access token issued at
   `/pat/v1` (see above). Team and executor tokens are not implemented yet.
