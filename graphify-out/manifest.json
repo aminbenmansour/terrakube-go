@@ -90,15 +90,15 @@
     "semantic_hash": "b7288201cc9c30bc967c319e20256317"
   },
   "internal/config/config.go": {
-    "mtime": 1795564284.2897997,
-    "seen": 1795564540.1673408,
-    "ast_hash": "72834361f67e1a4905fb0b47d30d5c57",
+    "mtime": 1795596657.1215076,
+    "seen": 1795611257.532632,
+    "ast_hash": "a5115ba0f4e434eb8ec5ad148a22ef5a",
     "semantic_hash": ""
   },
   "internal/config/config_test.go": {
-    "mtime": 1795564274.1657104,
-    "seen": 1795564540.1673417,
-    "ast_hash": "6065b341b43b12afb93d3dfe60eab209",
+    "mtime": 1795596664.6375823,
+    "seen": 1795611257.5326335,
+    "ast_hash": "2961e002bad56304d044c5e073c5a26f",
     "semantic_hash": ""
   },
   "internal/db/db.go": {
@@ -534,9 +534,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1795564508.7187822,
-    "seen": 1795564540.1691926,
-    "ast_hash": "81d368b4840e0643fd30444550996d96",
+    "mtime": 1795597125.9056153,
+    "seen": 1795611257.5348773,
+    "ast_hash": "734794e25767e920aedf87f5229610df",
     "semantic_hash": ""
   },
   "docs/compat.md": {
