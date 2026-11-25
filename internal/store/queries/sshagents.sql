@@ -48,5 +48,8 @@ SELECT count(*) FROM workspace WHERE agent_id = $1;
 -- name: ListSSHKeySecrets :many
 SELECT id, private_key FROM ssh;
 
+-- name: ListSSHKeySecretsAfter :many
+SELECT id, private_key FROM ssh WHERE id > $1 ORDER BY id LIMIT $2;
+
 -- name: SetSSHKeySecret :exec
 UPDATE ssh SET private_key = $2 WHERE id = $1 AND private_key = $3;

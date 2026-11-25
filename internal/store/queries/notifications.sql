@@ -55,5 +55,9 @@ INSERT INTO notification_configuration_template (configuration_id, template_id) 
 -- name: ListNotificationSecrets :many
 SELECT id, signing_secret FROM notification_configuration;
 
+-- name: ListNotificationSecretsAfter :many
+SELECT id, signing_secret FROM notification_configuration
+WHERE id > $1 ORDER BY id LIMIT $2;
+
 -- name: SetNotificationSecret :exec
 UPDATE notification_configuration SET signing_secret = $2 WHERE id = $1 AND signing_secret = $3;
