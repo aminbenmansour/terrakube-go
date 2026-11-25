@@ -114,8 +114,8 @@ available in this environment. `.data/` holds local state and is git-ignored.
   M5 needs a GraphQL implementation, not just a WebSocket.
 - Secret columns are encrypted at rest; `make rotate-keys` re-encrypts them
   under the active key (see README).
-- The organization list filters, sorts and pages in SQL; the project, tag and
-  workspace lists still run in memory and must move to SQL before production
+- The organization, project and tag lists filter, sort and page in SQL; the
+  workspace list still runs in memory and must move to SQL before production
   (#55).
 
 ## Git and PRs

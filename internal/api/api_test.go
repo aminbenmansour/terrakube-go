@@ -74,6 +74,30 @@ func (s *stubQuerier) CountOrganizationsByName(_ context.Context, arg store.Coun
 	return int64(len(s.visibleOrganizations(arg.AllowedIds))), s.err
 }
 
+func (s *stubQuerier) ListProjectsPage(_ context.Context, _ store.ListProjectsPageParams) ([]store.Project, error) {
+	return s.projects, s.err
+}
+
+func (s *stubQuerier) ListProjectsPageDesc(_ context.Context, _ store.ListProjectsPageDescParams) ([]store.Project, error) {
+	return s.projects, s.err
+}
+
+func (s *stubQuerier) CountProjectsByName(context.Context, store.CountProjectsByNameParams) (int64, error) {
+	return int64(len(s.projects)), s.err
+}
+
+func (s *stubQuerier) ListTagsPage(_ context.Context, arg store.ListTagsPageParams) ([]store.Tag, error) {
+	return matchingTags(s.tags, arg.Name, arg.NamePrefix), s.err
+}
+
+func (s *stubQuerier) ListTagsPageDesc(_ context.Context, arg store.ListTagsPageDescParams) ([]store.Tag, error) {
+	return matchingTags(s.tags, arg.Name, arg.NamePrefix), s.err
+}
+
+func (s *stubQuerier) CountTagsByName(_ context.Context, arg store.CountTagsByNameParams) (int64, error) {
+	return int64(len(matchingTags(s.tags, arg.Name, arg.NamePrefix))), s.err
+}
+
 // visibleOrganizations stands in for the query's allowed_ids predicate. The
 // name filter, sort and paging belong to Postgres; the SQL itself is covered by
 // the database tests in organizations_sql_test.go.
