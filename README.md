@@ -160,7 +160,9 @@ Set `TERRAKUBE_STORAGE_TYPE=s3` for S3/MinIO.
 notification signing secrets at rest. `TERRAKUBE_ENCRYPTION_ACTIVE_KEY`
 selects the key for new writes (default: the first). `make db-migrate`
 encrypts existing plaintext rows; running it twice is safe. Production
-refuses to start without a keyring.
+refuses to start without a keyring. Back up the keyring: a value sealed with
+a key you removed cannot be recovered, so keep old keys in the ring until
+every row has been re-encrypted.
 
 ## Roadmap
 
