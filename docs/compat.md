@@ -603,8 +603,8 @@ delete. Upstream requires no attribute beyond the JSON:API `type` on either, so
 a key without a name is accepted with `name: null`; agent writes are owner-only
 and ssh writes need `manageVcs`, as upstream. `GET /workspace/:id?include=ssh,agent` now emits both `included` rows. Deleting
 a key or pool a workspace still points at answers upstream's data-integrity
-`409` rather than leaving a dangling id. The ssh private key is stored
-plaintext, like variable values, until #54 lands.
+`409` rather than leaving a dangling id. The ssh private key and variable
+values are encrypted at rest; see Database below.
 
 `team` is the Settings > Teams screen and the name the access and project-access
 entries carry: list, get, create, patch and delete under
@@ -665,8 +665,8 @@ Current M1 limitations (tracked for later milestones):
   `organization`, `project`, `reference`, `vcs`, `ssh` and `agent`; relationship
   writes exist only for the workspace's `project`, `vcs`, `ssh` and `agent`,
   and RSQL beyond `attr==value` / `attr==prefix*` is not implemented.
-- Variable values are stored in plaintext. Upstream encrypts them with
-  `io.terrakube.encryption.*`; this must land before anything is exposed.
+- Secret columns are encrypted at rest (see Database). Key rotation and
+  retiring old keys are still pending (#159).
 - `tag` and `workspacetag` are served both through the TFE tag-binding
   endpoints and through the Elide-style management routes.
 
@@ -721,7 +721,7 @@ running.
   It does not configure locking, matching upstream.
 - **Variables**: `ENV` variables become plain environment entries; `TERRAFORM`
   variables become `TF_VAR_*`. Incomplete variables are skipped. Values are
-  still plaintext in the database.
+  encrypted at rest (see Database).
 - **Secrets**: values of variables marked `sensitive` and the minted internal
   JWT are replaced with `[REDACTED]` in live logs and in the stored job/step
   output. Terraform's own `(sensitive value)` masking is preserved.

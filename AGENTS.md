@@ -19,7 +19,7 @@ provider and existing API clients must keep working.
   sqlc. Change `internal/store/queries/*.sql`, then run `make generate`.
 - **Secrets stay out of logs and commits.** `TERRAKUBE_AUTH_TOKEN` is a
   development convenience; PATs and Dex replace it later. Variable values are
-  currently plaintext — never expose them in logs or error messages.
+  encrypted at rest but must never appear in logs or error messages.
 - **Keep attribution.** Upstream is Apache-2.0; the API and schema are derived
   from it. Preserve `LICENSE` and the compatibility notes.
 
@@ -112,8 +112,7 @@ available in this environment. `.data/` holds local state and is git-ignored.
 - The upstream UI uses GraphQL at `/graphql/api/v1` (plus graphql-ws
   `/subscriptions`) for most screens; only the organization list uses REST.
   M5 needs a GraphQL implementation, not just a WebSocket.
-- Variable values are stored plaintext today; encryption is required before
-  exposing the API beyond local development.
+- Secret columns are encrypted at rest; key rotation is still pending (#159).
 - M1 filtering, sorting and paging are in memory; move them into SQL before
   production.
 
