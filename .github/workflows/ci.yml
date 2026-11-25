@@ -83,7 +83,7 @@ jobs:
       # These packages skip without a database or Redis, so the unit job alone
       # never exercises them. The upstream UI fixtures run here.
       - name: Integration tests
-        run: go test -race ./internal/graphql ./internal/query ./internal/jobstatus ./internal/tfe ./internal/tfoutput ./internal/tfstate ./internal/secretstore
+        run: go test -race ./internal/graphql ./internal/query ./internal/jobstatus ./internal/tfe ./internal/tfoutput ./internal/tfstate ./internal/secretstore ./internal/api
 
   executor-e2e:
     runs-on: ubuntu-latest
