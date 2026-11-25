@@ -522,9 +522,9 @@
     "semantic_hash": "19031c04d29f72dabe80c42134d3a5e0"
   },
   "AGENTS.md": {
-    "mtime": 1795209239.1191244,
-    "seen": 1795209299.0110161,
-    "ast_hash": "26b97465830d41fcc4559d9a45f17adf",
+    "mtime": 1795611325.0210507,
+    "seen": 1795611329.6448998,
+    "ast_hash": "c8534591348e7b51e2b5db41557d6b78",
     "semantic_hash": ""
   },
   "CONTRIBUTING.md": {
@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "docs/compat.md": {
-    "mtime": 1795564510.9638019,
-    "seen": 1795564540.1691935,
-    "ast_hash": "0a9e72c588e435effaacb8a35510d039",
+    "mtime": 1795611318.9119902,
+    "seen": 1795611329.644924,
+    "ast_hash": "b524a7f86803baea14e01787218ba641",
     "semantic_hash": ""
   },
   "internal/executor/executor.go": {
