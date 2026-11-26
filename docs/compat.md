@@ -678,8 +678,21 @@ as upstream's schedule checks delegate to its workspace check. A
 value is allowed, anything else answers `403` as upstream's security check does.
 An unknown schedule is `404` and one reached through another workspace is also
 `404`. Cron expressions are stored verbatim — upstream's create hook logs a
-Quartz parse failure and still keeps the row — and no scheduler dispatches them
-yet (#146).
+Quartz parse failure and still keeps the row — and an expression this API cannot
+parse is logged once and skipped by the dispatcher.
+
+The API dispatches schedules itself (upstream uses Quartz): every 20 seconds it
+scans the elapsed seconds for matches, so a non-zero seconds field fires
+regardless of tick phase, and creates an ordinary plan/approval/apply run with
+`via=SCHEDULE`, `created_by=serviceAccount`, the schedule's `tcl` or its
+template's body and the template reference. It skips a locked workspace and a
+template that has left the workspace's organization, as upstream's trigger does.
+Expressions are Quartz's six or seven fields (seconds first; one of
+day-of-month/day-of-week must be `?`; weekdays are 1 = Sunday through 7 =
+Saturday); the calendar extensions (`L`, `W`, `#`) and month/weekday names are
+not supported and are skipped rather than guessed. Only one API replica
+dispatches: it holds a Postgres advisory lock and the others retry every 30
+seconds.
 
 `POST /operations` implements the JSON:API atomic operations extension the UI
 uses to create and update workspaces. It supports `op: add` (with `data.lid`,
