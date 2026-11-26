@@ -432,6 +432,8 @@ type Lister interface {
 	CountWorkspaces(ctx context.Context, scope []any, filter rsql.Node) (int64, error)
 	ListProjectWorkspaces(ctx context.Context, scope []any, filter rsql.Node, sorts []SortKey, limit *int64, offset int64) ([]Workspace, error)
 	CountProjectWorkspaces(ctx context.Context, scope []any, filter rsql.Node) (int64, error)
+	ListRunTriggers(ctx context.Context, scope []any, filter rsql.Node, sorts []SortKey, limit *int64, offset int64) ([]WorkspaceRunTrigger, error)
+	CountRunTriggers(ctx context.Context, scope []any, filter rsql.Node) (int64, error)
 }
 
 func (q *Queries) ListOrganizations(ctx context.Context, scope []any, filter rsql.Node, sorts []SortKey, limit *int64, offset int64) ([]Organization, error) {
@@ -472,4 +474,12 @@ func (q *Queries) ListProjectWorkspaces(ctx context.Context, scope []any, filter
 
 func (q *Queries) CountProjectWorkspaces(ctx context.Context, scope []any, filter rsql.Node) (int64, error) {
 	return q.CountList(ctx, ProjectWorkspaceList, scope, filter)
+}
+
+func (q *Queries) ListRunTriggers(ctx context.Context, scope []any, filter rsql.Node, sorts []SortKey, limit *int64, offset int64) ([]WorkspaceRunTrigger, error) {
+	return q.ListPage[WorkspaceRunTrigger](ctx, RunTriggerList, scope, filter, sorts, limit, offset)
+}
+
+func (q *Queries) CountRunTriggers(ctx context.Context, scope []any, filter rsql.Node) (int64, error) {
+	return q.CountList(ctx, RunTriggerList, scope, filter)
 }

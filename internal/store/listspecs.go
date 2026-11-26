@@ -72,6 +72,21 @@ var WorkspaceList = ListSpec{
 	Sorts: map[string]string{"name": "lower(name)", "id": "id", "lastJobDate": "last_job_date"},
 }
 
+// RunTriggerList is scoped by the caller's visible organizations like the
+// organization list: the Run Triggers page filters both ends in one request.
+var RunTriggerList = ListSpec{
+	Table: "workspace_run_trigger",
+	Base:  "($1::text[] IS NULL OR organization_id = ANY($1::text[]))",
+	Attrs: map[string]Attr{
+		"id":                      {Expr: "id"},
+		"enabled":                 {Expr: "enabled", Kind: KindBool},
+		"sourceWorkspace.id":      {Expr: "source_workspace_id"},
+		"destinationWorkspace.id": {Expr: "destination_workspace_id"},
+		"template.id":             {Expr: "template_id"},
+	},
+	Sorts: map[string]string{"createdDate": "created_date", "id": "id"},
+}
+
 var ProjectWorkspaceList = ListSpec{
 	Table: "workspace",
 	Base:  "project_id = $1 AND deleted = false",
