@@ -104,6 +104,11 @@ func TestWorkspaceListSortsAndFilters(t *testing.T) {
 		{"filter[workspace]=job.status!=failed", []string{"alpha", "charlie", "delta", "echo"}},
 		{"filter[workspace]=job.status=isnull=true",
 			[]string{"alpha", "bravo", "charlie", "delta", "echo"}},
+		{"filter[workspace]=workspaceTag.tagId=hasmember='" + tagID + "'", []string{"alpha", "bravo"}},
+		{"filter[workspace]=workspaceTag.tagId=hasnomember='" + tagID + "'",
+			[]string{"charlie", "delta", "echo"}},
+		{"filter[workspace]=workspaceTag=isempty=false", []string{"alpha", "bravo"}},
+		{"filter[workspace]=job=isempty=true", []string{"charlie", "delta", "echo"}},
 		{"page[size]=3&page[number]=2&page[totals]", []string{"delta", "echo"}},
 	} {
 		t.Run(tc.query, func(t *testing.T) {
