@@ -1,6 +1,9 @@
 -- name: ListSchedulesByWorkspace :many
 SELECT * FROM schedule WHERE workspace_id = $1 ORDER BY created_date, id;
 
+-- name: ListEnabledSchedules :many
+SELECT * FROM schedule WHERE enabled = true ORDER BY id;
+
 -- name: GetSchedule :one
 SELECT * FROM schedule WHERE id = $1;
 
