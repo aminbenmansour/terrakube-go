@@ -6,6 +6,11 @@ SELECT * FROM job
 WHERE organization_id = $1 AND deleted = false
 ORDER BY id DESC;
 
+-- name: ListJobsByWorkspace :many
+SELECT * FROM job
+WHERE workspace_id = $1 AND deleted = false
+ORDER BY id DESC;
+
 -- name: GetStep :one
 SELECT * FROM step WHERE id = $1;
 
