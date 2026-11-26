@@ -55,6 +55,38 @@ func (q *Queries) ApproveJob(ctx context.Context, arg ApproveJobParams) (Job, er
 	return i, err
 }
 
+const countJobsByStatus = `-- name: CountJobsByStatus :many
+SELECT status, count(*) AS total
+FROM job
+WHERE deleted = false
+GROUP BY status
+`
+
+type CountJobsByStatusRow struct {
+	Status string `json:"status"`
+	Total  int64  `json:"total"`
+}
+
+func (q *Queries) CountJobsByStatus(ctx context.Context) ([]CountJobsByStatusRow, error) {
+	rows, err := q.db.Query(ctx, countJobsByStatus)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CountJobsByStatusRow{}
+	for rows.Next() {
+		var i CountJobsByStatusRow
+		if err := rows.Scan(&i.Status, &i.Total); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createArchive = `-- name: CreateArchive :one
 INSERT INTO temp_archive (id, type, history_id)
 VALUES ($1, $2, $3)
