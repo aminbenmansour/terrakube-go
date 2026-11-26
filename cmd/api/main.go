@@ -138,6 +138,7 @@ func run() error {
 		logger.Info("personal access tokens enabled")
 	}
 
+	metrics := httpapi.NewMetrics()
 	handler := httpapi.New(httpapi.Deps{
 		Logger:       logger,
 		Service:      "api",
@@ -147,7 +148,7 @@ func run() error {
 		Storage:      storeBackend,
 		RateLimit:    cfg.RateLimit,
 		RateBurst:    cfg.RateBurst,
-		Metrics:      httpapi.NewMetrics(),
+		Metrics:      metrics,
 		MetricsToken: cfg.MetricsToken,
 	})
 	handler.Mount(api.MountPrefix, api.New(api.Deps{
@@ -259,5 +260,31 @@ func run() error {
 		handler.Mount("/", uiHandler)
 	}
 
+	if cfg.MetricsToken != "" {
+		go metrics.Sample(ctx, logger, metricsSource{store: querier, queue: q}, 30*time.Second)
+	}
+
 	return httpapi.Serve(ctx, logger, cfg.HTTPAddr, handler, cfg.ShutdownTimeout)
+}
+
+// metricsSource feeds the job and queue gauges from the database and Redis.
+type metricsSource struct {
+	store store.Querier
+	queue *queue.Queue
+}
+
+func (s metricsSource) JobStatusCounts(ctx context.Context) (map[string]int64, error) {
+	rows, err := s.store.CountJobsByStatus(ctx)
+	if err != nil {
+		return nil, err
+	}
+	counts := make(map[string]int64, len(rows))
+	for _, row := range rows {
+		counts[row.Status] = row.Total
+	}
+	return counts, nil
+}
+
+func (s metricsSource) QueueDepth(ctx context.Context) (int64, error) {
+	return s.queue.Depth(ctx, queue.JobsStream)
 }

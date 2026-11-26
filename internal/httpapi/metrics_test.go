@@ -1,10 +1,14 @@
 package httpapi
 
 import (
+	"context"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestMetricsDisabledWithoutToken(t *testing.T) {
@@ -71,5 +75,59 @@ func TestMetricsRecordsRequests(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Errorf("exposition lacks %q", want)
 		}
+	}
+}
+
+type fakeStats struct {
+	jobs  map[string]int64
+	depth int64
+	hit   chan struct{}
+	err   error
+}
+
+func (f *fakeStats) JobStatusCounts(context.Context) (map[string]int64, error) {
+	defer func() { f.hit <- struct{}{} }()
+	return f.jobs, f.err
+}
+
+func (f *fakeStats) QueueDepth(context.Context) (int64, error) {
+	return f.depth, f.err
+}
+
+func TestSampleRefreshesGauges(t *testing.T) {
+	m := NewMetrics()
+	src := &fakeStats{jobs: map[string]int64{"completed": 4, "failed": 1}, depth: 7, hit: make(chan struct{}, 4)}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		m.Sample(ctx, slog.New(slog.NewTextHandler(io.Discard, nil)), src, time.Millisecond)
+	}()
+
+	<-src.hit
+	cancel()
+	<-done
+
+	handler := m.Handler()
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	body := rec.Body.String()
+
+	for _, want := range []string{
+		`terrakube_jobs{status="completed"} 4`,
+		`terrakube_jobs{status="failed"} 1`,
+		`terrakube_queue_depth{stream="jobs"} 7`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("exposition lacks %q", want)
+		}
+	}
+
+	// A status that disappears from the database disappears from the gauge.
+	m.TrackJobStatuses(map[string]int64{"completed": 5})
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	if strings.Contains(rec.Body.String(), `terrakube_jobs{status="failed"}`) {
+		t.Error("stale status series kept")
 	}
 }
