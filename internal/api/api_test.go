@@ -48,6 +48,12 @@ type stubQuerier struct {
 	notifications         []store.NotificationConfiguration
 	triggers              []store.NotificationTrigger
 	notificationTemplates map[string][]string
+	runTriggers           []store.WorkspaceRunTrigger
+	runTriggerFilter      rsql.Node
+	runTriggerScope       []any
+	createdRunTrigger     *store.CreateRunTriggerParams
+	updatedRunTrigger     *store.UpdateRunTriggerParams
+	deletedRunTriggers    []string
 	err                   error
 	created               *store.CreateOrganizationParams
 	orgSorts              []store.SortKey
@@ -104,6 +110,76 @@ func (s *stubQuerier) CountProjectWorkspaces(context.Context, []any, rsql.Node) 
 	return int64(len(s.workspaces)), s.err
 }
 
+func (s *stubQuerier) ListRunTriggers(_ context.Context, scope []any, filter rsql.Node, _ []store.SortKey, _ *int64, _ int64) ([]store.WorkspaceRunTrigger, error) {
+	s.runTriggerScope, s.runTriggerFilter = scope, filter
+	return s.runTriggers, s.err
+}
+
+func (s *stubQuerier) CountRunTriggers(context.Context, []any, rsql.Node) (int64, error) {
+	return int64(len(s.runTriggers)), s.err
+}
+
+func (s *stubQuerier) GetRunTrigger(_ context.Context, id string) (store.WorkspaceRunTrigger, error) {
+	for _, trigger := range s.runTriggers {
+		if trigger.ID == id {
+			return trigger, nil
+		}
+	}
+	return store.WorkspaceRunTrigger{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) ListRunTriggersByOrganization(_ context.Context, organizationID string) ([]store.WorkspaceRunTrigger, error) {
+	var items []store.WorkspaceRunTrigger
+	for _, trigger := range s.runTriggers {
+		if trigger.OrganizationID == organizationID {
+			items = append(items, trigger)
+		}
+	}
+	return items, s.err
+}
+
+func (s *stubQuerier) CountEnabledRunTriggersBySource(_ context.Context, arg store.CountEnabledRunTriggersBySourceParams) (int64, error) {
+	var count int64
+	for _, trigger := range s.runTriggers {
+		if trigger.SourceWorkspaceID == arg.SourceWorkspaceID && trigger.Enabled && trigger.ID != arg.ID {
+			count++
+		}
+	}
+	return count, s.err
+}
+
+func (s *stubQuerier) CreateRunTrigger(_ context.Context, arg store.CreateRunTriggerParams) (store.WorkspaceRunTrigger, error) {
+	s.createdRunTrigger = &arg
+	return store.WorkspaceRunTrigger{
+		ID:                     arg.ID,
+		SourceWorkspaceID:      arg.SourceWorkspaceID,
+		DestinationWorkspaceID: arg.DestinationWorkspaceID,
+		TemplateID:             arg.TemplateID,
+		OrganizationID:         arg.OrganizationID,
+		Enabled:                arg.Enabled,
+	}, s.err
+}
+
+func (s *stubQuerier) UpdateRunTrigger(_ context.Context, arg store.UpdateRunTriggerParams) (store.WorkspaceRunTrigger, error) {
+	s.updatedRunTrigger = &arg
+	for _, trigger := range s.runTriggers {
+		if trigger.ID == arg.ID {
+			trigger.SourceWorkspaceID = arg.SourceWorkspaceID
+			trigger.DestinationWorkspaceID = arg.DestinationWorkspaceID
+			trigger.TemplateID = arg.TemplateID
+			trigger.OrganizationID = arg.OrganizationID
+			trigger.Enabled = arg.Enabled
+			return trigger, nil
+		}
+	}
+	return store.WorkspaceRunTrigger{}, pgx.ErrNoRows
+}
+
+func (s *stubQuerier) DeleteRunTrigger(_ context.Context, id string) error {
+	s.deletedRunTriggers = append(s.deletedRunTriggers, id)
+	return s.err
+}
+
 // stubLists gives a fake that only exercises non-list endpoints the whole
 // list surface. Override the method a test needs.
 type stubLists struct{}
@@ -130,6 +206,10 @@ func (stubLists) ListProjectWorkspaces(context.Context, []any, rsql.Node, []stor
 func (stubLists) CountProjectWorkspaces(context.Context, []any, rsql.Node) (int64, error) {
 	return 0, nil
 }
+func (stubLists) ListRunTriggers(context.Context, []any, rsql.Node, []store.SortKey, *int64, int64) ([]store.WorkspaceRunTrigger, error) {
+	return nil, nil
+}
+func (stubLists) CountRunTriggers(context.Context, []any, rsql.Node) (int64, error) { return 0, nil }
 
 // scopeIDs unwraps the organization scope argument, which is nil for an owner.
 func scopeIDs(scope []any) []string {

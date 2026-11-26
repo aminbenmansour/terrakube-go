@@ -19,6 +19,7 @@ DELETE /organization/{organizationID}/workspace/{workspaceID}/schedule/{schedule
 DELETE /organization/{organizationID}/workspace/{workspaceID}/variable/{variableID}/
 DELETE /organization/{organizationID}/workspace/{workspaceID}/workspaceTag/{workspaceTagID}/
 DELETE /project/{projectID}/
+DELETE /runTrigger/{runTriggerID}/
 DELETE /variable/{variableID}/
 DELETE /workspace/{workspaceID}/
 GET /action
@@ -63,6 +64,8 @@ GET /organization/{organizationID}/workspace/{workspaceID}/workspaceTag
 GET /project/{projectID}/
 GET /project/{projectID}/workspace
 GET /reference/{referenceID}/collection
+GET /runTrigger
+GET /runTrigger/{runTriggerID}/
 GET /variable/{variableID}/
 GET /workspace/{workspaceID}/
 GET /workspace/{workspaceID}/variable
@@ -87,6 +90,7 @@ PATCH /organization/{organizationID}/workspace/{workspaceID}/schedule/{scheduleI
 PATCH /organization/{organizationID}/workspace/{workspaceID}/variable/{variableID}/
 PATCH /organization/{organizationID}/workspace/{workspaceID}/workspaceTag/{workspaceTagID}/
 PATCH /project/{projectID}/
+PATCH /runTrigger/{runTriggerID}/
 PATCH /variable/{variableID}/
 PATCH /workspace/{workspaceID}/
 POST /action
@@ -112,4 +116,5 @@ POST /organization/{organizationID}/workspace/{workspaceID}/notificationConfigur
 POST /organization/{organizationID}/workspace/{workspaceID}/schedule
 POST /organization/{organizationID}/workspace/{workspaceID}/variable
 POST /organization/{organizationID}/workspace/{workspaceID}/workspaceTag
+POST /runTrigger
 POST /workspace/{workspaceID}/variable
