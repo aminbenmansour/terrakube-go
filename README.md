@@ -117,6 +117,11 @@ page load and a CLI run need.
 Build everything with `make build`; run the checks with `make check`, and scan
 dependencies with `make vuln` (`govulncheck`; CI runs it too).
 
+`TERRAKUBE_METRICS_TOKEN` exposes `/metrics` in Prometheus format to bearers of
+that token; without it the endpoint does not exist. It reports request counts
+and latency by method, route pattern and status, plus the Go runtime and process
+collectors.
+
 Security: see [SECURITY.md](SECURITY.md) to report a problem, and
 [docs/threat-model.md](docs/threat-model.md) for the assets, trust boundaries,
 controls and accepted risks. CI publishes a CycloneDX SBOM for each build.
