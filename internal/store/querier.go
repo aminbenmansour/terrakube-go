@@ -122,6 +122,7 @@ type Querier interface {
 	ListGlobalVariablesByOrganization(ctx context.Context, organizationID string) ([]Globalvar, error)
 	ListItemsByCollection(ctx context.Context, collectionID string) ([]Item, error)
 	ListJobsByOrganization(ctx context.Context, organizationID string) ([]Job, error)
+	ListJobsByWorkspace(ctx context.Context, workspaceID string) ([]Job, error)
 	ListNotificationConfigurationTemplateIDs(ctx context.Context, configurationID string) ([]string, error)
 	ListNotificationConfigurationsByOrganization(ctx context.Context, organizationID string) ([]NotificationConfiguration, error)
 	ListNotificationConfigurationsByWorkspace(ctx context.Context, workspaceID *string) ([]NotificationConfiguration, error)

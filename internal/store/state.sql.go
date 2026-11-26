@@ -619,6 +619,56 @@ func (q *Queries) ListJobsByOrganization(ctx context.Context, organizationID str
 	return items, nil
 }
 
+const listJobsByWorkspace = `-- name: ListJobsByWorkspace :many
+SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch FROM job
+WHERE workspace_id = $1 AND deleted = false
+ORDER BY id DESC
+`
+
+func (q *Queries) ListJobsByWorkspace(ctx context.Context, workspaceID string) ([]Job, error) {
+	rows, err := q.db.Query(ctx, listJobsByWorkspace, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Job{}
+	for rows.Next() {
+		var i Job
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.WorkspaceID,
+			&i.Command,
+			&i.Status,
+			&i.Output,
+			&i.TemplateReference,
+			&i.Tcl,
+			&i.Via,
+			&i.AutoApply,
+			&i.Deleted,
+			&i.Comments,
+			&i.CommitID,
+			&i.ApprovedBy,
+			&i.ApprovedAt,
+			&i.PlanChanges,
+			&i.Refresh,
+			&i.CreatedDate,
+			&i.CreatedBy,
+			&i.UpdatedDate,
+			&i.UpdatedBy,
+			&i.OverrideSource,
+			&i.OverrideBranch,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStepsByJob = `-- name: ListStepsByJob :many
 SELECT id, job_id, step_number, name, status, log_status, output FROM step WHERE job_id = $1 ORDER BY step_number ASC
 `
