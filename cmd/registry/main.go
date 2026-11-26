@@ -39,9 +39,11 @@ func run() error {
 	logger.Warn("registry protocol is not implemented yet; see milestone M6")
 
 	handler := httpapi.New(httpapi.Deps{
-		Logger:  logger,
-		Service: "registry",
-		Started: time.Now(),
+		Logger:    logger,
+		Service:   "registry",
+		Started:   time.Now(),
+		RateLimit: cfg.RateLimit,
+		RateBurst: cfg.RateBurst,
 	})
 
 	return httpapi.Serve(ctx, logger, cfg.RegistryHTTPAddr, handler, cfg.ShutdownTimeout)

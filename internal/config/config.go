@@ -63,6 +63,10 @@ type Config struct {
 	// CORSOrigins restricts browser access to the management API. Empty allows
 	// any origin, matching the behaviour before this was configurable.
 	CORSOrigins []string
+	// RateLimit caps requests per second per caller; zero disables it.
+	RateLimit int
+	// RateBurst is the token bucket size; zero uses RateLimit.
+	RateBurst int
 
 	HTTPAddr         string
 	ExecutorHTTPAddr string
@@ -130,6 +134,8 @@ func Load() (Config, error) {
 		TerraformLoginMaxDays:     int(envInt64([]string{"TERRAKUBE_TERRAFORM_LOGIN_MAX_DAYS"}, 365)),
 		UIDir:                     env("TERRAKUBE_UI_DIR", ""),
 		CORSOrigins:               envList("TERRAKUBE_CORS_ORIGINS"),
+		RateLimit:                 int(envInt64([]string{"TERRAKUBE_RATE_LIMIT"}, 0)),
+		RateBurst:                 int(envInt64([]string{"TERRAKUBE_RATE_BURST"}, 0)),
 		HTTPAddr:                  env("TERRAKUBE_HTTP_ADDR", ":8080"),
 		ExecutorHTTPAddr:          env("TERRAKUBE_EXECUTOR_HTTP_ADDR", ":8081"),
 		RegistryHTTPAddr:          env("TERRAKUBE_REGISTRY_HTTP_ADDR", ":8082"),

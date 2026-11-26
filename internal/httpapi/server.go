@@ -29,6 +29,10 @@ type Deps struct {
 	DB      Pinger
 	Redis   Pinger
 	Storage storage.Backend
+	// RateLimit caps requests per second per caller (a rate of zero disables
+	// it) and RateBurst is the bucket size (zero uses the rate).
+	RateLimit int
+	RateBurst int
 }
 
 // New builds the base router. Domain routers are mounted on top of it.
@@ -44,6 +48,7 @@ func New(deps Deps) *chi.Mux {
 	r.Use(SecurityHeaders())
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
+	r.Use(RateLimit(deps.RateLimit, deps.RateBurst))
 	r.Use(middleware.Recoverer)
 	r.Use(requestLogger(deps.Logger))
 
