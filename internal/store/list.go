@@ -28,17 +28,30 @@ type Attr struct {
 	// becomes an EXISTS over that table instead of a column on the list table.
 	From  string
 	Where string
+	// Collection marks the relationship itself rather than one of its columns;
+	// only =isempty= applies to it.
+	Collection bool
 }
 
-// allows reports whether the attribute supports the operator. A related
-// attribute supports membership only; =isnull= and ranges would need a
-// quantifier choice the UI does not send.
+// allows reports whether the attribute supports the operator.
 func (a Attr) allows(op rsql.Op) bool {
+	switch op {
+	case rsql.OpIsEmpty:
+		return a.Collection
+	case rsql.OpHasMember, rsql.OpHasNoMember:
+		return a.From != "" && !a.Collection
+	}
+	if a.Collection {
+		return false
+	}
 	if a.From == "" {
 		return true
 	}
+	// Related columns support membership and ranges; =isnull= would need a
+	// quantifier choice the UI does not send.
 	switch op {
-	case rsql.OpEq, rsql.OpNe, rsql.OpIn, rsql.OpOut, rsql.OpIni, rsql.OpOuti:
+	case rsql.OpEq, rsql.OpNe, rsql.OpIn, rsql.OpOut, rsql.OpIni, rsql.OpOuti,
+		rsql.OpBetween, rsql.OpNotBetween:
 		return true
 	}
 	return false
@@ -185,6 +198,23 @@ func (s ListSpec) renderCompare(c rsql.Compare, args *[]any) (string, error) {
 		}
 		return "", fmt.Errorf("%w: =isnull= takes true or false", rsql.ErrSyntax)
 
+	case rsql.OpIsEmpty:
+		clause := exists(attr, "")
+		if strings.EqualFold(c.Values[0], "true") {
+			return "NOT " + clause, nil
+		}
+		if strings.EqualFold(c.Values[0], "false") {
+			return clause, nil
+		}
+		return "", fmt.Errorf("%w: =isempty= takes true or false", rsql.ErrSyntax)
+
+	case rsql.OpHasMember, rsql.OpHasNoMember:
+		predicate, err := s.match(attr, c.Values[0], args, false, false)
+		if err != nil {
+			return "", err
+		}
+		return relate(attr, predicate, c.Op == rsql.OpHasNoMember), nil
+
 	case rsql.OpIn, rsql.OpOut:
 		placeholders := make([]string, 0, len(c.Values))
 		for _, raw := range c.Values {
@@ -217,6 +247,29 @@ func (s ListSpec) renderCompare(c rsql.Compare, args *[]any) (string, error) {
 		return relate(attr, predicate, negate && attr.From != ""), nil
 	}
 
+	if c.Op == rsql.OpBetween || c.Op == rsql.OpNotBetween {
+		if len(c.Values) != 2 {
+			return "", fmt.Errorf("%w: %s takes two values", rsql.ErrSyntax, c.Op)
+		}
+		low, err := s.value(attr, c.Values[0])
+		if err != nil {
+			return "", err
+		}
+		high, err := s.value(attr, c.Values[1])
+		if err != nil {
+			return "", err
+		}
+		*args = append(*args, low)
+		lo := len(*args)
+		*args = append(*args, high)
+		hi := len(*args)
+		predicate := fmt.Sprintf("%s >= $%d AND %s <= $%d", attr.Expr, lo, attr.Expr, hi)
+		if c.Op == rsql.OpNotBetween {
+			predicate = fmt.Sprintf("(%s < $%d OR %s > $%d)", attr.Expr, lo, attr.Expr, hi)
+		}
+		return relate(attr, predicate, false), nil
+	}
+
 	op, ok := map[rsql.Op]string{
 		rsql.OpLt: "<", rsql.OpLe: "<=", rsql.OpGt: ">", rsql.OpGe: ">=",
 	}[c.Op]
@@ -231,17 +284,27 @@ func (s ListSpec) renderCompare(c rsql.Compare, args *[]any) (string, error) {
 	return fmt.Sprintf("%s %s $%d", attr.Expr, op, len(*args)), nil
 }
 
+// exists renders an EXISTS over the attribute's related table. An empty
+// predicate only tests that a related row exists, which =isempty= uses.
+func exists(attr Attr, predicate string) string {
+	clause := "EXISTS (SELECT 1 FROM " + attr.From + " WHERE " + attr.Where
+	if predicate != "" {
+		clause += " AND " + predicate
+	}
+	return clause + ")"
+}
+
 // relate wraps a predicate on a related attribute in EXISTS. A negated
 // predicate becomes NOT EXISTS, which keeps rows without any related row.
 func relate(attr Attr, predicate string, negate bool) string {
 	if attr.From == "" {
 		return predicate
 	}
-	exists := "EXISTS (SELECT 1 FROM " + attr.From + " WHERE " + attr.Where + " AND " + predicate + ")"
+	clause := exists(attr, predicate)
 	if negate {
-		return "NOT " + exists
+		return "NOT " + clause
 	}
-	return exists
+	return clause
 }
 
 // match renders the string operators. A '*' in the value is a wildcard; every
