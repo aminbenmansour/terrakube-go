@@ -74,6 +74,7 @@ func New(deps Deps) http.Handler {
 
 	r := chi.NewRouter()
 	r.Use(httpapi.CORS(deps.CORSOrigins))
+	r.Use(httpapi.LimitBody(jsonapi.MaxBodyBytes))
 	r.Use(a.authenticate)
 	r.Use(requireUUIDParams)
 

@@ -19,6 +19,7 @@ import (
 	graphqlapi "github.com/aminbenmansour/terrakube-go/internal/graphql"
 	"github.com/aminbenmansour/terrakube-go/internal/httpapi"
 	"github.com/aminbenmansour/terrakube-go/internal/jobstatus"
+	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
 	"github.com/aminbenmansour/terrakube-go/internal/logging"
 	"github.com/aminbenmansour/terrakube-go/internal/pat"
 	"github.com/aminbenmansour/terrakube-go/internal/queue"
@@ -217,7 +218,7 @@ func run() error {
 	// The UI calls these cross-origin when it is served from another host, and
 	// browsers enforce CORS on the HTTP query endpoint just like any other.
 	cors := httpapi.CORS(cfg.CORSOrigins)
-	handler.Mount("/graphql/api/v1", cors(graphqlapi.New(graphqlDeps)))
+	handler.Mount("/graphql/api/v1", cors(httpapi.LimitBody(jsonapi.MaxBodyBytes)(graphqlapi.New(graphqlDeps))))
 	handler.Mount("/subscriptions", cors(graphqlapi.NewSubscriptions(graphqlDeps)))
 	handler.Get("/.well-known/terraform.json", tfe.Discovery(tfeDeps))
 	handler.Mount("/remote/tfe/v2", tfe.New(tfeDeps))
