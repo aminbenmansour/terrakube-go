@@ -69,6 +69,41 @@ func seedWorkspaces(t *testing.T) (*Queries, []Workspace) {
 		rows = append(rows, ws)
 	}
 
+	// Tags and jobs back the relationship filters: prod-api carries the prod
+	// tag and a job waiting for approval, staging carries the dev tag, and the
+	// other workspace only has a discarded failed job.
+	tag, err := q.CreateTag(ctx, CreateTagParams{
+		ID: uuid.NewString(), Name: ptr("env"), OrganizationID: org.ID,
+	})
+	if err != nil {
+		t.Fatalf("create tag: %v", err)
+	}
+	for i, value := range []string{"prod", "dev"} {
+		if _, err := q.CreateWorkspaceTag(ctx, CreateWorkspaceTagParams{
+			ID: uuid.NewString(), TagID: tag.ID, TagValue: ptr(value), WorkspaceID: rows[i*2].ID,
+		}); err != nil {
+			t.Fatalf("bind tag %q: %v", value, err)
+		}
+	}
+	for i, status := range []string{"waitingApproval", "failed"} {
+		if _, err := q.CreateJob(ctx, CreateJobParams{
+			OrganizationID: org.ID, WorkspaceID: rows[i].ID, Status: status,
+			Via: "UI", AutoApply: false, Refresh: true, PlanChanges: true,
+		}); err != nil {
+			t.Fatalf("create %s job: %v", status, err)
+		}
+	}
+	discarded, err := q.CreateJob(ctx, CreateJobParams{
+		OrganizationID: org.ID, WorkspaceID: rows[3].ID, Status: "failed",
+		Via: "UI", AutoApply: false, Refresh: true, PlanChanges: true,
+	})
+	if err != nil {
+		t.Fatalf("create discarded job: %v", err)
+	}
+	if _, err := q.db.Exec(ctx, `UPDATE job SET deleted = true WHERE id = $1`, discarded.ID); err != nil {
+		t.Fatalf("discard job: %v", err)
+	}
+
 	gone, err := q.CreateWorkspace(ctx, CreateWorkspaceParams{
 		ID: uuid.NewString(), Name: "gone", IacType: "terraform", OrganizationID: org.ID,
 	})
@@ -116,7 +151,7 @@ func TestListPageFilters(t *testing.T) {
 		{"date comparison", "lastJobDate=gt=2026-01-15T00:00:00Z", nil, []string{"Prod-Web"}},
 		{"and", "name=ini='*prod*';lastJobStatus==failed", nil, []string{"Prod-Web"}},
 		{"or", "name==staging,name==other", nil, []string{"other", "staging"}},
-		{"unsupported attribute widens", "workspaceTag.tagId=='x'", nil,
+		{"unsupported attribute widens", "workspaceTag.colour=='x'", nil,
 			[]string{"other", "prod-api", "Prod-Web", "staging"}},
 		{"descending", "", []SortKey{{Column: "name", Desc: true}},
 			[]string{"staging", "Prod-Web", "prod-api", "other"}},
@@ -147,6 +182,49 @@ func TestListPageFilters(t *testing.T) {
 			}
 			if want := int64(len(tc.want)); total != want {
 				t.Errorf("count = %d, want %d", total, want)
+			}
+		})
+	}
+}
+
+func TestListPageRelationshipFilters(t *testing.T) {
+	q, rows := seedWorkspaces(t)
+	scope := []any{rows[0].OrganizationID}
+	ctx := t.Context()
+
+	// The tag id comes from the binding seeded on prod-api.
+	var tagID string
+	if err := q.db.QueryRow(ctx, `SELECT tag_id FROM workspacetag WHERE workspace_id = $1`, rows[0].ID).Scan(&tagID); err != nil {
+		t.Fatalf("read tag id: %v", err)
+	}
+
+	for _, tc := range []struct {
+		name   string
+		filter string
+		want   []string
+	}{
+		{"tag binding", "workspaceTag.tagId=='" + tagID + "'", []string{"prod-api", "staging"}},
+		{"tag exclusion includes untagged", "workspaceTag.tagId!='" + tagID + "'", []string{"other", "Prod-Web"}},
+		{"tag value case insensitive", "workspaceTag.value=ini='PROD'", []string{"prod-api"}},
+		{"tag value set", "workspaceTag.value=in=('dev')", []string{"staging"}},
+		{"tag value exclusion", "workspaceTag.value=out=('dev')", []string{"other", "prod-api", "Prod-Web"}},
+		{"job status", "job.status==waitingApproval", []string{"prod-api"}},
+		{"discarded job is ignored", "job.status==failed", []string{"Prod-Web"}},
+		{"job status exclusion", "job.status!=failed", []string{"other", "prod-api", "staging"}},
+		{"unsupported operator widens", "job.status=isnull=true",
+			[]string{"other", "prod-api", "Prod-Web", "staging"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			node, err := rsql.Parse(tc.filter)
+			if err != nil {
+				t.Fatalf("parse %q: %v", tc.filter, err)
+			}
+			got, err := q.ListPage[Workspace](ctx, WorkspaceList, scope, node, nil, nil, 0)
+			if err != nil {
+				t.Fatalf("ListPage: %v", err)
+			}
+			if names := workspaceNames(got); !slices.Equal(names, tc.want) {
+				t.Errorf("names = %v, want %v", names, tc.want)
 			}
 		})
 	}

@@ -50,6 +50,18 @@ var WorkspaceList = ListSpec{
 		"policyComplianceStatus": {Expr: "policy_compliance_status"},
 		"project.id":             {Expr: "project_id"},
 		"lastJobDate":            {Expr: "last_job_date", Kind: KindTime},
+		// Relationship filters. The UI sends these for the workspace list:
+		// a tag binding matches when one row satisfies it, and a job status
+		// when a live job has it.
+		"workspaceTag.tagId": {
+			Expr: "wt.tag_id", From: "workspacetag wt", Where: "wt.workspace_id = workspace.id",
+		},
+		"workspaceTag.value": {
+			Expr: "wt.tag_value", From: "workspacetag wt", Where: "wt.workspace_id = workspace.id",
+		},
+		"job.status": {
+			Expr: "j.status", From: "job j", Where: "j.workspace_id = workspace.id AND j.deleted = false",
+		},
 	},
 	Sorts: map[string]string{"name": "lower(name)", "id": "id", "lastJobDate": "last_job_date"},
 }

@@ -24,6 +24,24 @@ const (
 type Attr struct {
 	Expr string
 	Kind Kind
+	// From and Where describe an attribute on a related table: the predicate
+	// becomes an EXISTS over that table instead of a column on the list table.
+	From  string
+	Where string
+}
+
+// allows reports whether the attribute supports the operator. A related
+// attribute supports membership only; =isnull= and ranges would need a
+// quantifier choice the UI does not send.
+func (a Attr) allows(op rsql.Op) bool {
+	if a.From == "" {
+		return true
+	}
+	switch op {
+	case rsql.OpEq, rsql.OpNe, rsql.OpIn, rsql.OpOut, rsql.OpIni, rsql.OpOuti:
+		return true
+	}
+	return false
 }
 
 // ListSpec is one resource's list query: its table, the scope predicate that
@@ -117,8 +135,8 @@ func (s ListSpec) supported(n rsql.Node) bool {
 	case rsql.Or:
 		return s.supported(v.Left) && s.supported(v.Right)
 	case rsql.Compare:
-		_, ok := s.Attrs[v.Attr]
-		return ok
+		attr, ok := s.Attrs[v.Attr]
+		return ok && attr.allows(v.Op)
 	}
 	return false
 }
@@ -177,20 +195,26 @@ func (s ListSpec) renderCompare(c rsql.Compare, args *[]any) (string, error) {
 			*args = append(*args, value)
 			placeholders = append(placeholders, fmt.Sprintf("$%d", len(*args)))
 		}
+		predicate := attr.Expr + " IN (" + strings.Join(placeholders, ", ") + ")"
+		if attr.From != "" {
+			return relate(attr, predicate, c.Op == rsql.OpOut), nil
+		}
 		not := ""
 		if c.Op == rsql.OpOut {
 			not = "NOT "
 		}
 		return attr.Expr + " " + not + "IN (" + strings.Join(placeholders, ", ") + ")", nil
 
-	case rsql.OpEq:
-		return s.match(attr, c.Values[0], args, false, false)
-	case rsql.OpNe:
-		return s.match(attr, c.Values[0], args, false, true)
-	case rsql.OpIni:
-		return s.match(attr, c.Values[0], args, true, false)
-	case rsql.OpOuti:
-		return s.match(attr, c.Values[0], args, true, true)
+	case rsql.OpEq, rsql.OpNe, rsql.OpIni, rsql.OpOuti:
+		insensitive := c.Op == rsql.OpIni || c.Op == rsql.OpOuti
+		negate := c.Op == rsql.OpNe || c.Op == rsql.OpOuti
+		// On a related attribute the negation belongs outside EXISTS: "has no
+		// related row with this value" also matches rows with no relation.
+		predicate, err := s.match(attr, c.Values[0], args, insensitive, negate && attr.From == "")
+		if err != nil {
+			return "", err
+		}
+		return relate(attr, predicate, negate && attr.From != ""), nil
 	}
 
 	op, ok := map[rsql.Op]string{
@@ -205,6 +229,19 @@ func (s ListSpec) renderCompare(c rsql.Compare, args *[]any) (string, error) {
 	}
 	*args = append(*args, value)
 	return fmt.Sprintf("%s %s $%d", attr.Expr, op, len(*args)), nil
+}
+
+// relate wraps a predicate on a related attribute in EXISTS. A negated
+// predicate becomes NOT EXISTS, which keeps rows without any related row.
+func relate(attr Attr, predicate string, negate bool) string {
+	if attr.From == "" {
+		return predicate
+	}
+	exists := "EXISTS (SELECT 1 FROM " + attr.From + " WHERE " + attr.Where + " AND " + predicate + ")"
+	if negate {
+		return "NOT " + exists
+	}
+	return exists
 }
 
 // match renders the string operators. A '*' in the value is a wildcard; every
