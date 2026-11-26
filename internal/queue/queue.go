@@ -43,6 +43,15 @@ func (q *Queue) Close() error {
 	return q.client.Close()
 }
 
+// Depth reports how many entries a stream currently holds.
+func (q *Queue) Depth(ctx context.Context, stream string) (int64, error) {
+	depth, err := q.client.XLen(ctx, stream).Result()
+	if err != nil {
+		return 0, fmt.Errorf("queue: depth of %s: %w", stream, err)
+	}
+	return depth, nil
+}
+
 // Publish appends an entry to a stream and returns its message ID.
 func (q *Queue) Publish(ctx context.Context, stream string, values map[string]any) (string, error) {
 	id, err := q.client.XAdd(ctx, &redis.XAddArgs{
