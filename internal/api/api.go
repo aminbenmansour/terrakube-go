@@ -231,6 +231,16 @@ func New(deps Deps) http.Handler {
 		r.With(a.requireWrite(canManageWorkspace)).Patch("/relationships/templates", a.replaceNotificationTemplates)
 	})
 
+	// Workspace run triggers: the workspace page's Run Triggers tab calls the
+	// collection at the root, filtered by either end.
+	r.Get("/runTrigger", a.listRunTriggers)
+	r.Post("/runTrigger", a.createRunTrigger)
+	r.Route("/runTrigger/{runTriggerID}", func(r chi.Router) {
+		r.Get("/", a.getRunTrigger)
+		r.Patch("/", a.updateRunTrigger)
+		r.Delete("/", a.deleteRunTrigger)
+	})
+
 	// Workspaces
 	r.Route("/workspace/{workspaceID}", func(r chi.Router) {
 		r.Use(a.workspaceScope)
