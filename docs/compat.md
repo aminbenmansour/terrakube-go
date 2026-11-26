@@ -303,6 +303,14 @@ Query conventions:
 - `include=step`, `fields[workspace]=name`.
 - Content type `application/vnd.api+json`; errors use a JSON:API `errors`
   array. `DELETE` must not send a body or content type.
+- JSON:API and GraphQL request bodies are limited to 8 MiB and answer `413`
+  with a JSON:API error above it. Configuration tarballs and state uploads
+  each allow 100 MiB.
+- Responses carry `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: strict-origin-when-cross-origin`, and
+  `Strict-Transport-Security` when the request arrives over HTTPS (directly or
+  via `X-Forwarded-Proto`). A content security policy is not set because the
+  bundled React UI owns its asset policy.
 
 Our initial implementation targets the resources needed by the CLI workflow and
 the UI's core screens. Anything missing is filled in against the upstream spec.
