@@ -108,6 +108,12 @@ permissive `Access-Control-Allow-Origin: *` default, and a UI served by this API
 needs no entry at all. Set it to the UI's origin in the split-origin deployment.
 Check a running stack with `./scripts/ui-smoke.sh` (needs `TERRAKUBE_UI_DIR`).
 
+`TERRAKUBE_RATE_LIMIT` (requests per second per caller) turns on rate limiting;
+it is off unless set, and `TERRAKUBE_RATE_BURST` sets the bucket size (default:
+the rate). Callers are keyed by bearer token, or by address without one, and an
+exceeded limit answers `429` with `Retry-After`. Keep it well above what a UI
+page load and a CLI run need.
+
 Build everything with `make build`; run the checks with `make check`, and scan
 dependencies with `make vuln` (`govulncheck`; CI runs it too).
 
