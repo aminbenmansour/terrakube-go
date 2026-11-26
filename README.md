@@ -119,8 +119,10 @@ dependencies with `make vuln` (`govulncheck`; CI runs it too).
 
 `TERRAKUBE_METRICS_TOKEN` exposes `/metrics` in Prometheus format to bearers of
 that token; without it the endpoint does not exist. It reports request counts
-and latency by method, route pattern and status, plus the Go runtime and process
-collectors.
+and latency by method, route pattern and status, live `terrakube_jobs{status}`
+counts and `terrakube_queue_depth{stream="jobs"}`, plus the Go runtime and
+process collectors. The job and queue gauges are refreshed every 30 seconds by a
+sampler rather than computed per scrape.
 
 Security: see [SECURITY.md](SECURITY.md) to report a problem, and
 [docs/threat-model.md](docs/threat-model.md) for the assets, trust boundaries,

@@ -11,6 +11,12 @@ SELECT * FROM job
 WHERE workspace_id = $1 AND deleted = false
 ORDER BY id DESC;
 
+-- name: CountJobsByStatus :many
+SELECT status, count(*) AS total
+FROM job
+WHERE deleted = false
+GROUP BY status;
+
 -- name: GetStep :one
 SELECT * FROM step WHERE id = $1;
 

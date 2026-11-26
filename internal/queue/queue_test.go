@@ -46,6 +46,25 @@ func TestHeadStreamReturnsTheOldestEntries(t *testing.T) {
 	}
 }
 
+func TestDepthCountsStreamEntries(t *testing.T) {
+	q := testQueue(t)
+	ctx := context.Background()
+	stream := fmt.Sprintf("test-depth-%d", time.Now().UnixNano())
+	defer func() { _ = q.DeleteStream(ctx, stream) }()
+
+	if depth, err := q.Depth(ctx, stream); err != nil || depth != 0 {
+		t.Fatalf("depth of an absent stream = %d, %v; want 0", depth, err)
+	}
+	for i := 0; i < 3; i++ {
+		if _, err := q.Publish(ctx, stream, map[string]any{"n": i}); err != nil {
+			t.Fatalf("publish %d: %v", i, err)
+		}
+	}
+	if depth, err := q.Depth(ctx, stream); err != nil || depth != 3 {
+		t.Fatalf("depth = %d, %v; want 3", depth, err)
+	}
+}
+
 func TestDeleteRemovesAMessage(t *testing.T) {
 	q := testQueue(t)
 	ctx := context.Background()

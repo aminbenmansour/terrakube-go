@@ -15,6 +15,7 @@ type Querier interface {
 	// Deleting a provider in use unlinks its workspaces instead of failing, which
 	// is what upstream does through the mapped relationship.
 	ClearWorkspaceVCS(ctx context.Context, vcsID *string) error
+	CountJobsByStatus(ctx context.Context) ([]CountJobsByStatusRow, error)
 	CountWorkspacesWithAgent(ctx context.Context, agentID *string) (int64, error)
 	CountWorkspacesWithSSHKey(ctx context.Context, sshID *string) (int64, error)
 	CreateAccess(ctx context.Context, arg CreateAccessParams) (Access, error)

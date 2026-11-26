@@ -1,7 +1,9 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/subtle"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -19,6 +21,8 @@ type Metrics struct {
 	registry *prometheus.Registry
 	requests *prometheus.CounterVec
 	duration *prometheus.HistogramVec
+	jobs     *prometheus.GaugeVec
+	queue    *prometheus.GaugeVec
 }
 
 // NewMetrics builds an isolated registry so the exposition contains only this
@@ -39,9 +43,17 @@ func NewMetrics() *Metrics {
 		Help:    "HTTP request latency in seconds, by method and route.",
 		Buckets: prometheus.DefBuckets,
 	}, []string{"method", "route"})
-	registry.MustRegister(requests, duration)
+	jobs := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "terrakube_jobs",
+		Help: "Live jobs by status.",
+	}, []string{"status"})
+	queue := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "terrakube_queue_depth",
+		Help: "Messages waiting on a Redis stream.",
+	}, []string{"stream"})
+	registry.MustRegister(requests, duration, jobs, queue)
 
-	return &Metrics{registry: registry, requests: requests, duration: duration}
+	return &Metrics{registry: registry, requests: requests, duration: duration, jobs: jobs, queue: queue}
 }
 
 // Middleware records one observation per request. The route label is chi's
@@ -66,6 +78,65 @@ func (m *Metrics) Middleware() func(http.Handler) http.Handler {
 		})
 	}
 }
+
+// TrackJobStatuses replaces the job gauge series, so a status that disappears
+// from the database stops being reported instead of freezing at its old value.
+func (m *Metrics) TrackJobStatuses(counts map[string]int64) {
+	m.jobs.Reset()
+	for status, count := range counts {
+		m.jobs.WithLabelValues(status).Set(float64(count))
+	}
+}
+
+// TrackQueueDepth sets one stream's gauge.
+func (m *Metrics) TrackQueueDepth(stream string, depth int64) {
+	m.queue.WithLabelValues(stream).Set(float64(depth))
+}
+
+// StatsSource is what the sampler reads. The command wires it to the database
+// and the queue so this package stays independent of both.
+type StatsSource interface {
+	JobStatusCounts(ctx context.Context) (map[string]int64, error)
+	QueueDepth(ctx context.Context) (int64, error)
+}
+
+// Sample refreshes the job and queue gauges until ctx is cancelled. A scrape
+// must not run those queries itself: the job count grows with history and the
+// queue call is a round trip.
+func (m *Metrics) Sample(ctx context.Context, logger *slog.Logger, src StatsSource, interval time.Duration) {
+	if interval <= 0 {
+		interval = 30 * time.Second
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		if counts, err := src.JobStatusCounts(ctx); err != nil {
+			if ctx.Err() == nil {
+				logger.Warn("sample job statuses", "error", err)
+			}
+		} else {
+			m.TrackJobStatuses(counts)
+		}
+		if depth, err := src.QueueDepth(ctx); err != nil {
+			if ctx.Err() == nil {
+				logger.Warn("sample queue depth", "error", err)
+			}
+		} else {
+			m.TrackQueueDepth(QueueLabel, depth)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
+// QueueLabel is the stream label the depth gauge carries; the jobs queue is
+// the only stream with a depth worth alerting on.
+const QueueLabel = "jobs"
 
 // Handler serves the exposition format.
 func (m *Metrics) Handler() http.Handler {
