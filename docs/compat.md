@@ -668,6 +668,19 @@ key). Upstream gates writes on a team's `manageTemplate` permission, and this
 API enforces the same one. One divergence: an unknown attribute in a PATCH is ignored
 here, while upstream answers `404 Unknown attribute`.
 
+`schedule` is the workspace Schedules tab: list and create under
+`/organization/:id/workspace/:id/schedule`, get, patch and delete under
+`/organization/:id/workspace/:id/schedule/:scheduleID`. Attributes are `cron`,
+`description`, `templateReference`, `enabled` (default `true`) and the audit
+fields; the workspace is the only relationship. Writes need `manageWorkspace`,
+as upstream's schedule checks delegate to its workspace check. A
+`templateReference` must be a template in the workspace's organization: an empty
+value is allowed, anything else answers `403` as upstream's security check does.
+An unknown schedule is `404` and one reached through another workspace is also
+`404`. Cron expressions are stored verbatim — upstream's create hook logs a
+Quartz parse failure and still keeps the row — and no scheduler dispatches them
+yet (#146).
+
 `POST /operations` implements the JSON:API atomic operations extension the UI
 uses to create and update workspaces. It supports `op: add` (with `data.lid`,
 attributes and the same relationships as `POST /workspace`) and `op: update`
@@ -692,7 +705,7 @@ Current M1 limitations (tracked for later milestones):
   with `TERRAKUBE_DEX_ENABLED=true`, or a personal access token issued at
   `/pat/v1` (see above). Team and executor tokens are not implemented yet.
 - `include=` is implemented only for the workspace's `variable`,
-  `job`, `organization`, `project`, `reference`, `vcs`, `ssh` and `agent`; relationship
+  `job`, `schedule`, `organization`, `project`, `reference`, `vcs`, `ssh` and `agent`; relationship
   writes exist only for the workspace's `project`, `vcs`, `ssh` and `agent`.
 - Secret columns are encrypted at rest (see Database). `make rotate-keys`
   re-encrypts them under the active key and verifies that nothing remains

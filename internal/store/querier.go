@@ -37,6 +37,7 @@ type Querier interface {
 	CreateProjectAccess(ctx context.Context, arg CreateProjectAccessParams) (ProjectAccess, error)
 	CreateReference(ctx context.Context, arg CreateReferenceParams) (Reference, error)
 	CreateSSHKey(ctx context.Context, arg CreateSSHKeyParams) (Ssh, error)
+	CreateSchedule(ctx context.Context, arg CreateScheduleParams) (Schedule, error)
 	CreateStep(ctx context.Context, arg CreateStepParams) (Step, error)
 	CreateTag(ctx context.Context, arg CreateTagParams) (Tag, error)
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error)
@@ -61,6 +62,7 @@ type Querier interface {
 	DeleteProjectAccess(ctx context.Context, id string) error
 	DeleteReference(ctx context.Context, id string) error
 	DeleteSSHKey(ctx context.Context, id string) error
+	DeleteSchedule(ctx context.Context, id string) error
 	DeleteTag(ctx context.Context, id string) error
 	DeleteTeam(ctx context.Context, id string) error
 	DeleteTemplate(ctx context.Context, id string) error
@@ -96,6 +98,7 @@ type Querier interface {
 	GetProjectByName(ctx context.Context, arg GetProjectByNameParams) (Project, error)
 	GetReference(ctx context.Context, id string) (Reference, error)
 	GetSSHKey(ctx context.Context, id string) (Ssh, error)
+	GetSchedule(ctx context.Context, id string) (Schedule, error)
 	GetStep(ctx context.Context, id string) (Step, error)
 	GetStepByJobAndNumber(ctx context.Context, arg GetStepByJobAndNumberParams) (Step, error)
 	GetTag(ctx context.Context, id string) (Tag, error)
@@ -140,6 +143,7 @@ type Querier interface {
 	ListSSHKeySecrets(ctx context.Context) ([]ListSSHKeySecretsRow, error)
 	ListSSHKeySecretsAfter(ctx context.Context, arg ListSSHKeySecretsAfterParams) ([]ListSSHKeySecretsAfterRow, error)
 	ListSSHKeysByOrganization(ctx context.Context, organizationID string) ([]Ssh, error)
+	ListSchedulesByWorkspace(ctx context.Context, workspaceID string) ([]Schedule, error)
 	ListStepsByJob(ctx context.Context, jobID int64) ([]Step, error)
 	ListTagsByOrganization(ctx context.Context, organizationID string) ([]Tag, error)
 	ListTeamsByOrganization(ctx context.Context, organizationID string) ([]Team, error)
@@ -182,6 +186,7 @@ type Querier interface {
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 	UpdateProjectAccess(ctx context.Context, arg UpdateProjectAccessParams) (ProjectAccess, error)
 	UpdateSSHKey(ctx context.Context, arg UpdateSSHKeyParams) (Ssh, error)
+	UpdateSchedule(ctx context.Context, arg UpdateScheduleParams) (Schedule, error)
 	UpdateStepOutput(ctx context.Context, arg UpdateStepOutputParams) error
 	UpdateStepStatus(ctx context.Context, arg UpdateStepStatusParams) (Step, error)
 	UpdateTag(ctx context.Context, arg UpdateTagParams) (Tag, error)

@@ -146,6 +146,22 @@ func (a *API) getWorkspace(w http.ResponseWriter, r *http.Request) {
 		resource.Relationships["variable"] = jsonapi.LinkList("variable", ids...)
 	}
 
+	if want["schedule"] {
+		schedules, err := a.deps.Store.ListSchedulesByWorkspace(r.Context(), ws.ID)
+		if err != nil {
+			if !a.writeStoreError(w, "list schedules", err) {
+				a.internalError(w, "list schedules", err)
+			}
+			return
+		}
+		ids := make([]string, 0, len(schedules))
+		for _, schedule := range schedules {
+			ids = append(ids, schedule.ID)
+			included = append(included, scheduleResource(schedule))
+		}
+		resource.Relationships["schedule"] = jsonapi.LinkList("schedule", ids...)
+	}
+
 	if want["job"] {
 		jobs, err := a.deps.Store.ListJobsByWorkspace(r.Context(), ws.ID)
 		if err != nil {
