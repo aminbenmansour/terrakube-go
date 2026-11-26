@@ -41,6 +41,7 @@ func New(deps Deps) *chi.Mux {
 	}
 
 	r := chi.NewRouter()
+	r.Use(SecurityHeaders())
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
