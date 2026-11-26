@@ -239,6 +239,20 @@ type Reference struct {
 	CollectionID string             `json:"collection_id"`
 }
 
+type Schedule struct {
+	ID                string             `json:"id"`
+	Cron              *string            `json:"cron"`
+	Description       *string            `json:"description"`
+	Tcl               *string            `json:"tcl"`
+	TemplateReference *string            `json:"template_reference"`
+	Enabled           bool               `json:"enabled"`
+	WorkspaceID       string             `json:"workspace_id"`
+	CreatedDate       pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate       pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy         *string            `json:"created_by"`
+	UpdatedBy         *string            `json:"updated_by"`
+}
+
 type Ssh struct {
 	ID             string             `json:"id"`
 	Name           *string            `json:"name"`
