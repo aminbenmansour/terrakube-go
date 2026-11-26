@@ -105,14 +105,16 @@ func run() error {
 	logger.Info("executor started", "storage", cfg.Storage.Type)
 
 	handler := httpapi.New(httpapi.Deps{
-		Logger:    logger,
-		Service:   "executor",
-		Started:   time.Now(),
-		DB:        pool,
-		Redis:     q,
-		Storage:   storeBackend,
-		RateLimit: cfg.RateLimit,
-		RateBurst: cfg.RateBurst,
+		Logger:       logger,
+		Service:      "executor",
+		Started:      time.Now(),
+		DB:           pool,
+		Redis:        q,
+		Storage:      storeBackend,
+		RateLimit:    cfg.RateLimit,
+		RateBurst:    cfg.RateBurst,
+		Metrics:      httpapi.NewMetrics(),
+		MetricsToken: cfg.MetricsToken,
 	})
 
 	return httpapi.Serve(ctx, logger, cfg.ExecutorHTTPAddr, handler, cfg.ShutdownTimeout)

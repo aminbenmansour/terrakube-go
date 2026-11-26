@@ -67,6 +67,8 @@ type Config struct {
 	RateLimit int
 	// RateBurst is the token bucket size; zero uses RateLimit.
 	RateBurst int
+	// MetricsToken guards /metrics. Empty leaves the endpoint disabled.
+	MetricsToken string
 
 	HTTPAddr         string
 	ExecutorHTTPAddr string
@@ -136,6 +138,7 @@ func Load() (Config, error) {
 		CORSOrigins:               envList("TERRAKUBE_CORS_ORIGINS"),
 		RateLimit:                 int(envInt64([]string{"TERRAKUBE_RATE_LIMIT"}, 0)),
 		RateBurst:                 int(envInt64([]string{"TERRAKUBE_RATE_BURST"}, 0)),
+		MetricsToken:              env("TERRAKUBE_METRICS_TOKEN", ""),
 		HTTPAddr:                  env("TERRAKUBE_HTTP_ADDR", ":8080"),
 		ExecutorHTTPAddr:          env("TERRAKUBE_EXECUTOR_HTTP_ADDR", ":8081"),
 		RegistryHTTPAddr:          env("TERRAKUBE_REGISTRY_HTTP_ADDR", ":8082"),
