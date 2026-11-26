@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
 	"github.com/aminbenmansour/terrakube-go/internal/rsql"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 )
@@ -497,4 +498,20 @@ func (s *stubQuerier) ListProjectAccessByProjectAndNames(_ context.Context, arg 
 		}
 	}
 	return rows, s.err
+}
+
+// The management router refuses a body over the JSON:API limit before any
+// handler decodes it, so memory stays bounded and the answer is 413.
+func TestOversizedBodyIsRefused(t *testing.T) {
+	handler := newTestAPI(t, &stubQuerier{})
+
+	req := httptest.NewRequest(http.MethodPost, "/organization",
+		strings.NewReader(strings.Repeat("x", jsonapi.MaxBodyBytes+1)))
+	req.Header.Set("Content-Type", jsonapi.MediaType)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want 413; body = %s", rec.Code, rec.Body.String())
+	}
 }

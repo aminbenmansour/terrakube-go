@@ -15,7 +15,9 @@ import (
 // MediaType is the JSON:API content type.
 const MediaType = "application/vnd.api+json"
 
-const maxBodyBytes = 8 << 20 // 8 MiB
+// MaxBodyBytes bounds a JSON:API request body. The routers refuse anything
+// larger before the handler runs, and the decoders stop reading here.
+const MaxBodyBytes = 8 << 20 // 8 MiB
 
 // Resource is a JSON:API resource object.
 type Resource struct {
@@ -286,7 +288,7 @@ func DecodeRequest(r *http.Request) (*RequestData, error) {
 	var doc struct {
 		Data RequestData `json:"data"`
 	}
-	dec := json.NewDecoder(io.LimitReader(r.Body, maxBodyBytes))
+	dec := json.NewDecoder(io.LimitReader(r.Body, MaxBodyBytes))
 	if err := dec.Decode(&doc); err != nil {
 		return nil, fmt.Errorf("invalid JSON: %w", err)
 	}
@@ -308,7 +310,7 @@ func RelationshipIdentifier(r *http.Request) (typ, id string, sent bool, err err
 	var doc struct {
 		Data json.RawMessage `json:"data"`
 	}
-	dec := json.NewDecoder(io.LimitReader(r.Body, maxBodyBytes))
+	dec := json.NewDecoder(io.LimitReader(r.Body, MaxBodyBytes))
 	if err := dec.Decode(&doc); err != nil {
 		return "", "", false, fmt.Errorf("invalid JSON: %w", err)
 	}
@@ -408,7 +410,7 @@ func RelationshipList(r *http.Request) ([]ResourceIdentifier, error) {
 	var doc struct {
 		Data json.RawMessage `json:"data"`
 	}
-	dec := json.NewDecoder(io.LimitReader(r.Body, maxBodyBytes))
+	dec := json.NewDecoder(io.LimitReader(r.Body, MaxBodyBytes))
 	if err := dec.Decode(&doc); err != nil {
 		return nil, fmt.Errorf("invalid JSON: %w", err)
 	}
