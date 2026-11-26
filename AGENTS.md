@@ -115,8 +115,9 @@ available in this environment. `.data/` holds local state and is git-ignored.
 - Secret columns are encrypted at rest; `make rotate-keys` re-encrypts them
   under the active key (see README).
 - List filtering (RSQL), sorting and paging run in SQL for organizations,
-  projects, tags and workspaces. A filter naming an attribute we do not model is
-  ignored whole, so relationship filters widen rather than hide rows; the
+  projects, tags and workspaces, including the workspace's `workspaceTag.*` and
+  `job.status` relationship filters. A filter naming an attribute or operator we
+  do not model is ignored whole, so it widens rather than hides rows; the
   remaining collections ignore these parameters.
 
 ## Git and PRs
