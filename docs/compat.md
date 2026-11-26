@@ -679,7 +679,7 @@ Current M1 limitations (tracked for later milestones):
   with `TERRAKUBE_DEX_ENABLED=true`, or a personal access token issued at
   `/pat/v1` (see above). Team and executor tokens are not implemented yet.
 - `include=` is implemented only for the workspace's `variable`,
-  `organization`, `project`, `reference`, `vcs`, `ssh` and `agent`; relationship
+  `job`, `organization`, `project`, `reference`, `vcs`, `ssh` and `agent`; relationship
   writes exist only for the workspace's `project`, `vcs`, `ssh` and `agent`.
 - Secret columns are encrypted at rest (see Database). `make rotate-keys`
   re-encrypts them under the active key and verifies that nothing remains
