@@ -25,6 +25,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/logging"
 	"github.com/aminbenmansour/terrakube-go/internal/pat"
 	"github.com/aminbenmansour/terrakube-go/internal/queue"
+	"github.com/aminbenmansour/terrakube-go/internal/runtrigger"
 	"github.com/aminbenmansour/terrakube-go/internal/schedule"
 	"github.com/aminbenmansour/terrakube-go/internal/secretstore"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
@@ -321,6 +322,7 @@ func startScheduler(ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool
 				continue
 			}
 			logger.Info("schedule dispatcher active")
+			go runtrigger.NewDispatcher(st, q, logger).Run(ctx)
 			schedule.NewDispatcher(st, q, logger).Run(ctx)
 			conn.Release()
 			return
