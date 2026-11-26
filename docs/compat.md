@@ -694,6 +694,28 @@ not supported and are skipped rather than guessed. Only one API replica
 dispatches: it holds a Postgres advisory lock and the others retry every 30
 seconds.
 
+`runTrigger` is the workspace Run Triggers tab. The UI calls the collection at
+the root: `GET/POST /runTrigger` and `GET/PATCH/DELETE /runTrigger/:id`.
+Attributes are `enabled` (default `true`) and the audit fields; the
+relationships are `sourceWorkspace`, `destinationWorkspace` and an optional
+`template`. Both ends must be live workspaces of one organization, must differ,
+and a template override must belong to that organization; a malformed shape is
+`403`, as upstream's structural check answers. The `organization` is derived
+from the destination and is not part of the API surface. Reads are open to every
+member of that organization, and a caller outside it sees neither the edge nor
+its place in the collection. Creating or changing an edge needs `manageWorkspace`
+on the destination and membership on the source; only the instance owner may
+repoint an existing edge, so a manager's `PATCH` of `sourceWorkspace` or
+`destinationWorkspace` is `403 UpdatePermission Denied` while `enabled` and
+`template` are accepted and answer `204`. A duplicate pair is `409`. The
+organization's graph must stay acyclic: an edge that would close a loop is
+`400`, as is a source workspace past 20 enabled outbound edges. `GET` accepts
+`include=sourceWorkspace,destinationWorkspace,template`; the page's
+`filter[runTrigger]=sourceWorkspace.id==X,destinationWorkspace.id==X` returns
+both directions in one request. `DELETE` with a declared content type is `400`,
+matching upstream Elide. Dispatch of downstream runs is not implemented yet
+(#148 follow-up).
+
 `POST /operations` implements the JSON:API atomic operations extension the UI
 uses to create and update workspaces. It supports `op: add` (with `data.lid`,
 attributes and the same relationships as `POST /workspace`) and `op: update`
