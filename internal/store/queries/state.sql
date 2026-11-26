@@ -35,15 +35,33 @@ WHERE workspace_id = $1 AND job_reference = $2
 ORDER BY created_date DESC, id DESC
 LIMIT 1;
 
+-- name: GetHistoryBefore :one
+SELECT * FROM history
+WHERE workspace_id = $1 AND created_date < $2
+ORDER BY created_date DESC, id DESC
+LIMIT 1;
+
 -- name: CreateHistory :one
 INSERT INTO history (id, workspace_id, job_reference, output, serial, md5, lineage, created_by)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING *;
 
 -- name: CreateJob :one
-INSERT INTO job (organization_id, workspace_id, command, status, output, via, auto_apply, refresh, plan_changes, created_by, tcl, template_reference)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+INSERT INTO job (organization_id, workspace_id, command, status, output, via, auto_apply, refresh, plan_changes, created_by, tcl, template_reference,
+                 triggered_by_job_id, cascade_depth)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 RETURNING *;
+
+-- name: GetJobByWorkspaceAndTrigger :one
+SELECT * FROM job
+WHERE workspace_id = $1 AND triggered_by_job_id = $2
+ORDER BY id DESC
+LIMIT 1;
+
+-- name: DeleteJob :exec
+-- Only for a just-created dependent whose steps could not all be written; a
+-- normal job is soft-deleted so its history stays visible.
+DELETE FROM job WHERE id = $1;
 
 -- name: CreateStep :one
 INSERT INTO step (id, job_id, step_number, name, status, log_status, output)
@@ -51,11 +69,33 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
 -- name: UpdateJobStatus :one
-UPDATE job
-SET status = $2,
-    updated_date = now()
-WHERE id = $1
-RETURNING *;
+-- Completing a job and recording its run trigger event are one statement, so a
+-- crash between them cannot lose the dispatch. The event row is only written
+-- for a completed job with an enabled edge to a live destination; the unique
+-- job_id makes a repeated completion a no-op.
+WITH updated AS (
+    UPDATE job
+    SET status = $2,
+        updated_date = now()
+    WHERE job.id = $1
+    RETURNING job.id, job.workspace_id, job.status
+), event AS (
+    INSERT INTO run_trigger_event (id, job_id, status)
+    SELECT gen_random_uuid()::text, updated.id, 'PENDING'
+    FROM updated
+    WHERE updated.status = 'completed'
+      AND EXISTS (
+          SELECT 1
+          FROM workspace_run_trigger t
+          JOIN workspace w ON w.id = t.destination_workspace_id
+          WHERE t.source_workspace_id = updated.workspace_id
+            AND t.enabled
+            AND w.deleted = false
+      )
+    ON CONFLICT (job_id) DO NOTHING
+    RETURNING job_id
+)
+SELECT * FROM job WHERE job.id = $1;
 
 -- name: SetJobOverrideSource :one
 UPDATE job
