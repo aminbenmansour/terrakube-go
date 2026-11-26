@@ -250,6 +250,14 @@ func New(deps Deps) http.Handler {
 		r.With(a.requireWrite(canManageWorkspace)).Delete("/", a.deleteWorkspace)
 		r.Get("/variable", a.listVariables)
 		r.With(a.requireWrite(canManageWorkspace)).Post("/variable", a.createVariable)
+		// Schedules: the workspace page's Schedules tab.
+		r.Get("/schedule", a.listSchedules)
+		r.With(a.requireWrite(canManageWorkspace)).Post("/schedule", a.createSchedule)
+		r.Route("/schedule/{scheduleID}", func(r chi.Router) {
+			r.Get("/", a.getSchedule)
+			r.With(a.requireWrite(canManageWorkspace)).Patch("/", a.updateSchedule)
+			r.With(a.requireWrite(canManageWorkspace)).Delete("/", a.deleteSchedule)
+		})
 		r.With(a.requireWrite(canManageWorkspace)).Patch("/relationships/{relation}", a.updateWorkspaceRelationship)
 		// Workspace access grants: Settings > Workspace > Access.
 		r.Get("/access", a.listWorkspaceAccess)

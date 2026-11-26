@@ -15,6 +15,7 @@ DELETE /organization/{organizationID}/template/{templateID}/
 DELETE /organization/{organizationID}/vcs/{vcsID}/
 DELETE /organization/{organizationID}/workspace/{workspaceID}/
 DELETE /organization/{organizationID}/workspace/{workspaceID}/access/{accessID}/
+DELETE /organization/{organizationID}/workspace/{workspaceID}/schedule/{scheduleID}/
 DELETE /organization/{organizationID}/workspace/{workspaceID}/variable/{variableID}/
 DELETE /organization/{organizationID}/workspace/{workspaceID}/workspaceTag/{workspaceTagID}/
 DELETE /project/{projectID}/
@@ -54,6 +55,8 @@ GET /organization/{organizationID}/workspace/{workspaceID}/
 GET /organization/{organizationID}/workspace/{workspaceID}/access
 GET /organization/{organizationID}/workspace/{workspaceID}/access/{accessID}/
 GET /organization/{organizationID}/workspace/{workspaceID}/notificationConfiguration
+GET /organization/{organizationID}/workspace/{workspaceID}/schedule
+GET /organization/{organizationID}/workspace/{workspaceID}/schedule/{scheduleID}/
 GET /organization/{organizationID}/workspace/{workspaceID}/variable
 GET /organization/{organizationID}/workspace/{workspaceID}/variable/{variableID}/
 GET /organization/{organizationID}/workspace/{workspaceID}/workspaceTag
@@ -80,6 +83,7 @@ PATCH /organization/{organizationID}/vcs/{vcsID}/
 PATCH /organization/{organizationID}/workspace/{workspaceID}/
 PATCH /organization/{organizationID}/workspace/{workspaceID}/access/{accessID}/
 PATCH /organization/{organizationID}/workspace/{workspaceID}/relationships/{relation}
+PATCH /organization/{organizationID}/workspace/{workspaceID}/schedule/{scheduleID}/
 PATCH /organization/{organizationID}/workspace/{workspaceID}/variable/{variableID}/
 PATCH /organization/{organizationID}/workspace/{workspaceID}/workspaceTag/{workspaceTagID}/
 PATCH /project/{projectID}/
@@ -105,6 +109,7 @@ POST /organization/{organizationID}/vcs
 POST /organization/{organizationID}/workspace
 POST /organization/{organizationID}/workspace/{workspaceID}/access
 POST /organization/{organizationID}/workspace/{workspaceID}/notificationConfiguration
+POST /organization/{organizationID}/workspace/{workspaceID}/schedule
 POST /organization/{organizationID}/workspace/{workspaceID}/variable
 POST /organization/{organizationID}/workspace/{workspaceID}/workspaceTag
 POST /workspace/{workspaceID}/variable
