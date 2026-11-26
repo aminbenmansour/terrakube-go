@@ -152,22 +152,24 @@ func (q *Queries) CreateHistory(ctx context.Context, arg CreateHistoryParams) (H
 }
 
 const createJob = `-- name: CreateJob :one
-INSERT INTO job (organization_id, workspace_id, command, status, output, via, auto_apply, refresh, plan_changes, created_by)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO job (organization_id, workspace_id, command, status, output, via, auto_apply, refresh, plan_changes, created_by, tcl, template_reference)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch
 `
 
 type CreateJobParams struct {
-	OrganizationID string  `json:"organization_id"`
-	WorkspaceID    string  `json:"workspace_id"`
-	Command        *string `json:"command"`
-	Status         string  `json:"status"`
-	Output         *string `json:"output"`
-	Via            string  `json:"via"`
-	AutoApply      bool    `json:"auto_apply"`
-	Refresh        bool    `json:"refresh"`
-	PlanChanges    bool    `json:"plan_changes"`
-	CreatedBy      *string `json:"created_by"`
+	OrganizationID    string  `json:"organization_id"`
+	WorkspaceID       string  `json:"workspace_id"`
+	Command           *string `json:"command"`
+	Status            string  `json:"status"`
+	Output            *string `json:"output"`
+	Via               string  `json:"via"`
+	AutoApply         bool    `json:"auto_apply"`
+	Refresh           bool    `json:"refresh"`
+	PlanChanges       bool    `json:"plan_changes"`
+	CreatedBy         *string `json:"created_by"`
+	Tcl               *string `json:"tcl"`
+	TemplateReference *string `json:"template_reference"`
 }
 
 func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, error) {
@@ -182,6 +184,8 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		arg.Refresh,
 		arg.PlanChanges,
 		arg.CreatedBy,
+		arg.Tcl,
+		arg.TemplateReference,
 	)
 	var i Job
 	err := row.Scan(
