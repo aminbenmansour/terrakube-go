@@ -713,8 +713,24 @@ organization's graph must stay acyclic: an edge that would close a loop is
 `include=sourceWorkspace,destinationWorkspace,template`; the page's
 `filter[runTrigger]=sourceWorkspace.id==X,destinationWorkspace.id==X` returns
 both directions in one request. `DELETE` with a declared content type is `400`,
-matching upstream Elide. Dispatch of downstream runs is not implemented yet
-(#148 follow-up).
+matching upstream Elide.
+
+Dispatch is implemented by the API rather than Quartz. The same statement that
+marks a job `completed` writes one `run_trigger_event` row when the workspace
+has an enabled edge to a live destination, so a crash between the two cannot
+lose the dispatch. A poller on the leader replica claims due rows and, for a run
+that changed state, creates one ordinary plan/approval/apply job per edge with
+`via=RUN_TRIGGER`, `created_by=serviceAccount`, the edge's template or the
+destination's `defaultTemplate`, and `triggered_by_job_id` / `cascade_depth`
+lineage. A plan-only run never fires, and an apply whose state serial and md5
+match the previous history row does not either. A chain stops at cascade depth
+10, the runtime net for a cycle that slipped past the write-time check. A
+destination without a template, or with a template that has left the
+organization, is skipped with a warning. Enqueue failures retry exponentially
+(5s to 15min, 10 attempts), and a retry re-queues a still-`pending` dependent
+instead of creating a second one. Divergences: the lookback is the DB, not
+Quartz's job store, and there is no kill switch or processed-event retention
+sweep yet (#200).
 
 `POST /operations` implements the JSON:API atomic operations extension the UI
 uses to create and update workspaces. It supports `op: add` (with `data.lid`,

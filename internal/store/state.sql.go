@@ -7,6 +7,8 @@ package store
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const approveJob = `-- name: ApproveJob :one
@@ -16,7 +18,7 @@ SET approved_by = $2,
     status = 'pending',
     updated_date = now()
 WHERE id = $1
-RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch
+RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch, triggered_by_job_id, cascade_depth
 `
 
 type ApproveJobParams struct {
@@ -51,6 +53,8 @@ func (q *Queries) ApproveJob(ctx context.Context, arg ApproveJobParams) (Job, er
 		&i.UpdatedBy,
 		&i.OverrideSource,
 		&i.OverrideBranch,
+		&i.TriggeredByJobID,
+		&i.CascadeDepth,
 	)
 	return i, err
 }
@@ -152,9 +156,10 @@ func (q *Queries) CreateHistory(ctx context.Context, arg CreateHistoryParams) (H
 }
 
 const createJob = `-- name: CreateJob :one
-INSERT INTO job (organization_id, workspace_id, command, status, output, via, auto_apply, refresh, plan_changes, created_by, tcl, template_reference)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch
+INSERT INTO job (organization_id, workspace_id, command, status, output, via, auto_apply, refresh, plan_changes, created_by, tcl, template_reference,
+                 triggered_by_job_id, cascade_depth)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch, triggered_by_job_id, cascade_depth
 `
 
 type CreateJobParams struct {
@@ -170,6 +175,8 @@ type CreateJobParams struct {
 	CreatedBy         *string `json:"created_by"`
 	Tcl               *string `json:"tcl"`
 	TemplateReference *string `json:"template_reference"`
+	TriggeredByJobID  *int64  `json:"triggered_by_job_id"`
+	CascadeDepth      int32   `json:"cascade_depth"`
 }
 
 func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, error) {
@@ -186,6 +193,8 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		arg.CreatedBy,
 		arg.Tcl,
 		arg.TemplateReference,
+		arg.TriggeredByJobID,
+		arg.CascadeDepth,
 	)
 	var i Job
 	err := row.Scan(
@@ -212,6 +221,8 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		&i.UpdatedBy,
 		&i.OverrideSource,
 		&i.OverrideBranch,
+		&i.TriggeredByJobID,
+		&i.CascadeDepth,
 	)
 	return i, err
 }
@@ -261,6 +272,17 @@ DELETE FROM temp_archive WHERE id = $1
 
 func (q *Queries) DeleteArchive(ctx context.Context, id string) error {
 	_, err := q.db.Exec(ctx, deleteArchive, id)
+	return err
+}
+
+const deleteJob = `-- name: DeleteJob :exec
+DELETE FROM job WHERE id = $1
+`
+
+// Only for a just-created dependent whose steps could not all be written; a
+// normal job is soft-deleted so its history stays visible.
+func (q *Queries) DeleteJob(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteJob, id)
 	return err
 }
 
@@ -316,6 +338,37 @@ func (q *Queries) GetHistory(ctx context.Context, id string) (History, error) {
 	return i, err
 }
 
+const getHistoryBefore = `-- name: GetHistoryBefore :one
+SELECT id, workspace_id, job_reference, output, serial, md5, lineage, created_date, created_by, updated_date, updated_by FROM history
+WHERE workspace_id = $1 AND created_date < $2
+ORDER BY created_date DESC, id DESC
+LIMIT 1
+`
+
+type GetHistoryBeforeParams struct {
+	WorkspaceID string             `json:"workspace_id"`
+	CreatedDate pgtype.Timestamptz `json:"created_date"`
+}
+
+func (q *Queries) GetHistoryBefore(ctx context.Context, arg GetHistoryBeforeParams) (History, error) {
+	row := q.db.QueryRow(ctx, getHistoryBefore, arg.WorkspaceID, arg.CreatedDate)
+	var i History
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.JobReference,
+		&i.Output,
+		&i.Serial,
+		&i.Md5,
+		&i.Lineage,
+		&i.CreatedDate,
+		&i.CreatedBy,
+		&i.UpdatedDate,
+		&i.UpdatedBy,
+	)
+	return i, err
+}
+
 const getHistoryByJobReference = `-- name: GetHistoryByJobReference :one
 SELECT id, workspace_id, job_reference, output, serial, md5, lineage, created_date, created_by, updated_date, updated_by FROM history
 WHERE workspace_id = $1 AND job_reference = $2
@@ -348,7 +401,7 @@ func (q *Queries) GetHistoryByJobReference(ctx context.Context, arg GetHistoryBy
 }
 
 const getJob = `-- name: GetJob :one
-SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch FROM job WHERE id = $1
+SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch, triggered_by_job_id, cascade_depth FROM job WHERE id = $1
 `
 
 func (q *Queries) GetJob(ctx context.Context, id int64) (Job, error) {
@@ -378,6 +431,53 @@ func (q *Queries) GetJob(ctx context.Context, id int64) (Job, error) {
 		&i.UpdatedBy,
 		&i.OverrideSource,
 		&i.OverrideBranch,
+		&i.TriggeredByJobID,
+		&i.CascadeDepth,
+	)
+	return i, err
+}
+
+const getJobByWorkspaceAndTrigger = `-- name: GetJobByWorkspaceAndTrigger :one
+SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch, triggered_by_job_id, cascade_depth FROM job
+WHERE workspace_id = $1 AND triggered_by_job_id = $2
+ORDER BY id DESC
+LIMIT 1
+`
+
+type GetJobByWorkspaceAndTriggerParams struct {
+	WorkspaceID      string `json:"workspace_id"`
+	TriggeredByJobID *int64 `json:"triggered_by_job_id"`
+}
+
+func (q *Queries) GetJobByWorkspaceAndTrigger(ctx context.Context, arg GetJobByWorkspaceAndTriggerParams) (Job, error) {
+	row := q.db.QueryRow(ctx, getJobByWorkspaceAndTrigger, arg.WorkspaceID, arg.TriggeredByJobID)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.WorkspaceID,
+		&i.Command,
+		&i.Status,
+		&i.Output,
+		&i.TemplateReference,
+		&i.Tcl,
+		&i.Via,
+		&i.AutoApply,
+		&i.Deleted,
+		&i.Comments,
+		&i.CommitID,
+		&i.ApprovedBy,
+		&i.ApprovedAt,
+		&i.PlanChanges,
+		&i.Refresh,
+		&i.CreatedDate,
+		&i.CreatedBy,
+		&i.UpdatedDate,
+		&i.UpdatedBy,
+		&i.OverrideSource,
+		&i.OverrideBranch,
+		&i.TriggeredByJobID,
+		&i.CascadeDepth,
 	)
 	return i, err
 }
@@ -478,7 +578,7 @@ func (q *Queries) GetStepByJobAndNumber(ctx context.Context, arg GetStepByJobAnd
 }
 
 const listActiveJobsByOrganization = `-- name: ListActiveJobsByOrganization :many
-SELECT j.id, j.organization_id, j.workspace_id, j.command, j.status, j.output, j.template_reference, j.tcl, j.via, j.auto_apply, j.deleted, j.comments, j.commit_id, j.approved_by, j.approved_at, j.plan_changes, j.refresh, j.created_date, j.created_by, j.updated_date, j.updated_by, j.override_source, j.override_branch
+SELECT j.id, j.organization_id, j.workspace_id, j.command, j.status, j.output, j.template_reference, j.tcl, j.via, j.auto_apply, j.deleted, j.comments, j.commit_id, j.approved_by, j.approved_at, j.plan_changes, j.refresh, j.created_date, j.created_by, j.updated_date, j.updated_by, j.override_source, j.override_branch, j.triggered_by_job_id, j.cascade_depth
 FROM job j
 JOIN organization o ON o.id = j.organization_id
 WHERE o.name = $1
@@ -519,6 +619,8 @@ func (q *Queries) ListActiveJobsByOrganization(ctx context.Context, name string)
 			&i.UpdatedBy,
 			&i.OverrideSource,
 			&i.OverrideBranch,
+			&i.TriggeredByJobID,
+			&i.CascadeDepth,
 		); err != nil {
 			return nil, err
 		}
@@ -531,7 +633,7 @@ func (q *Queries) ListActiveJobsByOrganization(ctx context.Context, name string)
 }
 
 const listActiveJobsByWorkspace = `-- name: ListActiveJobsByWorkspace :many
-SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch FROM job
+SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch, triggered_by_job_id, cascade_depth FROM job
 WHERE workspace_id = $1
   AND status IN ('pending', 'running', 'queue', 'waitingApproval')
 ORDER BY id DESC
@@ -570,6 +672,8 @@ func (q *Queries) ListActiveJobsByWorkspace(ctx context.Context, workspaceID str
 			&i.UpdatedBy,
 			&i.OverrideSource,
 			&i.OverrideBranch,
+			&i.TriggeredByJobID,
+			&i.CascadeDepth,
 		); err != nil {
 			return nil, err
 		}
@@ -606,7 +710,7 @@ func (q *Queries) ListArchivesByHistory(ctx context.Context, historyID string) (
 }
 
 const listJobsByOrganization = `-- name: ListJobsByOrganization :many
-SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch FROM job
+SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch, triggered_by_job_id, cascade_depth FROM job
 WHERE organization_id = $1 AND deleted = false
 ORDER BY id DESC
 `
@@ -644,6 +748,8 @@ func (q *Queries) ListJobsByOrganization(ctx context.Context, organizationID str
 			&i.UpdatedBy,
 			&i.OverrideSource,
 			&i.OverrideBranch,
+			&i.TriggeredByJobID,
+			&i.CascadeDepth,
 		); err != nil {
 			return nil, err
 		}
@@ -656,7 +762,7 @@ func (q *Queries) ListJobsByOrganization(ctx context.Context, organizationID str
 }
 
 const listJobsByWorkspace = `-- name: ListJobsByWorkspace :many
-SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch FROM job
+SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch, triggered_by_job_id, cascade_depth FROM job
 WHERE workspace_id = $1 AND deleted = false
 ORDER BY id DESC
 `
@@ -694,6 +800,8 @@ func (q *Queries) ListJobsByWorkspace(ctx context.Context, workspaceID string) (
 			&i.UpdatedBy,
 			&i.OverrideSource,
 			&i.OverrideBranch,
+			&i.TriggeredByJobID,
+			&i.CascadeDepth,
 		); err != nil {
 			return nil, err
 		}
@@ -743,7 +851,7 @@ SET override_source = $2,
     override_branch = $3,
     updated_date = now()
 WHERE id = $1
-RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch
+RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch, triggered_by_job_id, cascade_depth
 `
 
 type SetJobOverrideSourceParams struct {
@@ -779,6 +887,8 @@ func (q *Queries) SetJobOverrideSource(ctx context.Context, arg SetJobOverrideSo
 		&i.UpdatedBy,
 		&i.OverrideSource,
 		&i.OverrideBranch,
+		&i.TriggeredByJobID,
+		&i.CascadeDepth,
 	)
 	return i, err
 }
@@ -840,7 +950,7 @@ UPDATE job
 SET plan_changes = $2,
     updated_date = now()
 WHERE id = $1
-RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch
+RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch, triggered_by_job_id, cascade_depth
 `
 
 type UpdateJobPlanChangesParams struct {
@@ -875,16 +985,36 @@ func (q *Queries) UpdateJobPlanChanges(ctx context.Context, arg UpdateJobPlanCha
 		&i.UpdatedBy,
 		&i.OverrideSource,
 		&i.OverrideBranch,
+		&i.TriggeredByJobID,
+		&i.CascadeDepth,
 	)
 	return i, err
 }
 
 const updateJobStatus = `-- name: UpdateJobStatus :one
-UPDATE job
-SET status = $2,
-    updated_date = now()
-WHERE id = $1
-RETURNING id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch
+WITH updated AS (
+    UPDATE job
+    SET status = $2,
+        updated_date = now()
+    WHERE job.id = $1
+    RETURNING job.id, job.workspace_id, job.status
+), event AS (
+    INSERT INTO run_trigger_event (id, job_id, status)
+    SELECT gen_random_uuid()::text, updated.id, 'PENDING'
+    FROM updated
+    WHERE updated.status = 'completed'
+      AND EXISTS (
+          SELECT 1
+          FROM workspace_run_trigger t
+          JOIN workspace w ON w.id = t.destination_workspace_id
+          WHERE t.source_workspace_id = updated.workspace_id
+            AND t.enabled
+            AND w.deleted = false
+      )
+    ON CONFLICT (job_id) DO NOTHING
+    RETURNING job_id
+)
+SELECT id, organization_id, workspace_id, command, status, output, template_reference, tcl, via, auto_apply, deleted, comments, commit_id, approved_by, approved_at, plan_changes, refresh, created_date, created_by, updated_date, updated_by, override_source, override_branch, triggered_by_job_id, cascade_depth FROM job WHERE job.id = $1
 `
 
 type UpdateJobStatusParams struct {
@@ -892,6 +1022,10 @@ type UpdateJobStatusParams struct {
 	Status string `json:"status"`
 }
 
+// Completing a job and recording its run trigger event are one statement, so a
+// crash between them cannot lose the dispatch. The event row is only written
+// for a completed job with an enabled edge to a live destination; the unique
+// job_id makes a repeated completion a no-op.
 func (q *Queries) UpdateJobStatus(ctx context.Context, arg UpdateJobStatusParams) (Job, error) {
 	row := q.db.QueryRow(ctx, updateJobStatus, arg.ID, arg.Status)
 	var i Job
@@ -919,6 +1053,8 @@ func (q *Queries) UpdateJobStatus(ctx context.Context, arg UpdateJobStatusParams
 		&i.UpdatedBy,
 		&i.OverrideSource,
 		&i.OverrideBranch,
+		&i.TriggeredByJobID,
+		&i.CascadeDepth,
 	)
 	return i, err
 }

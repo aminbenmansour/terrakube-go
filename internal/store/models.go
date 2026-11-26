@@ -152,6 +152,8 @@ type Job struct {
 	UpdatedBy         *string            `json:"updated_by"`
 	OverrideSource    *string            `json:"override_source"`
 	OverrideBranch    *string            `json:"override_branch"`
+	TriggeredByJobID  *int64             `json:"triggered_by_job_id"`
+	CascadeDepth      int32              `json:"cascade_depth"`
 }
 
 type NotificationConfiguration struct {
@@ -237,6 +239,18 @@ type Reference struct {
 	Description  *string            `json:"description"`
 	WorkspaceID  string             `json:"workspace_id"`
 	CollectionID string             `json:"collection_id"`
+}
+
+type RunTriggerEvent struct {
+	ID            string             `json:"id"`
+	JobID         int64              `json:"job_id"`
+	Status        string             `json:"status"`
+	AttemptCount  int32              `json:"attempt_count"`
+	LastAttemptAt pgtype.Timestamptz `json:"last_attempt_at"`
+	NextAttemptAt pgtype.Timestamptz `json:"next_attempt_at"`
+	LastError     *string            `json:"last_error"`
+	CreatedDate   pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate   pgtype.Timestamptz `json:"updated_date"`
 }
 
 type Schedule struct {

@@ -99,6 +99,54 @@ func TestRunTriggerListFiltersEitherEndAndScopesOrganizations(t *testing.T) {
 	assertIDs([]any{[]string{}}, nil)
 }
 
+func TestListEnabledRunTriggersBySourceSkipsDisabledAndDeleted(t *testing.T) {
+	q := New(dbtest.Pool(t))
+	ctx := t.Context()
+
+	org, err := q.CreateOrganization(ctx, CreateOrganizationParams{
+		ID: uuid.NewString(), Name: "trigger-enabled", ExecutionMode: "remote",
+	})
+	if err != nil {
+		t.Fatalf("create organization: %v", err)
+	}
+	newWorkspace := func(name string) Workspace {
+		ws, err := q.CreateWorkspace(ctx, CreateWorkspaceParams{
+			ID: uuid.NewString(), Name: name, IacType: "terraform", OrganizationID: org.ID,
+		})
+		if err != nil {
+			t.Fatalf("create workspace %q: %v", name, err)
+		}
+		return ws
+	}
+	source, live, disabledDest, deletedDest := newWorkspace("source"), newWorkspace("live"),
+		newWorkspace("disabled"), newWorkspace("deleted")
+	if err := q.SoftDeleteWorkspace(ctx, deletedDest.ID); err != nil {
+		t.Fatalf("soft-delete destination: %v", err)
+	}
+
+	newEdge := func(destination Workspace, enabled bool) WorkspaceRunTrigger {
+		edge, err := q.CreateRunTrigger(ctx, CreateRunTriggerParams{
+			ID: uuid.NewString(), SourceWorkspaceID: source.ID, DestinationWorkspaceID: destination.ID,
+			OrganizationID: org.ID, Enabled: enabled,
+		})
+		if err != nil {
+			t.Fatalf("create run trigger: %v", err)
+		}
+		return edge
+	}
+	wanted := newEdge(live, true)
+	newEdge(disabledDest, false)
+	newEdge(deletedDest, true)
+
+	edges, err := q.ListEnabledRunTriggersBySource(ctx, source.ID)
+	if err != nil {
+		t.Fatalf("ListEnabledRunTriggersBySource: %v", err)
+	}
+	if len(edges) != 1 || edges[0].ID != wanted.ID {
+		t.Errorf("edges = %+v, want only the enabled edge to a live workspace", edges)
+	}
+}
+
 func TestRunTriggerRepositoryGraphAndFanOut(t *testing.T) {
 	q := New(dbtest.Pool(t))
 	ctx := t.Context()
