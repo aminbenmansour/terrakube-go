@@ -139,14 +139,16 @@ func run() error {
 	}
 
 	handler := httpapi.New(httpapi.Deps{
-		Logger:    logger,
-		Service:   "api",
-		Started:   time.Now(),
-		DB:        pool,
-		Redis:     q,
-		Storage:   storeBackend,
-		RateLimit: cfg.RateLimit,
-		RateBurst: cfg.RateBurst,
+		Logger:       logger,
+		Service:      "api",
+		Started:      time.Now(),
+		DB:           pool,
+		Redis:        q,
+		Storage:      storeBackend,
+		RateLimit:    cfg.RateLimit,
+		RateBurst:    cfg.RateBurst,
+		Metrics:      httpapi.NewMetrics(),
+		MetricsToken: cfg.MetricsToken,
 	})
 	handler.Mount(api.MountPrefix, api.New(api.Deps{
 		Store:       querier,

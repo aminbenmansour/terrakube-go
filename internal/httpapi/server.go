@@ -33,6 +33,10 @@ type Deps struct {
 	// it) and RateBurst is the bucket size (zero uses the rate).
 	RateLimit int
 	RateBurst int
+	// Metrics, with MetricsToken set, serves /metrics to bearers of that
+	// token. Without a token the endpoint is absent rather than public.
+	Metrics      *Metrics
+	MetricsToken string
 }
 
 // New builds the base router. Domain routers are mounted on top of it.
@@ -48,9 +52,16 @@ func New(deps Deps) *chi.Mux {
 	r.Use(SecurityHeaders())
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
+	if deps.Metrics != nil {
+		r.Use(deps.Metrics.Middleware())
+	}
 	r.Use(RateLimit(deps.RateLimit, deps.RateBurst))
 	r.Use(middleware.Recoverer)
 	r.Use(requestLogger(deps.Logger))
+
+	if deps.Metrics != nil {
+		r.With(requireMetricsToken(deps.MetricsToken)).Handle("/metrics", deps.Metrics.Handler())
+	}
 
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{
