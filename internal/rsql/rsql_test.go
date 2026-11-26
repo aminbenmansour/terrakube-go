@@ -52,6 +52,14 @@ func TestParse(t *testing.T) {
 		{"name=='a;b,c'", "(== name a;b,c)"},
 		{"name=='it\\'s'", "(== name it's)"},
 		{"name=='*prod*'", "(== name *prod*)"},
+		// Elide's collection and range operators.
+		{"lastJobDate=between=(2026-01-01T00:00:00Z,2026-02-01T00:00:00Z)",
+			"(=between= lastJobDate 2026-01-01T00:00:00Z 2026-02-01T00:00:00Z)"},
+		{"lastJobDate=notbetween=(2026-01-01T00:00:00Z,2026-02-01T00:00:00Z)",
+			"(=notbetween= lastJobDate 2026-01-01T00:00:00Z 2026-02-01T00:00:00Z)"},
+		{"workspaceTag.tagId=hasmember='<uuid>'", "(=hasmember= workspaceTag.tagId <uuid>)"},
+		{"workspaceTag.tagId=hasnomember='<uuid>'", "(=hasnomember= workspaceTag.tagId <uuid>)"},
+		{"workspaceTag=isempty=true", "(=isempty= workspaceTag true)"},
 		// Whitespace around tokens is allowed.
 		{" name == prod ; status =in= ( a , b ) ", "(and (== name prod) (=in= status a b))"},
 	} {
@@ -81,6 +89,9 @@ func TestParseRejects(t *testing.T) {
 		"==x",
 		"name=='unterminated",
 		"name==a b",
+		"lastJobDate=between=(2026-01-01T00:00:00Z)",
+		"lastJobDate=between=(2026-01-01T00:00:00Z,2026-02-01T00:00:00Z,2026-03-01T00:00:00Z)",
+		"workspaceTag.tagId=hasmember=()",
 	} {
 		t.Run(raw, func(t *testing.T) {
 			if _, err := Parse(raw); !errors.Is(err, ErrSyntax) {

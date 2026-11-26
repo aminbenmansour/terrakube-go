@@ -211,7 +211,15 @@ func TestListPageRelationshipFilters(t *testing.T) {
 		{"job status", "job.status==waitingApproval", []string{"prod-api"}},
 		{"discarded job is ignored", "job.status==failed", []string{"Prod-Web"}},
 		{"job status exclusion", "job.status!=failed", []string{"other", "prod-api", "staging"}},
+		{"tag member", "workspaceTag.tagId=hasmember='" + tagID + "'", []string{"prod-api", "staging"}},
+		{"tag no member", "workspaceTag.tagId=hasnomember='" + tagID + "'", []string{"other", "Prod-Web"}},
+		{"tag collection empty", "workspaceTag=isempty=true", []string{"other", "Prod-Web"}},
+		{"tag collection present", "workspaceTag=isempty=false", []string{"prod-api", "staging"}},
+		{"job collection empty", "job=isempty=true", []string{"other", "staging"}},
+		{"job collection present", "job=isempty=false", []string{"prod-api", "Prod-Web"}},
 		{"unsupported operator widens", "job.status=isnull=true",
+			[]string{"other", "prod-api", "Prod-Web", "staging"}},
+		{"inapplicable operator widens", "workspaceTag=between=(a,b)",
 			[]string{"other", "prod-api", "Prod-Web", "staging"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -220,6 +228,38 @@ func TestListPageRelationshipFilters(t *testing.T) {
 				t.Fatalf("parse %q: %v", tc.filter, err)
 			}
 			got, err := q.ListPage[Workspace](ctx, WorkspaceList, scope, node, nil, nil, 0)
+			if err != nil {
+				t.Fatalf("ListPage: %v", err)
+			}
+			if names := workspaceNames(got); !slices.Equal(names, tc.want) {
+				t.Errorf("names = %v, want %v", names, tc.want)
+			}
+		})
+	}
+}
+
+func TestListPageBetween(t *testing.T) {
+	q, rows := seedWorkspaces(t)
+	scope := []any{rows[0].OrganizationID}
+
+	for _, tc := range []struct {
+		name   string
+		filter string
+		want   []string
+	}{
+		{"inside", "lastJobDate=between=(2025-12-15T00:00:00Z,2026-01-15T00:00:00Z)", []string{"prod-api"}},
+		{"inclusive bounds", "lastJobDate=between=(2026-01-01T00:00:00Z,2026-02-01T00:00:00Z)",
+			[]string{"prod-api", "Prod-Web"}},
+		{"outside", "lastJobDate=notbetween=(2025-12-15T00:00:00Z,2026-01-15T00:00:00Z)",
+			[]string{"Prod-Web"}},
+		{"empty range", "lastJobDate=between=(2026-03-01T00:00:00Z,2026-04-01T00:00:00Z)", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			node, err := rsql.Parse(tc.filter)
+			if err != nil {
+				t.Fatalf("parse %q: %v", tc.filter, err)
+			}
+			got, err := q.ListPage[Workspace](t.Context(), WorkspaceList, scope, node, nil, nil, 0)
 			if err != nil {
 				t.Fatalf("ListPage: %v", err)
 			}

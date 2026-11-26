@@ -62,6 +62,12 @@ var WorkspaceList = ListSpec{
 		"job.status": {
 			Expr: "j.status", From: "job j", Where: "j.workspace_id = workspace.id AND j.deleted = false",
 		},
+		"workspaceTag": {
+			From: "workspacetag wt", Where: "wt.workspace_id = workspace.id", Collection: true,
+		},
+		"job": {
+			From: "job j", Where: "j.workspace_id = workspace.id AND j.deleted = false", Collection: true,
+		},
 	},
 	Sorts: map[string]string{"name": "lower(name)", "id": "id", "lastJobDate": "last_job_date"},
 }

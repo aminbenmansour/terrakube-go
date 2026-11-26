@@ -30,7 +30,8 @@ this change parses RSQL and applies it in the query.
 - Relationship filters beyond the workspace's `workspaceTag.tagId`,
   `workspaceTag.value` and `job.status` (those three are a follow-up slice and
   use `EXISTS`; `project.id` is a plain column).
-- Collection operators (`=hasmember=`, `=isempty=`, `=between=`, `=subsetof=`).
+- `=subsetof=` (`=hasmember=`/`=hasnomember=`/`=isempty=` and `=between=` are
+  implemented).
 - The untyped global `filter=` parameter.
 - The `action` list keeps its dedicated two-term parser: the catalog is static
   and small, so SQL buys nothing there.
