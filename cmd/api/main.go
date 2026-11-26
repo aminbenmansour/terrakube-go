@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/aminbenmansour/terrakube-go/internal/api"
 	internalauth "github.com/aminbenmansour/terrakube-go/internal/auth"
 	"github.com/aminbenmansour/terrakube-go/internal/clilogin"
@@ -23,6 +25,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/logging"
 	"github.com/aminbenmansour/terrakube-go/internal/pat"
 	"github.com/aminbenmansour/terrakube-go/internal/queue"
+	"github.com/aminbenmansour/terrakube-go/internal/schedule"
 	"github.com/aminbenmansour/terrakube-go/internal/secretstore"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
@@ -263,6 +266,7 @@ func run() error {
 	if cfg.MetricsToken != "" {
 		go metrics.Sample(ctx, logger, metricsSource{store: querier, queue: q}, 30*time.Second)
 	}
+	startScheduler(ctx, logger, pool, querier, q)
 
 	return httpapi.Serve(ctx, logger, cfg.HTTPAddr, handler, cfg.ShutdownTimeout)
 }
@@ -287,4 +291,48 @@ func (s metricsSource) JobStatusCounts(ctx context.Context) (map[string]int64, e
 
 func (s metricsSource) QueueDepth(ctx context.Context) (int64, error) {
 	return s.queue.Depth(ctx, queue.JobsStream)
+}
+
+// startScheduler runs the workspace dispatcher on the replica holding a
+// session-level Postgres advisory lock, so two API instances never queue the
+// same tick twice. A replica that cannot take the lock retries; when the
+// holder exits, its connection closes and the next replica takes over.
+func startScheduler(ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool, st store.Querier, q *queue.Queue) {
+	const lockKey int64 = 0x74657272616b7562 // "terrakub"
+	go func() {
+		for ctx.Err() == nil {
+			conn, err := pool.Acquire(ctx)
+			if err != nil {
+				logger.Warn("schedule dispatcher cannot acquire a connection", "error", err)
+				if !waitFor(ctx, 30*time.Second) {
+					return
+				}
+				continue
+			}
+			var locked bool
+			if err := conn.QueryRow(ctx, "SELECT pg_try_advisory_lock($1)", lockKey).Scan(&locked); err != nil || !locked {
+				conn.Release()
+				if err != nil {
+					logger.Warn("schedule dispatcher lock failed", "error", err)
+				}
+				if !waitFor(ctx, 30*time.Second) {
+					return
+				}
+				continue
+			}
+			logger.Info("schedule dispatcher active")
+			schedule.NewDispatcher(st, q, logger).Run(ctx)
+			conn.Release()
+			return
+		}
+	}()
+}
+
+func waitFor(ctx context.Context, d time.Duration) bool {
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(d):
+		return true
+	}
 }
