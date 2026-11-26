@@ -22,6 +22,7 @@ type nestedStub struct {
 	orgs       []store.Organization
 	workspaces []store.Workspace
 	variables  []store.Variable
+	jobs       []store.Job
 }
 
 func (s *nestedStub) GetOrganization(_ context.Context, id string) (store.Organization, error) {
@@ -47,6 +48,16 @@ func (s *nestedStub) ListVariablesByWorkspace(_ context.Context, workspaceID str
 	for _, v := range s.variables {
 		if v.WorkspaceID == workspaceID {
 			out = append(out, v)
+		}
+	}
+	return out, nil
+}
+
+func (s *nestedStub) ListJobsByWorkspace(_ context.Context, workspaceID string) ([]store.Job, error) {
+	var out []store.Job
+	for _, job := range s.jobs {
+		if job.WorkspaceID == workspaceID {
+			out = append(out, job)
 		}
 	}
 	return out, nil
@@ -122,6 +133,10 @@ func newNestedStub() *nestedStub {
 			{ID: varID, VariableKey: "FOO", VariableValue: "bar", VariableCategory: "TERRAFORM", WorkspaceID: wsID},
 			{ID: "55555555-5555-4555-8555-555555555555", VariableKey: "BAZ", VariableValue: "qux", VariableCategory: "ENV", WorkspaceID: otherWS},
 		},
+		jobs: []store.Job{
+			{ID: 42, OrganizationID: orgID, WorkspaceID: wsID, Status: "completed"},
+			{ID: 43, OrganizationID: orgID, WorkspaceID: otherWS, Status: "completed"},
+		},
 	}
 }
 
@@ -170,7 +185,7 @@ func serveNested(t *testing.T, s *nestedStub, method, path, body string) *httpte
 // (Details.tsx), so listVariables alone cannot make the Variables tab work.
 func TestNestedWorkspaceGetIncludesVariables(t *testing.T) {
 	rec := serveNested(t, newNestedStub(), http.MethodGet,
-		"/organization/"+orgID+"/workspace/"+wsID+"?include=variable,organization", "")
+		"/organization/"+orgID+"/workspace/"+wsID+"?include=variable,organization,job", "")
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body = %s", rec.Code, rec.Body.String())
@@ -194,13 +209,26 @@ func TestNestedWorkspaceGetIncludesVariables(t *testing.T) {
 		t.Errorf("relationships.variable.data = %v, want one variable %s", ids, varID)
 	}
 
-	var includedVariable, includedOrganization bool
+	var jobIDs []struct {
+		Type string `json:"type"`
+		ID   string `json:"id"`
+	}
+	if err := json.Unmarshal(doc.Data.Relationships["job"].Data, &jobIDs); err != nil {
+		t.Fatalf("decode relationships.job: %v", err)
+	}
+	if len(jobIDs) != 1 || jobIDs[0].Type != "job" || jobIDs[0].ID != "42" {
+		t.Errorf("relationships.job.data = %v, want the workspace's job 42", jobIDs)
+	}
+
+	var includedVariable, includedOrganization, includedJob bool
 	for _, inc := range doc.Included {
 		switch inc.Type {
 		case "variable":
 			includedVariable = inc.ID == varID && inc.Attributes["key"] == "FOO"
 		case "organization":
 			includedOrganization = inc.ID == orgID && inc.Attributes["name"] == "demo"
+		case "job":
+			includedJob = inc.ID == "42"
 		}
 	}
 	if !includedVariable {
@@ -208,6 +236,9 @@ func TestNestedWorkspaceGetIncludesVariables(t *testing.T) {
 	}
 	if !includedOrganization {
 		t.Errorf("included = %v, want the workspace's organization", doc.Included)
+	}
+	if !includedJob {
+		t.Errorf("included = %v, want the workspace's job", doc.Included)
 	}
 }
 
