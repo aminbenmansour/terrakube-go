@@ -1,20 +1,20 @@
 {
   ".github/workflows/ci.yml": {
-    "mtime": 1795655685.5299532,
-    "seen": 1795655725.5671456,
+    "mtime": 1795655863.889945,
+    "seen": 1795656097.1814034,
     "ast_hash": "6422c88db5d1e6a862974e7d0d38bf97",
     "semantic_hash": ""
   },
   "cmd/api/main.go": {
-    "mtime": 1795653816.4765337,
-    "seen": 1795655725.5671535,
-    "ast_hash": "2903b2ee94fe5618c86f589f6d3a71d0",
+    "mtime": 1795656002.4805808,
+    "seen": 1795656097.1814103,
+    "ast_hash": "06b1edc95fa53afc50741544ff1436da",
     "semantic_hash": ""
   },
   "cmd/executor/main.go": {
-    "mtime": 1795653816.476678,
-    "seen": 1795655725.5671573,
-    "ast_hash": "08681bb4fc4604ca2862d60aa8593e5b",
+    "mtime": 1795656002.4548397,
+    "seen": 1795656097.1814134,
+    "ast_hash": "6fd5b2ebc1515c759b4d17a08ffdb33a",
     "semantic_hash": ""
   },
   "cmd/migrate/main.go": {
@@ -24,9 +24,9 @@
     "semantic_hash": ""
   },
   "cmd/registry/main.go": {
-    "mtime": 1795653816.476678,
-    "seen": 1795655725.5672276,
-    "ast_hash": "b1fa2ea11c00d6a851eb60b11f0294c1",
+    "mtime": 1795656002.4548397,
+    "seen": 1795656097.1814582,
+    "ast_hash": "2c26136868cbdea0d776bb32d7814ff2",
     "semantic_hash": ""
   },
   "deploy/compose/compose.yaml": {
@@ -36,9 +36,9 @@
     "semantic_hash": ""
   },
   "go.mod": {
-    "mtime": 1795167368.030301,
-    "seen": 1795168323.468317,
-    "ast_hash": "b693f6fe062a399a4c417afbbe7ece71",
+    "mtime": 1795656009.8886735,
+    "seen": 1795656097.184247,
+    "ast_hash": "c4d84457d404104db47c014d992e6814",
     "semantic_hash": ""
   },
   "internal/api/api.go": {
@@ -90,9 +90,9 @@
     "semantic_hash": "b7288201cc9c30bc967c319e20256317"
   },
   "internal/config/config.go": {
-    "mtime": 1795653816.4858243,
-    "seen": 1795655725.5748966,
-    "ast_hash": "ce18158f6c6f310b77702efdcd9018d5",
+    "mtime": 1795656002.4458992,
+    "seen": 1795656097.1850655,
+    "ast_hash": "4b7ba70cff876a81b0c6d18f38284a91",
     "semantic_hash": ""
   },
   "internal/config/config_test.go": {
@@ -120,9 +120,9 @@
     "semantic_hash": "d07800aad12a30fe0893d9a288d33c14"
   },
   "internal/httpapi/server.go": {
-    "mtime": 1795653816.4859295,
-    "seen": 1795655725.5754914,
-    "ast_hash": "45840363bdf4b59f62ee2c3b7d1e8068",
+    "mtime": 1795656035.6927435,
+    "seen": 1795656097.185661,
+    "ast_hash": "b781dfa99a135ea51e6ef7d3ec06c37b",
     "semantic_hash": ""
   },
   "internal/httpapi/server_test.go": {
@@ -534,9 +534,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1795655692.3021038,
-    "seen": 1795655725.5773716,
-    "ast_hash": "df6fb15f3f1a64b051ea96feee8286ff",
+    "mtime": 1795656072.2136014,
+    "seen": 1795656097.1874247,
+    "ast_hash": "0b570661e7876543da99e9824b952b7a",
     "semantic_hash": ""
   },
   "docs/compat.md": {
@@ -2784,15 +2784,27 @@
     "semantic_hash": ""
   },
   "SECURITY.md": {
-    "mtime": 1795655652.3407836,
-    "seen": 1795655725.5773737,
+    "mtime": 1795655863.8900383,
+    "seen": 1795656097.1874259,
     "ast_hash": "12f821beffbcfa199f009fbb8001e6dc",
     "semantic_hash": ""
   },
   "docs/threat-model.md": {
-    "mtime": 1795655720.1686447,
-    "seen": 1795655725.5775926,
+    "mtime": 1795655863.8900383,
+    "seen": 1795656097.1875713,
     "ast_hash": "a04a70591b56e7838f4370b596ae080e",
+    "semantic_hash": ""
+  },
+  "internal/httpapi/metrics.go": {
+    "mtime": 1795656002.4458084,
+    "seen": 1795656097.1855888,
+    "ast_hash": "b179bba0edb54635707562224f09da17",
+    "semantic_hash": ""
+  },
+  "internal/httpapi/metrics_test.go": {
+    "mtime": 1795656063.709009,
+    "seen": 1795656097.18559,
+    "ast_hash": "91f804afca52da94f98fdf93f7d7dfe3",
     "semantic_hash": ""
   }
 }
