@@ -1,19 +1,19 @@
 {
   ".github/workflows/ci.yml": {
-    "mtime": 1795619264.839071,
-    "seen": 1795619667.075003,
-    "ast_hash": "7a7e2758660b5cfad8be229adbd1b43b",
+    "mtime": 1795655685.5299532,
+    "seen": 1795655725.5671456,
+    "ast_hash": "6422c88db5d1e6a862974e7d0d38bf97",
     "semantic_hash": ""
   },
   "cmd/api/main.go": {
-    "mtime": 1795653626.3891678,
-    "seen": 1795653684.4412065,
+    "mtime": 1795653816.4765337,
+    "seen": 1795655725.5671535,
     "ast_hash": "2903b2ee94fe5618c86f589f6d3a71d0",
     "semantic_hash": ""
   },
   "cmd/executor/main.go": {
-    "mtime": 1795653626.380882,
-    "seen": 1795653684.4412112,
+    "mtime": 1795653816.476678,
+    "seen": 1795655725.5671573,
     "ast_hash": "08681bb4fc4604ca2862d60aa8593e5b",
     "semantic_hash": ""
   },
@@ -24,8 +24,8 @@
     "semantic_hash": ""
   },
   "cmd/registry/main.go": {
-    "mtime": 1795653626.3756793,
-    "seen": 1795653684.4412367,
+    "mtime": 1795653816.476678,
+    "seen": 1795655725.5672276,
     "ast_hash": "b1fa2ea11c00d6a851eb60b11f0294c1",
     "semantic_hash": ""
   },
@@ -90,8 +90,8 @@
     "semantic_hash": "b7288201cc9c30bc967c319e20256317"
   },
   "internal/config/config.go": {
-    "mtime": 1795653626.3751547,
-    "seen": 1795653684.4451423,
+    "mtime": 1795653816.4858243,
+    "seen": 1795655725.5748966,
     "ast_hash": "ce18158f6c6f310b77702efdcd9018d5",
     "semantic_hash": ""
   },
@@ -120,8 +120,8 @@
     "semantic_hash": "d07800aad12a30fe0893d9a288d33c14"
   },
   "internal/httpapi/server.go": {
-    "mtime": 1795653626.3748472,
-    "seen": 1795653684.445678,
+    "mtime": 1795653816.4859295,
+    "seen": 1795655725.5754914,
     "ast_hash": "45840363bdf4b59f62ee2c3b7d1e8068",
     "semantic_hash": ""
   },
@@ -534,14 +534,14 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1795653640.8418167,
-    "seen": 1795653684.4474308,
-    "ast_hash": "54f7e027b5a1bc15ec4df31a75047eb6",
+    "mtime": 1795655692.3021038,
+    "seen": 1795655725.5773716,
+    "ast_hash": "df6fb15f3f1a64b051ea96feee8286ff",
     "semantic_hash": ""
   },
   "docs/compat.md": {
-    "mtime": 1795653640.842147,
-    "seen": 1795653684.447432,
+    "mtime": 1795653816.4769657,
+    "seen": 1795655725.5773757,
     "ast_hash": "3aad14518c2f8e9c307455ec9566333c",
     "semantic_hash": ""
   },
@@ -2772,15 +2772,27 @@
     "semantic_hash": ""
   },
   "internal/httpapi/ratelimit.go": {
-    "mtime": 1795653606.4320362,
-    "seen": 1795653684.445658,
+    "mtime": 1795653816.4858642,
+    "seen": 1795655725.5754478,
     "ast_hash": "0be6c2f033f03f549592a9b4d247195f",
     "semantic_hash": ""
   },
   "internal/httpapi/ratelimit_test.go": {
-    "mtime": 1795653603.3620157,
-    "seen": 1795653684.4456594,
+    "mtime": 1795653816.4858904,
+    "seen": 1795655725.5754492,
     "ast_hash": "812da6f45878f346785eef92ccdb9716",
+    "semantic_hash": ""
+  },
+  "SECURITY.md": {
+    "mtime": 1795655652.3407836,
+    "seen": 1795655725.5773737,
+    "ast_hash": "12f821beffbcfa199f009fbb8001e6dc",
+    "semantic_hash": ""
+  },
+  "docs/threat-model.md": {
+    "mtime": 1795655720.1686447,
+    "seen": 1795655725.5775926,
+    "ast_hash": "a04a70591b56e7838f4370b596ae080e",
     "semantic_hash": ""
   }
 }

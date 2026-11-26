@@ -44,6 +44,16 @@ jobs:
       - name: Vulnerability scan
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.10.0 ./...
 
+      # The SBOM for a release is the artifact of the run that built its commit.
+      - name: Software bill of materials
+        run: go run github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.9.0 mod -json -output sbom.cdx.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.cdx.json
+          retention-days: 90
+
   integration:
     runs-on: ubuntu-latest
     services:
