@@ -27,9 +27,9 @@ this change parses RSQL and applies it in the query.
 
 ## Non-goals
 
-- Relationship filters (`project.id` is a plain column and is supported;
-  `workspaceTag.tagId`, `job.status` need `EXISTS` subqueries and stay ignored,
-  documented).
+- Relationship filters beyond the workspace's `workspaceTag.tagId`,
+  `workspaceTag.value` and `job.status` (those three are a follow-up slice and
+  use `EXISTS`; `project.id` is a plain column).
 - Collection operators (`=hasmember=`, `=isempty=`, `=between=`, `=subsetof=`).
 - The untyped global `filter=` parameter.
 - The `action` list keeps its dedicated two-term parser: the catalog is static

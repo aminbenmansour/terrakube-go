@@ -285,9 +285,13 @@ Query conventions:
   `=isnull=true|false`, `=ini=`/`=outi=` (case-insensitive), `=lt=`, `=le=`,
   `=gt=`, `=ge=`, `*` as the wildcard, `;` (AND), `,` (OR) and parentheses.
   `==` is case-sensitive; the UI's name search uses `=ini='*term*'`. A filter
-  naming an attribute we do not model is ignored whole, so a relationship
-  filter (`workspaceTag.tagId`, `job.status`) widens instead of hiding rows. A
-  malformed expression is a `400`. Semicolons must be URL-encoded (`%3B`).
+  naming an attribute we do not model is ignored whole, so it widens instead of
+  hiding rows. A malformed expression is a `400`. Semicolons must be URL-encoded
+  (`%3B`). On the workspace list, the related attributes `workspaceTag.tagId`,
+  `workspaceTag.value` and `job.status` filter through an `EXISTS` subquery and
+  accept the membership operators (`==`, `!=`, `=in=`, `=out=`, `=ini=`,
+  `=outi=`); `!=`/`=out=` become `NOT EXISTS`, so an untagged workspace
+  matches, and discarded jobs are ignored.
 - `sort=name`, `sort=-name`, or comma-separated keys (`sort=name,-id`); `name`
   compares case-insensitively and `id` is the tiebreaker.
 - `page[size]`, `page[number]`, `page[totals]`. Any page parameter makes Elide
@@ -666,9 +670,9 @@ Current M1 limitations (tracked for later milestones):
   workspace lists. Sortable attributes are `name` and `id` everywhere, plus
   `lastJobDate` on workspaces; modeled filter attributes are `name`,
   `description`, `id`, and for workspaces also `lastJobStatus`,
-  `policyComplianceStatus`, `project.id` and `lastJobDate`. Relationship filters
-  need EXISTS subqueries and are ignored for now, as is the `action` catalog,
-  which keeps its own in-memory two-term parser. The organization list also
+  `policyComplianceStatus`, `project.id`, `lastJobDate`, `workspaceTag.tagId`,
+  `workspaceTag.value` and `job.status`. Other relationship filters are ignored,
+  as is the `action` catalog, which keeps its own in-memory two-term parser. The organization list also
   applies the caller's membership restriction in the query, so `page[totals]`
   counts only visible rows.
 - Authentication is a static bearer token (`TERRAKUBE_AUTH_TOKEN`), a Dex JWT
