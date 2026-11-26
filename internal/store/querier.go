@@ -15,6 +15,7 @@ type Querier interface {
 	// Deleting a provider in use unlinks its workspaces instead of failing, which
 	// is what upstream does through the mapped relationship.
 	ClearWorkspaceVCS(ctx context.Context, vcsID *string) error
+	CountEnabledRunTriggersBySource(ctx context.Context, arg CountEnabledRunTriggersBySourceParams) (int64, error)
 	CountJobsByStatus(ctx context.Context) ([]CountJobsByStatusRow, error)
 	CountWorkspacesWithAgent(ctx context.Context, agentID *string) (int64, error)
 	CountWorkspacesWithSSHKey(ctx context.Context, sshID *string) (int64, error)
@@ -36,6 +37,7 @@ type Querier interface {
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateProjectAccess(ctx context.Context, arg CreateProjectAccessParams) (ProjectAccess, error)
 	CreateReference(ctx context.Context, arg CreateReferenceParams) (Reference, error)
+	CreateRunTrigger(ctx context.Context, arg CreateRunTriggerParams) (WorkspaceRunTrigger, error)
 	CreateSSHKey(ctx context.Context, arg CreateSSHKeyParams) (Ssh, error)
 	CreateSchedule(ctx context.Context, arg CreateScheduleParams) (Schedule, error)
 	CreateStep(ctx context.Context, arg CreateStepParams) (Step, error)
@@ -61,6 +63,7 @@ type Querier interface {
 	DeleteProject(ctx context.Context, id string) error
 	DeleteProjectAccess(ctx context.Context, id string) error
 	DeleteReference(ctx context.Context, id string) error
+	DeleteRunTrigger(ctx context.Context, id string) error
 	DeleteSSHKey(ctx context.Context, id string) error
 	DeleteSchedule(ctx context.Context, id string) error
 	DeleteTag(ctx context.Context, id string) error
@@ -97,6 +100,7 @@ type Querier interface {
 	GetProjectAccess(ctx context.Context, id string) (ProjectAccess, error)
 	GetProjectByName(ctx context.Context, arg GetProjectByNameParams) (Project, error)
 	GetReference(ctx context.Context, id string) (Reference, error)
+	GetRunTrigger(ctx context.Context, id string) (WorkspaceRunTrigger, error)
 	GetSSHKey(ctx context.Context, id string) (Ssh, error)
 	GetSchedule(ctx context.Context, id string) (Schedule, error)
 	GetStep(ctx context.Context, id string) (Step, error)
@@ -141,6 +145,7 @@ type Querier interface {
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
 	ListReferencesByCollection(ctx context.Context, collectionID string) ([]Reference, error)
 	ListReferencesByWorkspace(ctx context.Context, workspaceID string) ([]Reference, error)
+	ListRunTriggersByOrganization(ctx context.Context, organizationID string) ([]WorkspaceRunTrigger, error)
 	ListSSHKeySecrets(ctx context.Context) ([]ListSSHKeySecretsRow, error)
 	ListSSHKeySecretsAfter(ctx context.Context, arg ListSSHKeySecretsAfterParams) ([]ListSSHKeySecretsAfterRow, error)
 	ListSSHKeysByOrganization(ctx context.Context, organizationID string) ([]Ssh, error)
@@ -186,6 +191,7 @@ type Querier interface {
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) (Organization, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 	UpdateProjectAccess(ctx context.Context, arg UpdateProjectAccessParams) (ProjectAccess, error)
+	UpdateRunTrigger(ctx context.Context, arg UpdateRunTriggerParams) (WorkspaceRunTrigger, error)
 	UpdateSSHKey(ctx context.Context, arg UpdateSSHKeyParams) (Ssh, error)
 	UpdateSchedule(ctx context.Context, arg UpdateScheduleParams) (Schedule, error)
 	UpdateStepOutput(ctx context.Context, arg UpdateStepOutputParams) error

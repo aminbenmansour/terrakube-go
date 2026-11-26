@@ -394,6 +394,19 @@ type Workspace struct {
 	AgentID                         *string            `json:"agent_id"`
 }
 
+type WorkspaceRunTrigger struct {
+	ID                     string             `json:"id"`
+	SourceWorkspaceID      string             `json:"source_workspace_id"`
+	DestinationWorkspaceID string             `json:"destination_workspace_id"`
+	TemplateID             *string            `json:"template_id"`
+	OrganizationID         string             `json:"organization_id"`
+	Enabled                bool               `json:"enabled"`
+	CreatedDate            pgtype.Timestamptz `json:"created_date"`
+	CreatedBy              *string            `json:"created_by"`
+	UpdatedDate            pgtype.Timestamptz `json:"updated_date"`
+	UpdatedBy              *string            `json:"updated_by"`
+}
+
 type Workspacetag struct {
 	ID          string             `json:"id"`
 	TagID       string             `json:"tag_id"`
