@@ -283,15 +283,18 @@ Query conventions:
 
 - `filter[type]=...` uses RSQL: `==`, `!=`, `=in=(...)`, `=out=(...)`,
   `=isnull=true|false`, `=ini=`/`=outi=` (case-insensitive), `=lt=`, `=le=`,
-  `=gt=`, `=ge=`, `*` as the wildcard, `;` (AND), `,` (OR) and parentheses.
+  `=gt=`, `=ge=`, `=between=(a,b)`, `=notbetween=(a,b)`, `*` as the wildcard,
+  `;` (AND), `,` (OR) and parentheses.
   `==` is case-sensitive; the UI's name search uses `=ini='*term*'`. A filter
   naming an attribute we do not model is ignored whole, so it widens instead of
   hiding rows. A malformed expression is a `400`. Semicolons must be URL-encoded
   (`%3B`). On the workspace list, the related attributes `workspaceTag.tagId`,
   `workspaceTag.value` and `job.status` filter through an `EXISTS` subquery and
   accept the membership operators (`==`, `!=`, `=in=`, `=out=`, `=ini=`,
-  `=outi=`); `!=`/`=out=` become `NOT EXISTS`, so an untagged workspace
-  matches, and discarded jobs are ignored.
+  `=outi=`), plus `=hasmember=`/`=hasnomember=` and ranges; `!=`/`=out=`/
+  `=hasnomember=` become `NOT EXISTS`, so an untagged workspace matches, and
+  discarded jobs are ignored. The relationship itself takes `=isempty=`:
+  `workspaceTag=isempty=true` lists workspaces with no tag binding.
 - `sort=name`, `sort=-name`, or comma-separated keys (`sort=name,-id`); `name`
   compares case-insensitively and `id` is the tiebreaker.
 - `page[size]`, `page[number]`, `page[totals]`. Any page parameter makes Elide
