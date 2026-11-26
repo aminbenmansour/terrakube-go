@@ -121,6 +121,7 @@ type Querier interface {
 	ListAgentsByOrganization(ctx context.Context, organizationID string) ([]Agent, error)
 	ListArchivesByHistory(ctx context.Context, historyID string) ([]TempArchive, error)
 	ListCollectionsByOrganization(ctx context.Context, organizationID string) ([]Collection, error)
+	ListEnabledSchedules(ctx context.Context) ([]Schedule, error)
 	ListGlobalVariableSecrets(ctx context.Context) ([]ListGlobalVariableSecretsRow, error)
 	ListGlobalVariableSecretsAfter(ctx context.Context, arg ListGlobalVariableSecretsAfterParams) ([]ListGlobalVariableSecretsAfterRow, error)
 	ListGlobalVariablesByOrganization(ctx context.Context, organizationID string) ([]Globalvar, error)

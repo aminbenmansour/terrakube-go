@@ -83,6 +83,42 @@ func (q *Queries) GetSchedule(ctx context.Context, id string) (Schedule, error) 
 	return i, err
 }
 
+const listEnabledSchedules = `-- name: ListEnabledSchedules :many
+SELECT id, cron, description, tcl, template_reference, enabled, workspace_id, created_date, updated_date, created_by, updated_by FROM schedule WHERE enabled = true ORDER BY id
+`
+
+func (q *Queries) ListEnabledSchedules(ctx context.Context) ([]Schedule, error) {
+	rows, err := q.db.Query(ctx, listEnabledSchedules)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Schedule{}
+	for rows.Next() {
+		var i Schedule
+		if err := rows.Scan(
+			&i.ID,
+			&i.Cron,
+			&i.Description,
+			&i.Tcl,
+			&i.TemplateReference,
+			&i.Enabled,
+			&i.WorkspaceID,
+			&i.CreatedDate,
+			&i.UpdatedDate,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSchedulesByWorkspace = `-- name: ListSchedulesByWorkspace :many
 SELECT id, cron, description, tcl, template_reference, enabled, workspace_id, created_date, updated_date, created_by, updated_by FROM schedule WHERE workspace_id = $1 ORDER BY created_date, id
 `
