@@ -15,17 +15,22 @@ var ErrSyntax = errors.New("invalid filter expression")
 type Op string
 
 const (
-	OpEq     Op = "=="
-	OpNe     Op = "!="
-	OpIn     Op = "=in="
-	OpOut    Op = "=out="
-	OpIsNull Op = "=isnull="
-	OpIni    Op = "=ini="
-	OpOuti   Op = "=outi="
-	OpLt     Op = "=lt="
-	OpLe     Op = "=le="
-	OpGt     Op = "=gt="
-	OpGe     Op = "=ge="
+	OpEq          Op = "=="
+	OpNe          Op = "!="
+	OpIn          Op = "=in="
+	OpOut         Op = "=out="
+	OpIsNull      Op = "=isnull="
+	OpIni         Op = "=ini="
+	OpOuti        Op = "=outi="
+	OpLt          Op = "=lt="
+	OpLe          Op = "=le="
+	OpGt          Op = "=gt="
+	OpGe          Op = "=ge="
+	OpBetween     Op = "=between="
+	OpNotBetween  Op = "=notbetween="
+	OpHasMember   Op = "=hasmember="
+	OpHasNoMember Op = "=hasnomember="
+	OpIsEmpty     Op = "=isempty="
 )
 
 // Node is a filter expression.
@@ -37,8 +42,8 @@ type And struct{ Left, Right Node }
 // Or is the disjunction written with ','.
 type Or struct{ Left, Right Node }
 
-// Compare is one attribute predicate. Values is a single value except for
-// =in= and =out=, which hold the list.
+// Compare is one attribute predicate. Values is a single value except for the
+// set operators (=in=, =out=) and =between=, which hold a list.
 type Compare struct {
 	Attr   string
 	Op     Op
@@ -76,7 +81,10 @@ type parser struct {
 
 // operators are matched longest first, because "=in=" is a prefix of "=ini="
 // and "=out=" of "=outi=".
-var operators = []Op{OpIsNull, OpIni, OpOuti, OpOut, OpIn, OpLt, OpLe, OpGt, OpGe, OpEq, OpNe}
+var operators = []Op{
+	OpHasNoMember, OpHasMember, OpNotBetween, OpBetween, OpIsEmpty,
+	OpIsNull, OpIni, OpOuti, OpOut, OpIn, OpLt, OpLe, OpGt, OpGe, OpEq, OpNe,
+}
 
 func (p *parser) parseOr() (Node, error) {
 	left, err := p.parseAnd()
@@ -153,10 +161,21 @@ func (p *parser) parseCompare() (Node, error) {
 		return nil, p.errorf("missing operator after %q", attr)
 	}
 
-	if op == OpIn || op == OpOut {
+	switch op {
+	case OpIn, OpOut:
 		values, err := p.parseList()
 		if err != nil {
 			return nil, err
+		}
+		return Compare{Attr: attr, Op: op, Values: values}, nil
+
+	case OpBetween, OpNotBetween:
+		values, err := p.parseList()
+		if err != nil {
+			return nil, err
+		}
+		if len(values) != 2 {
+			return nil, p.errorf("%s takes two values", op)
 		}
 		return Compare{Attr: attr, Op: op, Values: values}, nil
 	}
