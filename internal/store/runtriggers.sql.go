@@ -7,7 +7,43 @@ package store
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const claimRunTriggerEvent = `-- name: ClaimRunTriggerEvent :one
+UPDATE run_trigger_event
+SET status = 'PROCESSING',
+    attempt_count = attempt_count + 1,
+    last_attempt_at = now(),
+    updated_date = now()
+WHERE id = (
+    SELECT id FROM run_trigger_event
+    WHERE status = 'PENDING'
+      AND (next_attempt_at IS NULL OR next_attempt_at <= now())
+    ORDER BY created_date, id
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED
+)
+RETURNING id, job_id, status, attempt_count, last_attempt_at, next_attempt_at, last_error, created_date, updated_date
+`
+
+func (q *Queries) ClaimRunTriggerEvent(ctx context.Context) (RunTriggerEvent, error) {
+	row := q.db.QueryRow(ctx, claimRunTriggerEvent)
+	var i RunTriggerEvent
+	err := row.Scan(
+		&i.ID,
+		&i.JobID,
+		&i.Status,
+		&i.AttemptCount,
+		&i.LastAttemptAt,
+		&i.NextAttemptAt,
+		&i.LastError,
+		&i.CreatedDate,
+		&i.UpdatedDate,
+	)
+	return i, err
+}
 
 const countEnabledRunTriggersBySource = `-- name: CountEnabledRunTriggersBySource :one
 SELECT count(*) FROM workspace_run_trigger
@@ -77,6 +113,26 @@ func (q *Queries) DeleteRunTrigger(ctx context.Context, id string) error {
 	return err
 }
 
+const failStuckRunTriggerEvents = `-- name: FailStuckRunTriggerEvents :execrows
+UPDATE run_trigger_event
+SET status = 'FAILED', last_error = $3, updated_date = now()
+WHERE status = 'PROCESSING' AND last_attempt_at < $1 AND attempt_count >= $2
+`
+
+type FailStuckRunTriggerEventsParams struct {
+	LastAttemptAt pgtype.Timestamptz `json:"last_attempt_at"`
+	AttemptCount  int32              `json:"attempt_count"`
+	LastError     *string            `json:"last_error"`
+}
+
+func (q *Queries) FailStuckRunTriggerEvents(ctx context.Context, arg FailStuckRunTriggerEventsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, failStuckRunTriggerEvents, arg.LastAttemptAt, arg.AttemptCount, arg.LastError)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getRunTrigger = `-- name: GetRunTrigger :one
 SELECT id, source_workspace_id, destination_workspace_id, template_id, organization_id, enabled, created_date, created_by, updated_date, updated_by FROM workspace_run_trigger WHERE id = $1
 `
@@ -97,6 +153,44 @@ func (q *Queries) GetRunTrigger(ctx context.Context, id string) (WorkspaceRunTri
 		&i.UpdatedBy,
 	)
 	return i, err
+}
+
+const listEnabledRunTriggersBySource = `-- name: ListEnabledRunTriggersBySource :many
+SELECT t.id, t.source_workspace_id, t.destination_workspace_id, t.template_id, t.organization_id, t.enabled, t.created_date, t.created_by, t.updated_date, t.updated_by FROM workspace_run_trigger t
+JOIN workspace w ON w.id = t.destination_workspace_id
+WHERE t.source_workspace_id = $1 AND t.enabled = true AND w.deleted = false
+ORDER BY t.created_date, t.id
+`
+
+func (q *Queries) ListEnabledRunTriggersBySource(ctx context.Context, sourceWorkspaceID string) ([]WorkspaceRunTrigger, error) {
+	rows, err := q.db.Query(ctx, listEnabledRunTriggersBySource, sourceWorkspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WorkspaceRunTrigger{}
+	for rows.Next() {
+		var i WorkspaceRunTrigger
+		if err := rows.Scan(
+			&i.ID,
+			&i.SourceWorkspaceID,
+			&i.DestinationWorkspaceID,
+			&i.TemplateID,
+			&i.OrganizationID,
+			&i.Enabled,
+			&i.CreatedDate,
+			&i.CreatedBy,
+			&i.UpdatedDate,
+			&i.UpdatedBy,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listRunTriggersByOrganization = `-- name: ListRunTriggersByOrganization :many
@@ -132,6 +226,58 @@ func (q *Queries) ListRunTriggersByOrganization(ctx context.Context, organizatio
 		return nil, err
 	}
 	return items, nil
+}
+
+const reclaimStuckRunTriggerEvents = `-- name: ReclaimStuckRunTriggerEvents :execrows
+UPDATE run_trigger_event
+SET status = 'PENDING', updated_date = now()
+WHERE status = 'PROCESSING' AND last_attempt_at < $1 AND attempt_count < $2
+`
+
+type ReclaimStuckRunTriggerEventsParams struct {
+	LastAttemptAt pgtype.Timestamptz `json:"last_attempt_at"`
+	AttemptCount  int32              `json:"attempt_count"`
+}
+
+func (q *Queries) ReclaimStuckRunTriggerEvents(ctx context.Context, arg ReclaimStuckRunTriggerEventsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, reclaimStuckRunTriggerEvents, arg.LastAttemptAt, arg.AttemptCount)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const recordRunTriggerEvent = `-- name: RecordRunTriggerEvent :execrows
+UPDATE run_trigger_event
+SET status = $3,
+    last_error = $4,
+    next_attempt_at = $5,
+    updated_date = now()
+WHERE id = $1
+  AND status = 'PROCESSING'
+  AND last_attempt_at = $2
+`
+
+type RecordRunTriggerEventParams struct {
+	ID            string             `json:"id"`
+	LastAttemptAt pgtype.Timestamptz `json:"last_attempt_at"`
+	Status        string             `json:"status"`
+	LastError     *string            `json:"last_error"`
+	NextAttemptAt pgtype.Timestamptz `json:"next_attempt_at"`
+}
+
+func (q *Queries) RecordRunTriggerEvent(ctx context.Context, arg RecordRunTriggerEventParams) (int64, error) {
+	result, err := q.db.Exec(ctx, recordRunTriggerEvent,
+		arg.ID,
+		arg.LastAttemptAt,
+		arg.Status,
+		arg.LastError,
+		arg.NextAttemptAt,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const updateRunTrigger = `-- name: UpdateRunTrigger :one

@@ -12,6 +12,7 @@ type Querier interface {
 	AddNotificationConfigurationTemplate(ctx context.Context, arg AddNotificationConfigurationTemplateParams) error
 	ApproveJob(ctx context.Context, arg ApproveJobParams) (Job, error)
 	ClaimCliAuthCode(ctx context.Context, id string) (int64, error)
+	ClaimRunTriggerEvent(ctx context.Context) (RunTriggerEvent, error)
 	// Deleting a provider in use unlinks its workspaces instead of failing, which
 	// is what upstream does through the mapped relationship.
 	ClearWorkspaceVCS(ctx context.Context, vcsID *string) error
@@ -56,6 +57,9 @@ type Querier interface {
 	DeleteExpiredCliAuthSessions(ctx context.Context) (int64, error)
 	DeleteGlobalVariable(ctx context.Context, id string) error
 	DeleteItem(ctx context.Context, id string) error
+	// Only for a just-created dependent whose steps could not all be written; a
+	// normal job is soft-deleted so its history stays visible.
+	DeleteJob(ctx context.Context, id int64) error
 	DeleteNotificationConfiguration(ctx context.Context, id string) error
 	DeleteNotificationConfigurationTemplates(ctx context.Context, configurationID string) error
 	DeleteNotificationTrigger(ctx context.Context, id string) error
@@ -74,6 +78,7 @@ type Querier interface {
 	DeleteWorkspaceTag(ctx context.Context, id string) error
 	DenyCliAuthSession(ctx context.Context, id string) error
 	FailCliAuthSession(ctx context.Context, id string) error
+	FailStuckRunTriggerEvents(ctx context.Context, arg FailStuckRunTriggerEventsParams) (int64, error)
 	GetAccess(ctx context.Context, id string) (Access, error)
 	GetAction(ctx context.Context, id string) (Action, error)
 	GetAgent(ctx context.Context, id string) (Agent, error)
@@ -84,9 +89,11 @@ type Querier interface {
 	GetContent(ctx context.Context, id string) (Content, error)
 	GetGlobalVariable(ctx context.Context, id string) (Globalvar, error)
 	GetHistory(ctx context.Context, id string) (History, error)
+	GetHistoryBefore(ctx context.Context, arg GetHistoryBeforeParams) (History, error)
 	GetHistoryByJobReference(ctx context.Context, arg GetHistoryByJobReferenceParams) (History, error)
 	GetItem(ctx context.Context, id string) (Item, error)
 	GetJob(ctx context.Context, id int64) (Job, error)
+	GetJobByWorkspaceAndTrigger(ctx context.Context, arg GetJobByWorkspaceAndTriggerParams) (Job, error)
 	GetLatestHistory(ctx context.Context, workspaceID string) (History, error)
 	GetNotificationConfiguration(ctx context.Context, id string) (NotificationConfiguration, error)
 	GetNotificationTrigger(ctx context.Context, id string) (NotificationTrigger, error)
@@ -125,6 +132,7 @@ type Querier interface {
 	ListAgentsByOrganization(ctx context.Context, organizationID string) ([]Agent, error)
 	ListArchivesByHistory(ctx context.Context, historyID string) ([]TempArchive, error)
 	ListCollectionsByOrganization(ctx context.Context, organizationID string) ([]Collection, error)
+	ListEnabledRunTriggersBySource(ctx context.Context, sourceWorkspaceID string) ([]WorkspaceRunTrigger, error)
 	ListEnabledSchedules(ctx context.Context) ([]Schedule, error)
 	ListGlobalVariableSecrets(ctx context.Context) ([]ListGlobalVariableSecretsRow, error)
 	ListGlobalVariableSecretsAfter(ctx context.Context, arg ListGlobalVariableSecretsAfterParams) ([]ListGlobalVariableSecretsAfterRow, error)
@@ -165,6 +173,8 @@ type Querier interface {
 	ListWorkspaceTagsByWorkspace(ctx context.Context, workspaceID string) ([]Workspacetag, error)
 	ListWorkspacesByOrganization(ctx context.Context, organizationID string) ([]Workspace, error)
 	ListWorkspacesByProject(ctx context.Context, projectID *string) ([]Workspace, error)
+	ReclaimStuckRunTriggerEvents(ctx context.Context, arg ReclaimStuckRunTriggerEventsParams) (int64, error)
+	RecordRunTriggerEvent(ctx context.Context, arg RecordRunTriggerEventParams) (int64, error)
 	SetCliAuthSessionIdentity(ctx context.Context, arg SetCliAuthSessionIdentityParams) error
 	SetGlobalVariableSecret(ctx context.Context, arg SetGlobalVariableSecretParams) error
 	SetJobOverrideSource(ctx context.Context, arg SetJobOverrideSourceParams) (Job, error)
@@ -186,6 +196,10 @@ type Querier interface {
 	UpdateItem(ctx context.Context, arg UpdateItemParams) (Item, error)
 	UpdateJobOutput(ctx context.Context, arg UpdateJobOutputParams) error
 	UpdateJobPlanChanges(ctx context.Context, arg UpdateJobPlanChangesParams) (Job, error)
+	// Completing a job and recording its run trigger event are one statement, so a
+	// crash between them cannot lose the dispatch. The event row is only written
+	// for a completed job with an enabled edge to a live destination; the unique
+	// job_id makes a repeated completion a no-op.
 	UpdateJobStatus(ctx context.Context, arg UpdateJobStatusParams) (Job, error)
 	UpdateNotificationConfiguration(ctx context.Context, arg UpdateNotificationConfigurationParams) (NotificationConfiguration, error)
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) (Organization, error)
