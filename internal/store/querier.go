@@ -47,6 +47,7 @@ type Querier interface {
 	CreateStep(ctx context.Context, arg CreateStepParams) (Step, error)
 	CreateTag(ctx context.Context, arg CreateTagParams) (Tag, error)
 	CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error)
+	CreateTeamToken(ctx context.Context, arg CreateTeamTokenParams) (TeamToken, error)
 	CreateTemplate(ctx context.Context, arg CreateTemplateParams) (Template, error)
 	CreateVCS(ctx context.Context, arg CreateVCSParams) (Vc, error)
 	CreateVariable(ctx context.Context, arg CreateVariableParams) (Variable, error)
@@ -126,6 +127,7 @@ type Querier interface {
 	GetTag(ctx context.Context, id string) (Tag, error)
 	GetTagByName(ctx context.Context, arg GetTagByNameParams) (Tag, error)
 	GetTeam(ctx context.Context, id string) (Team, error)
+	GetTeamToken(ctx context.Context, id string) (TeamToken, error)
 	GetTemplate(ctx context.Context, id string) (Template, error)
 	GetVCS(ctx context.Context, id string) (Vc, error)
 	GetVariable(ctx context.Context, id string) (Variable, error)
@@ -175,6 +177,7 @@ type Querier interface {
 	ListSchedulesByWorkspace(ctx context.Context, workspaceID string) ([]Schedule, error)
 	ListStepsByJob(ctx context.Context, jobID int64) ([]Step, error)
 	ListTagsByOrganization(ctx context.Context, organizationID string) ([]Tag, error)
+	ListTeamTokensByGroups(ctx context.Context, dollar_1 []string) ([]TeamToken, error)
 	ListTeamsByOrganization(ctx context.Context, organizationID string) ([]Team, error)
 	ListTeamsByOrganizationAndNames(ctx context.Context, arg ListTeamsByOrganizationAndNamesParams) ([]Team, error)
 	ListTemplatesByOrganization(ctx context.Context, organizationID string) ([]Template, error)
@@ -211,8 +214,10 @@ type Querier interface {
 	SetWorkspaceLastJob(ctx context.Context, arg SetWorkspaceLastJobParams) error
 	SetWorkspaceLock(ctx context.Context, arg SetWorkspaceLockParams) (Workspace, error)
 	SoftDeletePat(ctx context.Context, arg SoftDeletePatParams) error
+	SoftDeleteTeamToken(ctx context.Context, arg SoftDeleteTeamTokenParams) error
 	SoftDeleteWorkspace(ctx context.Context, id string) error
 	StampPatLastUsed(ctx context.Context, id string) error
+	StampTeamTokenLastUsed(ctx context.Context, id string) error
 	UpdateAccess(ctx context.Context, arg UpdateAccessParams) (Access, error)
 	UpdateAction(ctx context.Context, arg UpdateActionParams) (Action, error)
 	UpdateCollection(ctx context.Context, arg UpdateCollectionParams) (Collection, error)
