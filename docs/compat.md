@@ -654,9 +654,36 @@ and an unknown template is `404`, as upstream. Deleting a configuration cascades
 its triggers and template links. Two divergences and one gap: an unknown
 attribute in a PATCH is ignored here (upstream `404 Unknown attribute`), the
 workspace relationship is emitted as JSON null (upstream emits `data:null` plus
-empty `triggers`/`templates`/`policySet` arrays), and the outbox that drives
-real delivery is not implemented yet (#52). The two test sends are implemented
-(#153): `POST /notification/v1/configuration/:id/test` and
+empty `triggers`/`templates`/`policySet` arrays), and the outbox row is never
+pruned (upstream deletes terminal rows after a retention window). Real
+delivery (#155) is driven by `notification_outbox`: every job status update
+writes one row per matching configuration in the same statement, so a crash
+cannot lose it. A configuration matches when it is active, is workspace-scoped
+to the run's workspace or organization-wide, has a trigger naming the new
+status, and its template filter is empty or contains the job's
+`templateReference`; the `(job, configuration, status)` triple is unique, so a
+repeated status is a no-op and a `SKIPPED` row leaves room for a later genuine
+occurrence. A `failed` row is held for 90 seconds and dropped as
+`SKIPPED` if the job's live status moved on by delivery time (a lost
+API-to-executor dispatch response flips it briefly before the executor's
+callback corrects it). Every API replica drains the outbox at its own pace: a
+claim is `PENDING -> SENDING` with `SKIP LOCKED`, delivery happens outside any
+transaction, and the result is keyed on the attempt's `lastAttemptAt`. Slack,
+Teams and webhook failures retry with 1 minute then 5 minute backoff (a
+server-supplied `Retry-After` wins) up to 3 attempts; a 4xx other than 429, an
+invalid payload or the attempt limit is terminal `FAILED`; a row stuck in
+`SENDING` for 5 minutes is reclaimed for retry, or failed at the limit. The
+payload column exists for schema parity but stays null: the payload is rendered
+at delivery time from the live job, workspace, organization and configuration.
+Delivery history is `GET /notification/v1/workspace/:id/deliveries?limit=10`,
+which returns a raw (non-JSON:API) array of
+`{id, jobId, configurationName, channelType, status, attemptCount,
+lastAttemptAt, lastError, createdDate}`; a malformed or out-of-range `limit` is
+`400` (capped at 100). `POST /notification/v1/workspace/:id/deliveries/:deliveryId/retry`
+re-arms a `FAILED` row to `PENDING` and answers `200`, `404` for an id outside
+the workspace and `409` for a row that is not failed. Reading needs workspace
+membership; retrying needs `manageWorkspace`. The two test sends are
+implemented (#153): `POST /notification/v1/configuration/:id/test` and
 `POST /notification/v1/organization/:org/configuration/test` (raw
 `channelType`, `destinationUrl`, `signingSecret`) render the same payload as a
 delivery with job `0`, status `completed`, workspace `(test notification)` and

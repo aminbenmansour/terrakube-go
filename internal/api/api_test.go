@@ -48,6 +48,10 @@ type stubQuerier struct {
 	notifications         []store.NotificationConfiguration
 	triggers              []store.NotificationTrigger
 	notificationTemplates map[string][]string
+	deliveries            []store.ListNotificationDeliveriesByWorkspaceRow
+	deliveryExists        map[string]bool
+	rearmable             map[string]bool
+	rearmed               []string
 	runTriggers           []store.WorkspaceRunTrigger
 	runTriggerFilter      rsql.Node
 	runTriggerScope       []any

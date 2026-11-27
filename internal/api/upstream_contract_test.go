@@ -2210,3 +2210,26 @@ func (s *stubQuerier) UpdateProjectAccess(_ context.Context, arg store.UpdatePro
 func (s *stubQuerier) DeleteProjectAccess(context.Context, string) error {
 	return s.err
 }
+
+func (s *stubQuerier) ListNotificationDeliveriesByWorkspace(_ context.Context, arg store.ListNotificationDeliveriesByWorkspaceParams) ([]store.ListNotificationDeliveriesByWorkspaceRow, error) {
+	rows := s.deliveries
+	if int64(len(rows)) > int64(arg.Limit) {
+		rows = rows[:arg.Limit]
+	}
+	return rows, s.err
+}
+
+func (s *stubQuerier) NotificationOutboxExistsForWorkspace(_ context.Context, arg store.NotificationOutboxExistsForWorkspaceParams) (bool, error) {
+	return s.deliveryExists[arg.ID], s.err
+}
+
+func (s *stubQuerier) RearmNotificationOutbox(_ context.Context, id string) (int64, error) {
+	if s.err != nil {
+		return 0, s.err
+	}
+	if !s.rearmable[id] {
+		return 0, nil
+	}
+	s.rearmed = append(s.rearmed, id)
+	return 1, nil
+}
