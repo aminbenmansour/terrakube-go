@@ -1,11 +1,16 @@
 package api
 
 import (
+	"encoding/json"
+	"log/slog"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"github.com/aminbenmansour/terrakube-go/internal/httpapi"
 	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
+	"github.com/aminbenmansour/terrakube-go/internal/notification"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 )
 
@@ -408,4 +413,139 @@ func decodeNotificationConfigurationAttrs(w http.ResponseWriter, r *http.Request
 		return notificationConfigurationAttrs{}, nil, false
 	}
 	return attrs, data, true
+}
+
+// NewNotification builds the root /notification/v1 router. Upstream mounts the
+// test-send endpoints outside /api/v1, and the UI calls them at the API origin.
+func NewNotification(deps Deps) http.Handler {
+	if deps.Logger == nil {
+		deps.Logger = slog.Default()
+	}
+	if deps.Deliverer == nil {
+		deps.Deliverer = notification.NewDeliverer(true)
+	}
+	a := &API{deps: deps}
+	r := chi.NewRouter()
+	r.Use(httpapi.CORS(deps.CORSOrigins))
+	r.Use(httpapi.LimitBody(jsonapi.MaxBodyBytes))
+	r.Use(a.authenticate)
+	r.Route("/configuration/{configurationID}", func(r chi.Router) {
+		r.Use(a.notificationScope)
+		r.With(a.requireWrite(canManageWorkspace)).Post("/test", a.sendNotificationTest)
+	})
+	r.Route("/organization/{organizationID}", func(r chi.Router) {
+		r.Use(a.notificationTestOrganization)
+		r.With(a.requireWrite(canManageWorkspace)).Post("/configuration/test", a.sendAdHocNotificationTest)
+	})
+	return r
+}
+
+// notificationTestOrganization answers an unknown organization with 404 before
+// the access middleware can turn it into a non-member 403.
+func (a *API) notificationTestOrganization(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := param(r, "organizationID")
+		if _, err := uuid.Parse(id); err != nil {
+			jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Value", "Invalid value: "+id)
+			return
+		}
+		if _, err := a.deps.Store.GetOrganization(r.Context(), id); err != nil {
+			if !a.writeStoreError(w, "get organization", err) {
+				a.internalError(w, "get organization", err)
+			}
+			return
+		}
+		a.organizationAccess(next).ServeHTTP(w, r)
+	})
+}
+
+type notificationAdHocTestAttrs struct {
+	ChannelType    string  `json:"channelType"`
+	DestinationUrl string  `json:"destinationUrl"`
+	SigningSecret  *string `json:"signingSecret"`
+}
+
+// sendNotificationTest renders and sends the same test payload as a real
+// delivery, without persisting a configuration or a delivery row.
+func (a *API) sendNotificationTest(w http.ResponseWriter, r *http.Request) {
+	config, ok := a.notificationConfigurationByID(w, r)
+	if !ok {
+		return
+	}
+	organization, err := a.deps.Store.GetOrganization(r.Context(), config.OrganizationID)
+	if err != nil {
+		if !a.writeStoreError(w, "get organization", err) {
+			a.internalError(w, "get organization", err)
+		}
+		return
+	}
+	workspaceName := "(test notification)"
+	if config.WorkspaceID != nil && *config.WorkspaceID != "" {
+		workspace, err := a.deps.Store.GetWorkspace(r.Context(), *config.WorkspaceID)
+		if err != nil {
+			if !a.writeStoreError(w, "get workspace", err) {
+				a.internalError(w, "get workspace", err)
+			}
+			return
+		}
+		workspaceName = workspace.Name
+	}
+	configurationName := config.Name
+	if configurationName == "" {
+		configurationName = "Test Notification"
+	}
+	a.deliverNotificationTest(w, r, config.ChannelType, config.DestinationUrl, config.SigningSecret, notification.Context{
+		OrganizationName:  organization.Name,
+		WorkspaceName:     workspaceName,
+		Status:            "completed",
+		ConfigurationName: configurationName,
+		MessageStyle:      config.MessageStyle,
+	})
+}
+
+// sendAdHocNotificationTest lets the create form verify a destination before
+// the configuration has ever been saved.
+func (a *API) sendAdHocNotificationTest(w http.ResponseWriter, r *http.Request) {
+	organization, err := a.deps.Store.GetOrganization(r.Context(), param(r, "organizationID"))
+	if err != nil {
+		if !a.writeStoreError(w, "get organization", err) {
+			a.internalError(w, "get organization", err)
+		}
+		return
+	}
+	attrs := notificationAdHocTestAttrs{}
+	if err := json.NewDecoder(r.Body).Decode(&attrs); err != nil {
+		jsonapi.WriteError(w, http.StatusBadRequest, "Bad Request", "The request body is not valid JSON.")
+		return
+	}
+	if !notificationChannels[attrs.ChannelType] {
+		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Value", "Invalid value: "+attrs.ChannelType)
+		return
+	}
+	a.deliverNotificationTest(w, r, attrs.ChannelType, attrs.DestinationUrl, attrs.SigningSecret, notification.Context{
+		OrganizationName:  organization.Name,
+		WorkspaceName:     "(test notification)",
+		Status:            "completed",
+		ConfigurationName: "Test Notification",
+		MessageStyle:      notification.StyleDetailed,
+	})
+}
+
+func (a *API) deliverNotificationTest(w http.ResponseWriter, r *http.Request, channelType, destinationURL string, signingSecret *string, context notification.Context) {
+	payload, err := notification.BuildPayload(channelType, context)
+	if err != nil {
+		a.internalError(w, "render notification payload", err)
+		return
+	}
+	err = a.deps.Deliverer.Deliver(r.Context(), notification.Configuration{
+		ChannelType:    channelType,
+		DestinationURL: destinationURL,
+		SigningSecret:  signingSecret,
+	}, payload)
+	if err != nil {
+		a.deps.Logger.Warn("test notification failed", "channel", channelType, "error", err)
+		w.WriteHeader(http.StatusBadGateway)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }

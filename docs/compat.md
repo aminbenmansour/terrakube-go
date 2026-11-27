@@ -654,9 +654,17 @@ and an unknown template is `404`, as upstream. Deleting a configuration cascades
 its triggers and template links. Two divergences and one gap: an unknown
 attribute in a PATCH is ignored here (upstream `404 Unknown attribute`), the
 workspace relationship is emitted as JSON null (upstream emits `data:null` plus
-empty `triggers`/`templates`/`policySet` arrays), and the
-`/notification/v1/.../test` endpoints and the outbox that drives real delivery
-are not implemented yet (#52). The payload builders they will use are
+empty `triggers`/`templates`/`policySet` arrays), and the outbox that drives
+real delivery is not implemented yet (#52). The two test sends are implemented
+(#153): `POST /notification/v1/configuration/:id/test` and
+`POST /notification/v1/organization/:org/configuration/test` (raw
+`channelType`, `destinationUrl`, `signingSecret`) render the same payload as a
+delivery with job `0`, status `completed`, workspace `(test notification)` and
+no run/workspace URL. Success is `200`, a delivery failure `502`, an invalid
+channel or body `400`, and an unknown configuration or organization `404` here
+(upstream's permission check fails closed with `403` for an unknown id, but the
+notification routes in this API answer `404`); neither send persists a
+configuration or delivery row. The payload builders and senders are
 implemented (#154): Slack gets Block Kit cards with a coloured attachment for
 `DETAILED` and a one-line top-level `text` for `SIMPLE`; Teams gets adaptive
 cards (1.4) with a fact set and an optional View Run action; a generic webhook
