@@ -17,11 +17,20 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
 	"github.com/aminbenmansour/terrakube-go/internal/rbac"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
+	"github.com/aminbenmansour/terrakube-go/internal/teamtoken"
 )
 
+// TeamTokenService issues and revokes team-scoped access tokens. It is also a
+// verifier, so a team token authenticates REST and GraphQL with its group.
+type TeamTokenService interface {
+	auth.Verifier
+	Create(ctx context.Context, user auth.Identity, group string, days, hours, minutes int, description string) (string, error)
+	List(ctx context.Context, user auth.Identity) ([]teamtoken.Token, error)
+	Delete(ctx context.Context, id string, user auth.Identity) error
+}
+
 // AccessTokenStore is the slice of the generated queries the permission
-// endpoints need. The repository history is the source of the team access
-// tokens themselves (#143).
+// endpoints need.
 type AccessTokenStore interface {
 	ListTeamsByOrganizationAndNames(ctx context.Context, arg store.ListTeamsByOrganizationAndNamesParams) ([]store.Team, error)
 	ListAccessByWorkspaceAndNames(ctx context.Context, arg store.ListAccessByWorkspaceAndNamesParams) ([]store.Access, error)
@@ -49,7 +58,97 @@ func NewAccessToken(deps Deps) http.Handler {
 		r.Get("/teams/permissions/organization/{organizationID}", a.organizationPermissions)
 		r.Get("/teams/permissions/organization/{organizationID}/workspace/{workspaceID}", a.workspacePermissions)
 	})
+	r.Group(func(r chi.Router) {
+		r.Use(a.requireTeamTokens)
+		r.Get("/teams", a.listTeamTokens)
+		r.Post("/teams", a.createTeamToken)
+		r.Delete("/teams/{tokenID}", a.deleteTeamToken)
+	})
 	return r
+}
+
+func (a *API) requireTeamTokens(next http.Handler) http.Handler {
+	if a.deps.TeamTokens != nil {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		jsonapi.WriteError(w, http.StatusServiceUnavailable, "Service Unavailable", "Team tokens are not configured.")
+	})
+}
+
+type createTeamTokenRequest struct {
+	Group       string `json:"group"`
+	Description string `json:"description"`
+	Days        int    `json:"days"`
+	Hours       int    `json:"hours"`
+	Minutes     int    `json:"minutes"`
+}
+
+func (a *API) createTeamToken(w http.ResponseWriter, r *http.Request) {
+	identity, ok := auth.IdentityFromContext(r.Context())
+	if !ok {
+		jsonapi.WriteError(w, http.StatusUnauthorized, "Unauthorized", "A valid bearer token is required.")
+		return
+	}
+	request := createTeamTokenRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		jsonapi.WriteError(w, http.StatusBadRequest, "Bad Request", "The request body is not valid JSON.")
+		return
+	}
+
+	token, err := a.deps.TeamTokens.Create(r.Context(), *identity, request.Group,
+		request.Days, request.Hours, request.Minutes, request.Description)
+	switch {
+	case errors.Is(err, teamtoken.ErrForbidden):
+		jsonapi.WriteError(w, http.StatusForbidden, "Forbidden", "You are not a member of this team.")
+		return
+	case errors.Is(err, teamtoken.ErrNonInteractive):
+		jsonapi.WriteError(w, http.StatusForbidden, "Forbidden", "Only an interactive user can create tokens.")
+		return
+	case errors.Is(err, teamtoken.ErrInvalidLifetime):
+		jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Value", "Token lifetime values cannot be negative.")
+		return
+	case err != nil:
+		a.internalError(w, "create team token", err)
+		return
+	}
+	writeAccessTokenJSON(w, http.StatusCreated, map[string]string{"token": token})
+}
+
+func (a *API) listTeamTokens(w http.ResponseWriter, r *http.Request) {
+	identity, ok := auth.IdentityFromContext(r.Context())
+	if !ok {
+		jsonapi.WriteError(w, http.StatusUnauthorized, "Unauthorized", "A valid bearer token is required.")
+		return
+	}
+	tokens, err := a.deps.TeamTokens.List(r.Context(), *identity)
+	if err != nil {
+		a.internalError(w, "list team tokens", err)
+		return
+	}
+	// Upstream answers 202 here, and with [] rather than null when empty.
+	writeAccessTokenJSON(w, http.StatusAccepted, tokens)
+}
+
+func (a *API) deleteTeamToken(w http.ResponseWriter, r *http.Request) {
+	identity, ok := auth.IdentityFromContext(r.Context())
+	if !ok {
+		jsonapi.WriteError(w, http.StatusUnauthorized, "Unauthorized", "A valid bearer token is required.")
+		return
+	}
+	err := a.deps.TeamTokens.Delete(r.Context(), chi.URLParam(r, "tokenID"), *identity)
+	switch {
+	case errors.Is(err, teamtoken.ErrNotFound):
+		jsonapi.WriteError(w, http.StatusBadRequest, "Bad Request", "The requested token does not exist.")
+		return
+	case errors.Is(err, teamtoken.ErrForbidden):
+		jsonapi.WriteError(w, http.StatusForbidden, "Forbidden", "You are not a member of this team.")
+		return
+	case err != nil:
+		a.internalError(w, "delete team token", err)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func (a *API) requireAccessTokenStore(next http.Handler) http.Handler {

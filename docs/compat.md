@@ -389,6 +389,38 @@ whose `name` is one of the caller's groups; `project_access` rows are filtered
 by name upstream too. The captured responses are in
 `docs/upstream/rest/access-token-*.json`.
 
+#### Team tokens — `/access-token/v1/teams`
+
+Source: `plugin/token/team/TeamTokenController.java` and
+`TeamTokenService.java` in 2.34.3. A team token is the non-interactive
+credential for CI: a JWT whose only group is the team it was minted for.
+
+- `POST /access-token/v1/teams`
+  `{"group":"…","description":"…","days":0,"hours":1,"minutes":0}` →
+  `201 {"token":"<jwt>"}`. The caller must belong to `group` (its `groups`
+  claim), otherwise **403**; a token minted by this API (`iss` `Terrakube`)
+  cannot mint another, also **403**; a negative lifetime is **400**. The token
+  is shown once and never stored.
+- `GET /access-token/v1/teams` → **202** with the active tokens of the caller's
+  groups: `{id, days, hours, minutes, group, description, deleted, lastUsedAt,
+  createdDate, updatedDate, createdBy, updatedBy}`.
+- `DELETE /access-token/v1/teams/{id}` → **202** with no body; **400** unknown
+  or already revoked, **403** when the caller is in neither the token's team nor
+  the instance owner group. Revocation is a soft delete and takes effect
+  immediately.
+- The JWT has `iss`/`aud` `Terrakube`, `jti` = the `team_token` row id, `sub`
+  `"<group> (Team Token)"`, `name` `"<group> (Token)"`, `email` (the minting
+  user), `description`, `email_verified`, `groups` `["<group>"]`, `iat`, and
+  `exp` only when the lifetime is non-zero. Verification checks the signature,
+  issuer, expiry and a live non-deleted row; `last_used_at` is stamped at most
+  hourly. The token authenticates REST and GraphQL as its group, so its
+  permissions are the team's.
+- Team tokens share `TERRAKUBE_PAT_SECRET` with personal access tokens, as
+  upstream uses one `PatSecret`. The lifetime limit (`TokenMaxDays`, default
+  unlimited) is not configurable here, so any non-negative lifetime is accepted.
+  Rotation is mint-then-revoke; there is no in-place rotation endpoint upstream
+  either.
+
 ### Workspace and project grants
 
 Source: `api/.../rs/workspace/access/Access.java`,
@@ -902,8 +934,11 @@ Current M1 limitations (tracked for later milestones):
   applies the caller's membership restriction in the query, so `page[totals]`
   counts only visible rows.
 - Authentication is a static bearer token (`TERRAKUBE_AUTH_TOKEN`), a Dex JWT
-  with `TERRAKUBE_DEX_ENABLED=true`, or a personal access token issued at
-  `/pat/v1` (see above). Team and executor tokens are not implemented yet.
+  with `TERRAKUBE_DEX_ENABLED=true`, a personal access token issued at
+  `/pat/v1`, or a team token issued at `/access-token/v1/teams` (see above).
+  Both token kinds carry the caller's groups, which drive the same permissions.
+  Internal executor tokens are accepted only by the TFE, log and state
+  endpoints, scoped to their workspace.
 - `include=` is implemented only for the workspace's `variable`,
   `job`, `schedule`, `organization`, `project`, `reference`, `vcs`, `ssh` and `agent`; relationship
   writes exist only for the workspace's `project`, `vcs`, `ssh` and `agent`.
