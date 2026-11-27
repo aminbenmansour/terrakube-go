@@ -856,6 +856,42 @@ key). Upstream gates writes on a team's `manageTemplate` permission, and this
 API enforces the same one. One divergence: an unknown attribute in a PATCH is ignored
 here, while upstream answers `404 Unknown attribute`.
 
+`provider` is the Settings > Registry provider list and the workspace
+provider picker: list, get, create, patch and delete under
+`/organization/:id/provider`, with versions at
+`.../provider/:id/version[/:versionID]` and platform implementations at
+`.../version/:versionID/implementation[/:implementationID]`. A provider carries
+`name`, `description`, `imported` and `registryNamespace`; a version carries
+`versionNumber`, `protocols`, `status` (`active|deprecated|removed`, default
+`active`) and `deprecationMessage`; an implementation carries the platform and
+download metadata the registry serves. `GET .../provider?include=version` and
+`.../version.implementation` fill `included`; a provider always lists its
+version ids, and a version its implementation ids. Deletes do not cascade:
+the UI deletes implementations, then versions, then the provider. Resource
+writes need a team's `manageProvider` permission, as upstream. Missing required
+attributes answer upstream's `409` data-integrity conflict and an unknown
+`status` answers `400 Invalid value: x`; duplicate names and versions are `409`
+here where upstream's uncaught Spring constraint answers `500`, a bug recorded
+in the captures rather than copied.
+
+`module` is the Settings > Registry module list and the module picker: list,
+get, create, patch and delete under `/organization/:id/module`, with versions at
+`.../module/:id/version/:versionID` (created by the refresh poller, so only
+`GET` and `PATCH` are exposed). Attributes are `name`, `description`, `provider`,
+`source`, `folder`, `tagPrefix`, `latestVersion`, `downloadQuantity`, the audit
+fields and a computed `registryPath` (`<organization>/<module>/<provider>`).
+`include=vcs,ssh,version` fills `included`, and the `vcs`/`ssh` relationships
+accept a same-organization id (`404` otherwise). `GET /organization/:id?include=module`
+fills `included` with the organization's modules, which is the read the module
+import wizard makes before offering to import a module that already exists. The provider attribute must
+match upstream's `^[A-Za-z0-9]{1,64}$`, with its exact `400` message; missing
+required attributes answer `409`, and an invalid module-version status answers
+`400 Invalid value: x`. Deleting a module cascades its version rows. Writes need
+a team's `manageModule` permission, as upstream. Divergence: upstream's
+`module.github_app_token_id` column is omitted because this implementation has
+no GitHub App credentials table; nothing in the UI or the registry service reads
+it.
+
 `schedule` is the workspace Schedules tab: list and create under
 `/organization/:id/workspace/:id/schedule`, get, patch and delete under
 `/organization/:id/workspace/:id/schedule/:scheduleID`. Attributes are `cron`,
@@ -1146,6 +1182,10 @@ data can be imported and the UI's assumptions hold. Core tables implemented in
 
 `migrations/0002_temp_archive.sql` adds upstream's `temp_archive` table
 (`id`, `type`, `history_id`) used by the hosted-state and rollback flows.
+
+`migrations/0029_provider_module.sql` adds upstream's `provider`, `version`,
+`implementation`, `module` and `module_version` tables. `module` omits
+`github_app_token_id` (no GitHub App credentials in this implementation).
 
 `migrations/0004_remote_content.sql` adds `job.override_source` and
 `job.override_branch` (upstream stores the CLI configuration tarball URL there

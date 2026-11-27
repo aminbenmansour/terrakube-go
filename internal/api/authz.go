@@ -379,6 +379,8 @@ func canManageWorkspace(p rbac.Permissions) bool  { return p.ManageWorkspace }
 func canManageJob(p rbac.Permissions) bool        { return p.ManageJob }
 func canManageVcs(p rbac.Permissions) bool        { return p.ManageVcs }
 func canManageTemplate(p rbac.Permissions) bool   { return p.ManageTemplate }
+func canManageProvider(p rbac.Permissions) bool   { return p.ManageProvider }
+func canManageModule(p rbac.Permissions) bool     { return p.ManageModule }
 func canManageCollection(p rbac.Permissions) bool { return p.ManageCollection }
 
 // authorizeWorkspaceWrite guards the atomic operations document, which carries

@@ -77,7 +77,32 @@ func (a *API) getOrganization(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	jsonapi.WriteResource(w, http.StatusOK, organizationResource(org), jsonapi.ParseFieldsets(r))
+	resource := organizationResource(org)
+	var included []jsonapi.Resource
+	if parseInclude(r)["module"] {
+		// The module import wizard reads the organization's modules this way.
+		modules, err := a.deps.Store.ListModulesByOrganization(r.Context(), org.ID)
+		if err != nil {
+			if !a.writeStoreError(w, "list modules", err) {
+				a.internalError(w, "list modules", err)
+			}
+			return
+		}
+		ids := make([]string, 0, len(modules))
+		for _, module := range modules {
+			versions, err := a.deps.Store.ListModuleVersions(r.Context(), module.ID)
+			if err != nil {
+				if !a.writeStoreError(w, "list module versions", err) {
+					a.internalError(w, "list module versions", err)
+				}
+				return
+			}
+			ids = append(ids, module.ID)
+			included = append(included, moduleResource(module, org.Name, versions))
+		}
+		resource.Relationships = map[string]jsonapi.Relationship{"module": jsonapi.LinkList("module", ids...)}
+	}
+	jsonapi.Write(w, http.StatusOK, jsonapi.Document{Data: resource, Included: included}, jsonapi.ParseFieldsets(r))
 }
 
 func (a *API) createOrganization(w http.ResponseWriter, r *http.Request) {

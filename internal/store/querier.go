@@ -32,14 +32,19 @@ type Querier interface {
 	CreateContent(ctx context.Context, arg CreateContentParams) (Content, error)
 	CreateGlobalVariable(ctx context.Context, arg CreateGlobalVariableParams) (Globalvar, error)
 	CreateHistory(ctx context.Context, arg CreateHistoryParams) (History, error)
+	CreateImplementation(ctx context.Context, arg CreateImplementationParams) (Implementation, error)
 	CreateItem(ctx context.Context, arg CreateItemParams) (Item, error)
 	CreateJob(ctx context.Context, arg CreateJobParams) (Job, error)
+	CreateModule(ctx context.Context, arg CreateModuleParams) (Module, error)
+	CreateModuleVersion(ctx context.Context, arg CreateModuleVersionParams) (ModuleVersion, error)
 	CreateNotificationConfiguration(ctx context.Context, arg CreateNotificationConfigurationParams) (NotificationConfiguration, error)
 	CreateNotificationTrigger(ctx context.Context, arg CreateNotificationTriggerParams) (NotificationTrigger, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreatePat(ctx context.Context, arg CreatePatParams) (Pat, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateProjectAccess(ctx context.Context, arg CreateProjectAccessParams) (ProjectAccess, error)
+	CreateProvider(ctx context.Context, arg CreateProviderParams) (Provider, error)
+	CreateProviderVersion(ctx context.Context, arg CreateProviderVersionParams) (Version, error)
 	CreateReference(ctx context.Context, arg CreateReferenceParams) (Reference, error)
 	CreateRunTrigger(ctx context.Context, arg CreateRunTriggerParams) (WorkspaceRunTrigger, error)
 	CreateSSHKey(ctx context.Context, arg CreateSSHKeyParams) (Ssh, error)
@@ -62,16 +67,20 @@ type Querier interface {
 	DeleteCollection(ctx context.Context, id string) error
 	DeleteExpiredCliAuthSessions(ctx context.Context) (int64, error)
 	DeleteGlobalVariable(ctx context.Context, id string) error
+	DeleteImplementation(ctx context.Context, id string) error
 	DeleteItem(ctx context.Context, id string) error
 	// Only for a just-created dependent whose steps could not all be written; a
 	// normal job is soft-deleted so its history stays visible.
 	DeleteJob(ctx context.Context, id int64) error
+	DeleteModule(ctx context.Context, id string) error
 	DeleteNotificationConfiguration(ctx context.Context, id string) error
 	DeleteNotificationConfigurationTemplates(ctx context.Context, configurationID string) error
 	DeleteNotificationTrigger(ctx context.Context, id string) error
 	DeleteOrganization(ctx context.Context, id string) error
 	DeleteProject(ctx context.Context, id string) error
 	DeleteProjectAccess(ctx context.Context, id string) error
+	DeleteProvider(ctx context.Context, id string) error
+	DeleteProviderVersion(ctx context.Context, id string) error
 	DeleteReference(ctx context.Context, id string) error
 	DeleteRunTrigger(ctx context.Context, id string) error
 	DeleteSSHKey(ctx context.Context, id string) error
@@ -103,10 +112,13 @@ type Querier interface {
 	GetHistory(ctx context.Context, id string) (History, error)
 	GetHistoryBefore(ctx context.Context, arg GetHistoryBeforeParams) (History, error)
 	GetHistoryByJobReference(ctx context.Context, arg GetHistoryByJobReferenceParams) (History, error)
+	GetImplementation(ctx context.Context, id string) (Implementation, error)
 	GetItem(ctx context.Context, id string) (Item, error)
 	GetJob(ctx context.Context, id int64) (Job, error)
 	GetJobByWorkspaceAndTrigger(ctx context.Context, arg GetJobByWorkspaceAndTriggerParams) (Job, error)
 	GetLatestHistory(ctx context.Context, workspaceID string) (History, error)
+	GetModule(ctx context.Context, id string) (Module, error)
+	GetModuleVersion(ctx context.Context, id string) (ModuleVersion, error)
 	GetNotificationConfiguration(ctx context.Context, id string) (NotificationConfiguration, error)
 	GetNotificationTrigger(ctx context.Context, id string) (NotificationTrigger, error)
 	GetOrganization(ctx context.Context, id string) (Organization, error)
@@ -118,6 +130,8 @@ type Querier interface {
 	GetProject(ctx context.Context, id string) (Project, error)
 	GetProjectAccess(ctx context.Context, id string) (ProjectAccess, error)
 	GetProjectByName(ctx context.Context, arg GetProjectByNameParams) (Project, error)
+	GetProvider(ctx context.Context, id string) (Provider, error)
+	GetProviderVersion(ctx context.Context, id string) (Version, error)
 	GetReference(ctx context.Context, id string) (Reference, error)
 	GetRunTrigger(ctx context.Context, id string) (WorkspaceRunTrigger, error)
 	GetSSHKey(ctx context.Context, id string) (Ssh, error)
@@ -153,9 +167,13 @@ type Querier interface {
 	ListGlobalVariableSecrets(ctx context.Context) ([]ListGlobalVariableSecretsRow, error)
 	ListGlobalVariableSecretsAfter(ctx context.Context, arg ListGlobalVariableSecretsAfterParams) ([]ListGlobalVariableSecretsAfterRow, error)
 	ListGlobalVariablesByOrganization(ctx context.Context, organizationID string) ([]Globalvar, error)
+	ListImplementations(ctx context.Context, versionID string) ([]Implementation, error)
+	ListImplementationsByOrganization(ctx context.Context, organizationID string) ([]Implementation, error)
 	ListItemsByCollection(ctx context.Context, collectionID string) ([]Item, error)
 	ListJobsByOrganization(ctx context.Context, organizationID string) ([]Job, error)
 	ListJobsByWorkspace(ctx context.Context, workspaceID string) ([]Job, error)
+	ListModuleVersions(ctx context.Context, moduleID string) ([]ModuleVersion, error)
+	ListModulesByOrganization(ctx context.Context, organizationID string) ([]Module, error)
 	ListNotificationConfigurationTemplateIDs(ctx context.Context, configurationID string) ([]string, error)
 	ListNotificationConfigurationsByOrganization(ctx context.Context, organizationID string) ([]NotificationConfiguration, error)
 	ListNotificationConfigurationsByWorkspace(ctx context.Context, workspaceID *string) ([]NotificationConfiguration, error)
@@ -168,6 +186,9 @@ type Querier interface {
 	ListProjectAccessByProject(ctx context.Context, projectID string) ([]ProjectAccess, error)
 	ListProjectAccessByProjectAndNames(ctx context.Context, arg ListProjectAccessByProjectAndNamesParams) ([]ProjectAccess, error)
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
+	ListProviderVersions(ctx context.Context, providerID string) ([]Version, error)
+	ListProviderVersionsByOrganization(ctx context.Context, organizationID string) ([]Version, error)
+	ListProvidersByOrganization(ctx context.Context, organizationID string) ([]Provider, error)
 	ListReferencesByCollection(ctx context.Context, collectionID string) ([]Reference, error)
 	ListReferencesByWorkspace(ctx context.Context, workspaceID string) ([]Reference, error)
 	ListRunTriggersByOrganization(ctx context.Context, organizationID string) ([]WorkspaceRunTrigger, error)
@@ -224,6 +245,7 @@ type Querier interface {
 	UpdateContentStatus(ctx context.Context, arg UpdateContentStatusParams) (Content, error)
 	UpdateGlobalVariable(ctx context.Context, arg UpdateGlobalVariableParams) (Globalvar, error)
 	UpdateHistoryOutput(ctx context.Context, arg UpdateHistoryOutputParams) error
+	UpdateImplementation(ctx context.Context, arg UpdateImplementationParams) (Implementation, error)
 	UpdateItem(ctx context.Context, arg UpdateItemParams) (Item, error)
 	UpdateJobOutput(ctx context.Context, arg UpdateJobOutputParams) error
 	UpdateJobPlanChanges(ctx context.Context, arg UpdateJobPlanChangesParams) (Job, error)
@@ -240,10 +262,14 @@ type Querier interface {
 	// response flips the job to failed briefly before the executor's own callback
 	// corrects it, and the dispatcher drops the row if the live status moved on.
 	UpdateJobStatus(ctx context.Context, arg UpdateJobStatusParams) (Job, error)
+	UpdateModule(ctx context.Context, arg UpdateModuleParams) (Module, error)
+	UpdateModuleVersion(ctx context.Context, arg UpdateModuleVersionParams) (ModuleVersion, error)
 	UpdateNotificationConfiguration(ctx context.Context, arg UpdateNotificationConfigurationParams) (NotificationConfiguration, error)
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) (Organization, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 	UpdateProjectAccess(ctx context.Context, arg UpdateProjectAccessParams) (ProjectAccess, error)
+	UpdateProvider(ctx context.Context, arg UpdateProviderParams) (Provider, error)
+	UpdateProviderVersion(ctx context.Context, arg UpdateProviderVersionParams) (Version, error)
 	UpdateRunTrigger(ctx context.Context, arg UpdateRunTriggerParams) (WorkspaceRunTrigger, error)
 	UpdateSSHKey(ctx context.Context, arg UpdateSSHKeyParams) (Ssh, error)
 	UpdateSchedule(ctx context.Context, arg UpdateScheduleParams) (Schedule, error)

@@ -175,6 +175,45 @@ func New(deps Deps) http.Handler {
 			r.With(a.requireWrite(canManageTemplate)).Delete("/", a.deleteTemplate)
 		})
 
+		// Private registry providers: Settings > Registry and the provider
+		// picker. Versions and platform implementations hang off the provider.
+		r.Get("/provider", a.listProviders)
+		r.With(a.requireWrite(canManageProvider)).Post("/provider", a.createProvider)
+		r.Route("/provider/{providerID}", func(r chi.Router) {
+			r.Get("/", a.getProvider)
+			r.With(a.requireWrite(canManageProvider)).Patch("/", a.updateProvider)
+			r.With(a.requireWrite(canManageProvider)).Delete("/", a.deleteProvider)
+			r.Get("/version", a.listProviderVersions)
+			r.With(a.requireWrite(canManageProvider)).Post("/version", a.createProviderVersion)
+			r.Route("/version/{versionID}", func(r chi.Router) {
+				r.Get("/", a.getProviderVersion)
+				r.With(a.requireWrite(canManageProvider)).Patch("/", a.updateProviderVersion)
+				r.With(a.requireWrite(canManageProvider)).Delete("/", a.deleteProviderVersion)
+				r.Get("/implementation", a.listImplementations)
+				r.With(a.requireWrite(canManageProvider)).Post("/implementation", a.createImplementation)
+				r.Route("/implementation/{implementationID}", func(r chi.Router) {
+					r.Get("/", a.getImplementation)
+					r.With(a.requireWrite(canManageProvider)).Patch("/", a.updateImplementation)
+					r.With(a.requireWrite(canManageProvider)).Delete("/", a.deleteImplementation)
+				})
+			})
+		})
+
+		// Private registry modules: Settings > Registry and the module picker.
+		// Versions are created by the refresh poller and administered here.
+		r.Get("/module", a.listModules)
+		r.With(a.requireWrite(canManageModule)).Post("/module", a.createModule)
+		r.Route("/module/{moduleID}", func(r chi.Router) {
+			r.Get("/", a.getModule)
+			r.With(a.requireWrite(canManageModule)).Patch("/", a.updateModule)
+			r.With(a.requireWrite(canManageModule)).Delete("/", a.deleteModule)
+			r.Get("/version", a.listModuleVersions)
+			r.Route("/version/{versionID}", func(r chi.Router) {
+				r.Get("/", a.getModuleVersion)
+				r.With(a.requireWrite(canManageModule)).Patch("/", a.updateModuleVersion)
+			})
+		})
+
 		// SSH keys and self-hosted agent pools for workspace connections.
 		r.Get("/ssh", a.listSSHKeys)
 		r.With(a.requireWrite(canManageVcs)).Post("/ssh", a.createSSHKey)

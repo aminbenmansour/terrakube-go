@@ -80,7 +80,7 @@ type replay struct {
 	// status overrides the captured status when we deliberately answer
 	// differently; 0 means it must match.
 	status  int
-	querier *stubQuerier
+	querier store.Querier
 	// authToken enables authentication, for the unauthenticated capture.
 	authToken string
 	// idFrom names another capture that carries the resource id, for paths
@@ -809,6 +809,132 @@ var replayedCaptures = map[string]replay{
 		idFrom: "organization-template-create-empty",
 		method: http.MethodDelete,
 	},
+	"organization-provider-list": {
+		target: "registry-query",
+	},
+	"organization-provider-create": {
+		target: "registry-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"provider","attributes":{"name":"capture-provider","description":"capture","imported":true,"registryNamespace":"acme"}}}`,
+	},
+	"organization-provider-get": {
+		target: "registry-query",
+	},
+	"organization-provider-get-include": {
+		target: "registry-provider-query",
+	},
+	"organization-provider-patch": {
+		target: "registry-query",
+		idFrom: "organization-provider-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"provider","id":"{id}","attributes":{"description":"after"}}}`,
+	},
+	"organization-provider-version-create": {
+		target: "registry-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"version","attributes":{"versionNumber":"1.2.3","protocols":"5.0"}}}`,
+	},
+	"organization-provider-version-patch": {
+		target: "registry-query",
+		idFrom: "organization-provider-version-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"version","id":"{id}","attributes":{"status":"deprecated","deprecationMessage":"use 2.x"}}}`,
+	},
+	"organization-provider-version-invalid-status": {
+		target: "registry-query",
+		idFrom: "organization-provider-version-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"version","id":"{id}","attributes":{"status":"nonsense"}}}`,
+	},
+	"organization-provider-version-missing": {
+		target: "registry-provider-query",
+	},
+	"organization-provider-implementation-create": {
+		target: "registry-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"implementation","attributes":{"os":"linux","arch":"amd64","filename":"terraform-provider-capture_1.2.3_linux_amd64.zip","downloadUrl":"https://example.com/p.zip","shasumsUrl":"https://example.com/SHA256SUMS","shasumsSignatureUrl":"https://example.com/SHA256SUMS.sig","shasum":"abc","keyId":"key","asciiArmor":"armor","trustSignature":"trust","source":"https://github.com/example/p","sourceUrl":"https://github.com/example/p"}}}`,
+	},
+	"organization-provider-get-populated": {
+		target: "registry-query",
+	},
+	"organization-provider-implementation-delete": {
+		target: "registry-query",
+		method: http.MethodDelete,
+	},
+	"organization-provider-version-delete": {
+		target: "registry-query",
+		method: http.MethodDelete,
+	},
+	"organization-provider-delete": {
+		target: "registry-query",
+		method: http.MethodDelete,
+	},
+	"organization-provider-get-after-delete": {
+		target:  "resource-query",
+		querier: emptyRegistryStore(),
+	},
+	"organization-provider-missing": {
+		target:  "resource-query",
+		querier: emptyRegistryStore(),
+	},
+	"organization-provider-bad-id": {
+		target:  "resource-query",
+		querier: emptyRegistryStore(),
+	},
+	"organization-module-create": {
+		target: "registry-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"module","attributes":{"name":"capture-module","description":"capture","provider":"aws","source":"https://github.com/example/terraform-aws-capture","folder":null,"tagPrefix":null}}}`,
+	},
+	"organization-module-include": {
+		target: "registry-query",
+	},
+	"organization-module-list": {
+		target: "registry-query",
+	},
+	"organization-module-list-fields": {
+		target: "registry-query",
+	},
+	"organization-module-get": {
+		target: "registry-query",
+	},
+	"organization-module-get-include": {
+		target: "registry-query",
+	},
+	"organization-module-patch": {
+		target: "registry-query",
+		idFrom: "organization-module-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"module","id":"{id}","attributes":{"description":"after"}}}`,
+	},
+	"organization-module-version-patch": {
+		target: "registry-query",
+		idFrom: "organization-module-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"module_version","id":"bbbbbbbb-0000-4000-8000-000000000001","attributes":{"status":"deprecated","deprecationMessage":"use 2.x"}}}`,
+	},
+	"organization-module-version-invalid-status": {
+		target: "registry-query",
+		idFrom: "organization-module-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"module_version","id":"bbbbbbbb-0000-4000-8000-000000000001","attributes":{"status":"nonsense"}}}`,
+	},
+	"organization-module-missing": {
+		target:  "resource-query",
+		querier: emptyRegistryStore(),
+	},
+	"organization-module-bad-id": {
+		target:  "resource-query",
+		querier: emptyRegistryStore(),
+	},
+	"organization-module-delete": {
+		target: "registry-query",
+		method: http.MethodDelete,
+	},
+	"organization-module-get-after-delete": {
+		target:  "resource-query",
+		querier: emptyRegistryStore(),
+	},
 	"organization-tag-list": {
 		target: "tag-query",
 		// The recording predates the create, so the list is empty.
@@ -918,6 +1044,9 @@ var deferredCaptures = map[string]string{
 	"access-token-permissions-workspace":            "same endpoint; accesstoken_test.go covers the workspace accumulation",
 	"access-token-permissions-workspace-team":       "same endpoint; accesstoken_test.go covers the team half",
 	"access-token-permissions-workspace-missing":    "same endpoint; accesstoken_test.go covers the missing-workspace case",
+	"organization-provider-duplicate":               "upstream answers Spring's 500 page on the unique (organization, name) constraint; our unique index answers 409",
+	"organization-provider-version-duplicate":       "the same Spring 500 on the unique (provider, version) constraint; ours answers 409",
+	"organization-module-duplicate":                 "upstream answers 409 through a lifecycle hook; the replay stub cannot raise the database constraint, so internal/api/registry_test.go covers our 409",
 }
 
 // The ids upstream's demo seed gave the captures; the job captures were taken
@@ -1396,6 +1525,14 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 				if querier == nil {
 					querier = captureTemplateStore(t, captures)
 				}
+			case "registry-query":
+				target = strings.TrimPrefix(capture.path, "/api/v1")
+				if querier == nil {
+					querier = registryCaptureStore(captures)
+				}
+			case "registry-provider-query":
+				target = strings.TrimPrefix(capture.path, "/api/v1")
+				querier = registryProviderStore(t, captures)
 			}
 			if querier == nil {
 				querier = &stubQuerier{}

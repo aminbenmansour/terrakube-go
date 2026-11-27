@@ -113,6 +113,23 @@ type History struct {
 	UpdatedBy    *string            `json:"updated_by"`
 }
 
+type Implementation struct {
+	ID                  string  `json:"id"`
+	Os                  string  `json:"os"`
+	Arch                *string `json:"arch"`
+	Filename            string  `json:"filename"`
+	DownloadUrl         string  `json:"download_url"`
+	ShasumsUrl          string  `json:"shasums_url"`
+	ShasumsSignatureUrl string  `json:"shasums_signature_url"`
+	Shasum              string  `json:"shasum"`
+	KeyID               string  `json:"key_id"`
+	AsciiArmor          *string `json:"ascii_armor"`
+	TrustSignature      string  `json:"trust_signature"`
+	Source              string  `json:"source"`
+	SourceUrl           string  `json:"source_url"`
+	VersionID           string  `json:"version_id"`
+}
+
 type Item struct {
 	ID              string             `json:"id"`
 	ItemDescription *string            `json:"item_description"`
@@ -154,6 +171,35 @@ type Job struct {
 	OverrideBranch    *string            `json:"override_branch"`
 	TriggeredByJobID  *int64             `json:"triggered_by_job_id"`
 	CascadeDepth      int32              `json:"cascade_depth"`
+}
+
+type Module struct {
+	ID               string             `json:"id"`
+	Name             string             `json:"name"`
+	Description      *string            `json:"description"`
+	Provider         string             `json:"provider"`
+	Source           string             `json:"source"`
+	OrganizationID   string             `json:"organization_id"`
+	VcsID            *string            `json:"vcs_id"`
+	SshID            *string            `json:"ssh_id"`
+	DownloadQuantity *int64             `json:"download_quantity"`
+	CreatedDate      pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate      pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy        *string            `json:"created_by"`
+	UpdatedBy        *string            `json:"updated_by"`
+	TagPrefix        *string            `json:"tag_prefix"`
+	Folder           *string            `json:"folder"`
+	LatestVersion    *string            `json:"latest_version"`
+}
+
+type ModuleVersion struct {
+	ID                 string  `json:"id"`
+	ModuleID           string  `json:"module_id"`
+	Version            string  `json:"version"`
+	CommitInfo         string  `json:"commit_info"`
+	GitTag             *string `json:"git_tag"`
+	Status             string  `json:"status"`
+	DeprecationMessage *string `json:"deprecation_message"`
 }
 
 type NotificationConfiguration struct {
@@ -245,6 +291,15 @@ type ProjectAccess struct {
 	DestroyJob      bool    `json:"destroy_job"`
 	Role            *string `json:"role"`
 	ProjectID       string  `json:"project_id"`
+}
+
+type Provider struct {
+	ID                string  `json:"id"`
+	Name              string  `json:"name"`
+	Description       *string `json:"description"`
+	OrganizationID    string  `json:"organization_id"`
+	Imported          *bool   `json:"imported"`
+	RegistryNamespace *string `json:"registry_namespace"`
 }
 
 type Reference struct {
@@ -404,6 +459,15 @@ type Vc struct {
 	ConnectionType  *string            `json:"connection_type"`
 	PrivateKey      *string            `json:"private_key"`
 	OrganizationID  string             `json:"organization_id"`
+}
+
+type Version struct {
+	ID                 string  `json:"id"`
+	VersionNumber      string  `json:"version_number"`
+	Protocols          string  `json:"protocols"`
+	ProviderID         string  `json:"provider_id"`
+	Status             string  `json:"status"`
+	DeprecationMessage *string `json:"deprecation_message"`
 }
 
 type Webhook struct {
