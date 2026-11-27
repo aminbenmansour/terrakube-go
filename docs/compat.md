@@ -655,8 +655,17 @@ its triggers and template links. Two divergences and one gap: an unknown
 attribute in a PATCH is ignored here (upstream `404 Unknown attribute`), the
 workspace relationship is emitted as JSON null (upstream emits `data:null` plus
 empty `triggers`/`templates`/`policySet` arrays), and the
-`/notification/v1/.../test` endpoints and actual delivery are not implemented
-yet (#52). Writes need `manageWorkspace`, as upstream.
+`/notification/v1/.../test` endpoints and the outbox that drives real delivery
+are not implemented yet (#52). The payload builders they will use are
+implemented (#154): Slack gets Block Kit cards with a coloured attachment for
+`DETAILED` and a one-line top-level `text` for `SIMPLE`; Teams gets adaptive
+cards (1.4) with a fact set and an optional View Run action; a generic webhook
+gets a flat JSON body (`organization`, `workspace`, `jobId`, `status`, `runUrl`,
+`workspaceUrl`, `commitId`, `failureReason`, `configurationName`, absent values
+null), signed with
+`X-Terrakube-Signature: <lowercase hex HMAC-SHA256 of the raw body>` when
+`signingSecret` is set. Writes need `manageWorkspace`, as upstream.
+
 
 `template` is the Settings > Templates screen and the source of the workspace's
 `defaultTemplate`: list, get, create, patch and delete under
