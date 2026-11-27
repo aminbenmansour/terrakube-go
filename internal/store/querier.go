@@ -50,6 +50,8 @@ type Querier interface {
 	CreateTemplate(ctx context.Context, arg CreateTemplateParams) (Template, error)
 	CreateVCS(ctx context.Context, arg CreateVCSParams) (Vc, error)
 	CreateVariable(ctx context.Context, arg CreateVariableParams) (Variable, error)
+	CreateWebhook(ctx context.Context, arg CreateWebhookParams) (Webhook, error)
+	CreateWebhookEvent(ctx context.Context, arg CreateWebhookEventParams) (WebhookEvent, error)
 	CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (Workspace, error)
 	CreateWorkspaceTag(ctx context.Context, arg CreateWorkspaceTagParams) (Workspacetag, error)
 	DeleteAccess(ctx context.Context, id string) error
@@ -78,6 +80,8 @@ type Querier interface {
 	DeleteTemplate(ctx context.Context, id string) error
 	DeleteVCS(ctx context.Context, id string) error
 	DeleteVariable(ctx context.Context, id string) error
+	DeleteWebhook(ctx context.Context, id string) error
+	DeleteWebhookEvent(ctx context.Context, id string) error
 	DeleteWorkspaceTag(ctx context.Context, id string) error
 	DenyCliAuthSession(ctx context.Context, id string) error
 	FailCliAuthSession(ctx context.Context, id string) error
@@ -122,6 +126,9 @@ type Querier interface {
 	GetTemplate(ctx context.Context, id string) (Template, error)
 	GetVCS(ctx context.Context, id string) (Vc, error)
 	GetVariable(ctx context.Context, id string) (Variable, error)
+	GetWebhook(ctx context.Context, id string) (Webhook, error)
+	GetWebhookByWorkspace(ctx context.Context, workspaceID string) (Webhook, error)
+	GetWebhookEvent(ctx context.Context, id string) (WebhookEvent, error)
 	GetWorkspace(ctx context.Context, id string) (Workspace, error)
 	GetWorkspaceByName(ctx context.Context, arg GetWorkspaceByNameParams) (Workspace, error)
 	GetWorkspaceTag(ctx context.Context, id string) (Workspacetag, error)
@@ -174,6 +181,7 @@ type Querier interface {
 	ListVariableSecrets(ctx context.Context) ([]ListVariableSecretsRow, error)
 	ListVariableSecretsAfter(ctx context.Context, arg ListVariableSecretsAfterParams) ([]ListVariableSecretsAfterRow, error)
 	ListVariablesByWorkspace(ctx context.Context, workspaceID string) ([]Variable, error)
+	ListWebhookEvents(ctx context.Context, webhookID string) ([]WebhookEvent, error)
 	ListWorkspaceIDsByVCS(ctx context.Context, vcsID *string) ([]string, error)
 	ListWorkspaceTagsByWorkspace(ctx context.Context, workspaceID string) ([]Workspacetag, error)
 	ListWorkspacesByOrganization(ctx context.Context, organizationID string) ([]Workspace, error)
@@ -234,6 +242,8 @@ type Querier interface {
 	UpdateTemplate(ctx context.Context, arg UpdateTemplateParams) (Template, error)
 	UpdateVCS(ctx context.Context, arg UpdateVCSParams) (Vc, error)
 	UpdateVariable(ctx context.Context, arg UpdateVariableParams) (Variable, error)
+	UpdateWebhook(ctx context.Context, arg UpdateWebhookParams) (Webhook, error)
+	UpdateWebhookEvent(ctx context.Context, arg UpdateWebhookEventParams) (WebhookEvent, error)
 	UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams) (Workspace, error)
 	UpdateWorkspaceTagValue(ctx context.Context, arg UpdateWorkspaceTagValueParams) (Workspacetag, error)
 }

@@ -391,6 +391,35 @@ type Vc struct {
 	OrganizationID  string             `json:"organization_id"`
 }
 
+type Webhook struct {
+	ID           string             `json:"id"`
+	WorkspaceID  string             `json:"workspace_id"`
+	RemoteHookID *string            `json:"remote_hook_id"`
+	MigratedV2   bool               `json:"migrated_v2"`
+	SyncError    *string            `json:"sync_error"`
+	CreatedDate  pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate  pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy    *string            `json:"created_by"`
+	UpdatedBy    *string            `json:"updated_by"`
+}
+
+type WebhookEvent struct {
+	ID                string             `json:"id"`
+	WebhookID         string             `json:"webhook_id"`
+	Branch            string             `json:"branch"`
+	Path              string             `json:"path"`
+	PathType          string             `json:"path_type"`
+	Event             string             `json:"event"`
+	TemplateID        string             `json:"template_id"`
+	Priority          int32              `json:"priority"`
+	PrWorkflowEnabled bool               `json:"pr_workflow_enabled"`
+	PrApplyEnabled    bool               `json:"pr_apply_enabled"`
+	CreatedDate       pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate       pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy         *string            `json:"created_by"`
+	UpdatedBy         *string            `json:"updated_by"`
+}
+
 type Workspace struct {
 	ID                              string             `json:"id"`
 	Name                            string             `json:"name"`

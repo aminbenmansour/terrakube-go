@@ -130,6 +130,22 @@ func (a *API) getWorkspace(w http.ResponseWriter, r *http.Request) {
 	var included []jsonapi.Resource
 	want := parseInclude(r)
 
+	// The Webhook settings screen reads the relationship id from the same
+	// request that includes it (Details.tsx). Only that request pays for the
+	// lookup; a workspace without a webhook reports null.
+	if want["webhook"] {
+		webhook, err := a.workspaceWebhook(r, ws.ID)
+		if err != nil {
+			a.internalError(w, "get workspace webhook", err)
+			return
+		}
+		resource.Relationships["webhook"] = jsonapi.NullLink()
+		if webhook != nil {
+			resource.Relationships["webhook"] = jsonapi.Link("webhook", webhook.ID)
+			included = append(included, webhookResource(*webhook))
+		}
+	}
+
 	if want["variable"] {
 		variables, err := a.deps.Store.ListVariablesByWorkspace(r.Context(), ws.ID)
 		if err != nil {

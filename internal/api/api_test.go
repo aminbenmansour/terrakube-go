@@ -45,6 +45,8 @@ type stubQuerier struct {
 	teams                 []store.Team
 	access                []store.Access
 	projectAccess         []store.ProjectAccess
+	webhooks              []store.Webhook
+	webhookEvents         []store.WebhookEvent
 	notifications         []store.NotificationConfiguration
 	triggers              []store.NotificationTrigger
 	notificationTemplates map[string][]string
