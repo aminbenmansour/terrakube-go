@@ -46,7 +46,7 @@ func TestRejectedCredentialIsAUseful4xx(t *testing.T) {
 		},
 	})
 	_, err := Test(context.Background(),
-		Connection{Type: TypeGitHub, APIURL: server.URL + "/expired", AccessToken: "gh-token"})
+		Connection{AllowLocal: true, Type: TypeGitHub, APIURL: server.URL + "/expired", AccessToken: "gh-token"})
 	var discoveryErr *Error
 	if !errors.As(err, &discoveryErr) {
 		t.Fatalf("error = %v, want *Error", err)
@@ -65,8 +65,8 @@ func TestUnsupportedConnections(t *testing.T) {
 		connection Connection
 		status     int
 	}{
-		{"unknown type", Connection{Type: "BITBUCKET", AccessToken: "x"}, http.StatusUnprocessableEntity},
-		{"public", Connection{Type: "PUBLIC", AccessToken: "x"}, http.StatusUnprocessableEntity},
+		{"unknown type", Connection{AllowLocal: true, Type: "BITBUCKET", AccessToken: "x"}, http.StatusUnprocessableEntity},
+		{"public", Connection{AllowLocal: true, Type: "PUBLIC", AccessToken: "x"}, http.StatusUnprocessableEntity},
 	}
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {

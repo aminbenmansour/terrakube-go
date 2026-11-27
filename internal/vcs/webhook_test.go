@@ -46,7 +46,7 @@ func TestGitHubWebhookCreate(t *testing.T) {
 	server := newHookServer(t, `{"id": 4242}`, http.StatusCreated)
 
 	remote, err := SyncWebhook(context.Background(),
-		Connection{Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"},
+		Connection{AllowLocal: true, Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"},
 		WebhookSpec{
 			SourceURL: "https://github.com/acme/infra.git", CallbackURL: "https://terrakube.example.com/webhook/v1/hook-id",
 			Secret: "c2VjcmV0", Events: []string{"PUSH", "PULL_REQUEST", "PUSH"}, PullRequestWorkflow: true,
@@ -79,7 +79,7 @@ func TestGitHubWebhookCreate(t *testing.T) {
 
 func TestGitHubWebhookUpdateAndDelete(t *testing.T) {
 	server := newHookServer(t, `{"id": 4242}`, http.StatusOK)
-	connection := Connection{Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"}
+	connection := Connection{AllowLocal: true, Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"}
 	spec := WebhookSpec{SourceURL: "https://github.com/acme/infra", Events: []string{"RELEASE"}}
 
 	remote, err := SyncWebhook(context.Background(), connection, spec, "4242")
@@ -105,7 +105,7 @@ func TestGitHubWebhookUpdateAndDelete(t *testing.T) {
 func TestDeleteWebhookTreats404AsRemoved(t *testing.T) {
 	server := newHookServer(t, `{"message":"Not Found"}`, http.StatusNotFound)
 	if err := DeleteWebhook(context.Background(),
-		Connection{Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"},
+		Connection{AllowLocal: true, Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"},
 		"https://github.com/acme/infra", "9"); err != nil {
 		t.Fatalf("delete gone webhook = %v", err)
 	}
@@ -140,7 +140,7 @@ func TestGitLabWebhookCreate(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	remote, err := SyncWebhook(context.Background(),
-		Connection{Type: TypeGitLab, APIURL: server.URL, AccessToken: "gl-token"},
+		Connection{AllowLocal: true, Type: TypeGitLab, APIURL: server.URL, AccessToken: "gl-token"},
 		WebhookSpec{
 			SourceURL: "https://gitlab.com/acme/infra.git", CallbackURL: "https://terrakube.example.com/webhook/v1/hook-id",
 			Secret: "c2VjcmV0", Events: []string{"PUSH"}, PullRequestWorkflow: true,
@@ -169,7 +169,7 @@ func TestGitLabWebhookDelete(t *testing.T) {
 	t.Cleanup(handler.Close)
 
 	if err := DeleteWebhook(context.Background(),
-		Connection{Type: TypeGitLab, APIURL: handler.URL, AccessToken: "gl-token"},
+		Connection{AllowLocal: true, Type: TypeGitLab, APIURL: handler.URL, AccessToken: "gl-token"},
 		"https://gitlab.com/acme/infra", "99"); err != nil {
 		t.Fatalf("delete webhook: %v", err)
 	}
@@ -178,7 +178,7 @@ func TestGitLabWebhookDelete(t *testing.T) {
 func TestWebhookProviderErrorCarriesStatus(t *testing.T) {
 	server := newHookServer(t, `{"message":"Resource not accessible by integration"}`, http.StatusForbidden)
 	_, err := SyncWebhook(context.Background(),
-		Connection{Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"},
+		Connection{AllowLocal: true, Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"},
 		WebhookSpec{SourceURL: "https://github.com/acme/infra"}, "")
 	var providerErr *Error
 	if !errors.As(err, &providerErr) || providerErr.Status != http.StatusForbidden {
