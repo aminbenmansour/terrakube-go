@@ -4,6 +4,7 @@
 package vcs
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -135,6 +136,8 @@ type provider interface {
 	repositories(context.Context, string, string, int) (RepositoryPage, error)
 	branches(context.Context, string, int) (BranchPage, error)
 	test(context.Context) (string, error)
+	syncWebhook(context.Context, WebhookSpec, string) (string, error)
+	removeWebhook(context.Context, string, string) error
 }
 
 func providerFor(connection Connection) (provider, error) {
@@ -177,11 +180,29 @@ func baseURL(connection Connection) string {
 
 // getJSON performs one authenticated GET and decodes a 2xx body into target.
 func getJSON(ctx context.Context, rawURL, token string, header http.Header, target any) (http.Header, error) {
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	return doJSON(ctx, http.MethodGet, rawURL, token, header, nil, target)
+}
+
+// doJSON performs one authenticated request and decodes a 2xx body into target.
+// A nil target ignores the body. Provider failures carry the status the API
+// should answer with, so a rejected credential never surfaces as a 500.
+func doJSON(ctx context.Context, method, rawURL, token string, header http.Header, payload, target any) (http.Header, error) {
+	var body io.Reader
+	if payload != nil {
+		encoded, err := json.Marshal(payload)
+		if err != nil {
+			return nil, failed(http.StatusInternalServerError, "Could not encode the request: %v", err)
+		}
+		body = bytes.NewReader(encoded)
+	}
+	request, err := http.NewRequestWithContext(ctx, method, rawURL, body)
 	if err != nil {
 		return nil, failed(http.StatusBadGateway, "The provider URL is invalid: %v", err)
 	}
 	request.Header.Set("Accept", "application/json")
+	if payload != nil {
+		request.Header.Set("Content-Type", "application/json")
+	}
 	for key, values := range header {
 		request.Header[key] = values
 	}
@@ -200,34 +221,41 @@ func getJSON(ctx context.Context, rawURL, token string, header http.Header, targ
 		return nil, failed(http.StatusBadGateway, "Could not reach the VCS provider: %v", err)
 	}
 	defer response.Body.Close()
-	body, _ := io.ReadAll(io.LimitReader(response.Body, maxBody))
+	responseBody, _ := io.ReadAll(io.LimitReader(response.Body, maxBody))
 
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		message := providerMessage(body)
-		switch response.StatusCode {
-		case http.StatusUnauthorized:
-			return nil, failed(http.StatusUnauthorized,
-				"The VCS provider rejected the credential (HTTP 401). Reconnect it or check the token. %s", message)
-		case http.StatusForbidden:
-			return nil, failed(http.StatusForbidden,
-				"The VCS provider refused the request (HTTP 403). Check the token's scopes. %s", message)
-		case http.StatusNotFound:
-			return nil, failed(http.StatusNotFound, "The VCS provider could not find that resource. %s", message)
-		case http.StatusTooManyRequests:
-			return nil, failed(http.StatusTooManyRequests, "The VCS provider rate limit was reached. Try again later.")
-		default:
-			if response.StatusCode >= 500 {
-				return nil, failed(http.StatusBadGateway,
-					"The VCS provider failed the request (HTTP %d). %s", response.StatusCode, message)
-			}
-			return nil, failed(http.StatusBadRequest,
-				"The VCS provider rejected the request (HTTP %d). %s", response.StatusCode, message)
+		return nil, providerError(response.StatusCode, responseBody)
+	}
+	if target != nil && len(responseBody) > 0 {
+		if err := json.Unmarshal(responseBody, target); err != nil {
+			return nil, failed(http.StatusBadGateway, "The VCS provider returned an unexpected response: %v", err)
 		}
 	}
-	if err := json.Unmarshal(body, target); err != nil {
-		return nil, failed(http.StatusBadGateway, "The VCS provider returned an unexpected response: %v", err)
-	}
 	return response.Header, nil
+}
+
+// providerError maps a provider status and body to the API's answer.
+func providerError(status int, body []byte) error {
+	message := providerMessage(body)
+	switch status {
+	case http.StatusUnauthorized:
+		return failed(http.StatusUnauthorized,
+			"The VCS provider rejected the credential (HTTP 401). Reconnect it or check the token. %s", message)
+	case http.StatusForbidden:
+		return failed(http.StatusForbidden,
+			"The VCS provider refused the request (HTTP 403). Check the token's scopes. %s", message)
+	case http.StatusNotFound:
+		return failed(http.StatusNotFound, "The VCS provider could not find that resource. %s", message)
+	case http.StatusTooManyRequests:
+		return failed(http.StatusTooManyRequests, "The VCS provider rate limit was reached. Try again later.")
+	default:
+		if status >= 500 {
+			return failed(http.StatusBadGateway,
+				"The VCS provider failed the request (HTTP %d). %s", status, message)
+		}
+		return failed(http.StatusBadRequest,
+			"The VCS provider rejected the request (HTTP %d). %s", status, message)
+	}
 }
 
 // providerMessage extracts the short error text GitHub and GitLab send.
