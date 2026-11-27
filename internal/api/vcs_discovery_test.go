@@ -64,7 +64,7 @@ func vcsDiscoveryAPI(t *testing.T, providerURL string) http.Handler {
 			ConnectionType: strPtr("OAUTH"),
 		}},
 	}}
-	return NewVCS(Deps{Store: q})
+	return NewVCS(Deps{Store: q, VCSAllowLocal: true})
 }
 
 func decodeBody[T any](t *testing.T, rec *httptest.ResponseRecorder) T {

@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/aminbenmansour/terrakube-go/internal/auth"
+	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
 	"github.com/aminbenmansour/terrakube-go/internal/pat"
 )
 
@@ -185,3 +186,19 @@ func TestPATRoutesRequireAuthenticationAndASecret(t *testing.T) {
 }
 
 func int32Ptr(value int32) *int32 { return &value }
+
+func TestPATRoutesRefuseOversizedBodies(t *testing.T) {
+	router := NewPAT(Deps{
+		Logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		AuthToken: "dev-token",
+		PATs:      &stubPATService{},
+	})
+	request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("{}"))
+	request.Header.Set("Authorization", "Bearer dev-token")
+	request.ContentLength = jsonapi.MaxBodyBytes + 1
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, request)
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want 413: %s", rec.Code, rec.Body.String())
+	}
+}

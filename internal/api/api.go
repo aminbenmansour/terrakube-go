@@ -50,6 +50,9 @@ type Deps struct {
 	// Empty allows any origin, which is the historical behaviour; a UI served
 	// by this API shares its origin and needs no entry.
 	CORSOrigins []string
+	// VCSAllowLocal permits VCS API URLs on loopback/link-local addresses.
+	// Off by default. See config.Config.VCSAllowLocal.
+	VCSAllowLocal bool
 	// Deliverer posts notification test sends. Nil uses the SSRF-blocking
 	// deliverer the HTTP senders default to.
 	Deliverer *notification.Deliverer

@@ -49,6 +49,7 @@ func NewAccessToken(deps Deps) http.Handler {
 
 	r := chi.NewRouter()
 	r.Use(httpapi.CORS(deps.CORSOrigins))
+	r.Use(httpapi.LimitBody(jsonapi.MaxBodyBytes))
 	r.Use(a.authenticate)
 	// Only the two permission routes read the store; current-teams echoes the
 	// token and must keep working when no database is configured.

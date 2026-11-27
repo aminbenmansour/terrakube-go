@@ -85,6 +85,9 @@ func TestLoadDefaults(t *testing.T) {
 		t.Errorf("Dex settings = %v/%v/%v, want disabled with no audience checks",
 			cfg.DexEnabled, cfg.DexAudienceValidation, cfg.DexExtraAudiences)
 	}
+	if cfg.VCSAllowLocal {
+		t.Error("VCSAllowLocal = true by default, want false")
+	}
 	if cfg.PATSecret != "" || cfg.AdminGroup != "TERRAKUBE_ADMIN" {
 		t.Errorf("PAT settings = %q/%q, want empty/TERRAKUBE_ADMIN", cfg.PATSecret, cfg.AdminGroup)
 	}
@@ -111,6 +114,7 @@ func TestLoadOverrides(t *testing.T) {
 	t.Setenv("TERRAKUBE_ADMIN_GROUP", "platform-admins")
 	t.Setenv("TERRAKUBE_TERRAFORM_LOGIN_DEFAULT_DAYS", "14")
 	t.Setenv("TERRAKUBE_TERRAFORM_LOGIN_MAX_DAYS", "90")
+	t.Setenv("TERRAKUBE_VCS_ALLOW_LOCAL", "true")
 
 	cfg, err := Load()
 	if err != nil {
@@ -143,6 +147,9 @@ func TestLoadOverrides(t *testing.T) {
 	}
 	if cfg.TerraformLoginDefaultDays != 14 || cfg.TerraformLoginMaxDays != 90 {
 		t.Errorf("login days = %d/%d, want 14/90", cfg.TerraformLoginDefaultDays, cfg.TerraformLoginMaxDays)
+	}
+	if !cfg.VCSAllowLocal {
+		t.Error("VCSAllowLocal = false, want true")
 	}
 }
 

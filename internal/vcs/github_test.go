@@ -52,7 +52,8 @@ func githubRoutes(t *testing.T) map[string]func(http.ResponseWriter, *http.Reque
 func TestGroupsGitHub(t *testing.T) {
 	server := newFakeProvider(t, githubRoutes(t))
 	groups, err := Groups(context.Background(), Connection{
-		Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token",
+		AllowLocal: true,
+		Type:       TypeGitHub, APIURL: server.URL, AccessToken: "gh-token",
 	})
 	if err != nil {
 		t.Fatalf("Groups: %v", err)
@@ -65,7 +66,7 @@ func TestGroupsGitHub(t *testing.T) {
 
 func TestRepositoriesGitHub(t *testing.T) {
 	server := newFakeProvider(t, githubRoutes(t))
-	connection := Connection{Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"}
+	connection := Connection{AllowLocal: true, Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"}
 
 	page, err := Repositories(context.Background(), connection, "acme", "", 1)
 	if err != nil {
@@ -107,7 +108,7 @@ func TestRepositoriesGitHub(t *testing.T) {
 func TestBranchesGitHub(t *testing.T) {
 	server := newFakeProvider(t, githubRoutes(t))
 	page, err := Branches(context.Background(),
-		Connection{Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"}, "acme/infra", 1)
+		Connection{AllowLocal: true, Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"}, "acme/infra", 1)
 	if err != nil {
 		t.Fatalf("Branches: %v", err)
 	}
@@ -116,7 +117,7 @@ func TestBranchesGitHub(t *testing.T) {
 	}
 
 	_, err = Branches(context.Background(),
-		Connection{Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"}, "  ", 1)
+		Connection{AllowLocal: true, Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"}, "  ", 1)
 	var discoveryErr *Error
 	if !errors.As(err, &discoveryErr) || discoveryErr.Status != http.StatusBadRequest {
 		t.Fatalf("empty repository error = %v", err)
@@ -126,7 +127,7 @@ func TestBranchesGitHub(t *testing.T) {
 func TestTestConnection(t *testing.T) {
 	server := newFakeProvider(t, githubRoutes(t))
 	message, err := Test(context.Background(),
-		Connection{Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"})
+		Connection{AllowLocal: true, Type: TypeGitHub, APIURL: server.URL, AccessToken: "gh-token"})
 	if err != nil {
 		t.Fatalf("Test: %v", err)
 	}
@@ -141,8 +142,8 @@ func TestGitHubConnectionsWithoutAToken(t *testing.T) {
 		connection Connection
 		status     int
 	}{
-		{"no token", Connection{Type: TypeGitHub, APIURL: "https://api.github.com"}, http.StatusBadRequest},
-		{"app", Connection{Type: TypeGitHub, APIURL: "https://api.github.com", PrivateKey: "pem"}, http.StatusNotImplemented},
+		{"no token", Connection{AllowLocal: true, Type: TypeGitHub, APIURL: "https://api.github.com"}, http.StatusBadRequest},
+		{"app", Connection{AllowLocal: true, Type: TypeGitHub, APIURL: "https://api.github.com", PrivateKey: "pem"}, http.StatusNotImplemented},
 	}
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {

@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/aminbenmansour/terrakube-go/internal/auth"
+	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 	"github.com/aminbenmansour/terrakube-go/internal/teamtoken"
 )
@@ -477,5 +478,22 @@ func TestTeamTokensAnswer503WithoutAService(t *testing.T) {
 	rec := serveTeamTokens(t, nil, http.MethodGet, "/teams", "")
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want 503", rec.Code)
+	}
+}
+
+func TestTeamTokenRoutesRefuseOversizedBodies(t *testing.T) {
+	router := NewAccessToken(Deps{
+		Logger:       slog.New(slog.NewTextHandler(io.Discard, nil)),
+		AuthToken:    "dev-token",
+		AccessTokens: &fakeAccessTokenStore{},
+		TeamTokens:   &stubTeamTokens{},
+	})
+	request := httptest.NewRequest(http.MethodPost, "/teams", strings.NewReader("{}"))
+	request.Header.Set("Authorization", "Bearer dev-token")
+	request.ContentLength = jsonapi.MaxBodyBytes + 1
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, request)
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want 413: %s", rec.Code, rec.Body.String())
 	}
 }

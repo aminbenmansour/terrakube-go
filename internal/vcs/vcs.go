@@ -74,6 +74,10 @@ type Connection struct {
 	AccessToken    string
 	PrivateKey     string
 	ConnectionType string
+	// AllowLocal permits loopback and link-local API URLs. Development stacks
+	// and tests set it; production leaves it false so a connection cannot be
+	// used to reach cloud metadata or a loopback service.
+	AllowLocal bool
 }
 
 // Error carries the status the API should answer with, so a rejected
@@ -142,6 +146,13 @@ type provider interface {
 
 func providerFor(connection Connection) (provider, error) {
 	base := baseURL(connection)
+	// Only a stored URL can point somewhere unexpected; an empty api_url uses
+	// the fixed public provider host.
+	if strings.TrimSpace(connection.APIURL) != "" {
+		if err := validateEndpoint(base, connection.AllowLocal); err != nil {
+			return nil, err
+		}
+	}
 	switch connection.Type {
 	case TypeGitHub:
 		if strings.TrimSpace(connection.AccessToken) == "" {

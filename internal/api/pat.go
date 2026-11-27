@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/aminbenmansour/terrakube-go/internal/auth"
+	"github.com/aminbenmansour/terrakube-go/internal/httpapi"
 	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
 	"github.com/aminbenmansour/terrakube-go/internal/pat"
 )
@@ -31,6 +32,7 @@ func NewPAT(deps Deps) http.Handler {
 	a := &API{deps: deps}
 
 	r := chi.NewRouter()
+	r.Use(httpapi.LimitBody(jsonapi.MaxBodyBytes))
 	r.Use(a.authenticate)
 	r.Use(a.requirePATService)
 	r.Post("/", a.createPAT)

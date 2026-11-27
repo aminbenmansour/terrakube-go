@@ -303,9 +303,9 @@ Query conventions:
 - `include=step`, `fields[workspace]=name`.
 - Content type `application/vnd.api+json`; errors use a JSON:API `errors`
   array. `DELETE` must not send a body or content type.
-- JSON:API and GraphQL request bodies are limited to 8 MiB and answer `413`
-  with a JSON:API error above it. Configuration tarballs and state uploads
-  each allow 100 MiB.
+- JSON:API, GraphQL, `/pat/v1`, `/access-token/v1` and the webhook receiver
+  limit request bodies to 8 MiB and answer `413` with a JSON:API error above
+  it. Configuration tarballs and state uploads each allow 100 MiB.
 - `TERRAKUBE_RATE_LIMIT` caps requests per second per caller and answers `429`
   with `Retry-After`; unset means no limit, as upstream.
 - Responses carry `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
@@ -313,6 +313,13 @@ Query conventions:
   `Strict-Transport-Security` when the request arrives over HTTPS (directly or
   via `X-Forwarded-Proto`). A content security policy is not set because the
   bundled React UI owns its asset policy.
+- Outbound URLs are checked against SSRF: notification destinations reject
+  private, loopback and link-local addresses on every send, and a stored VCS
+  `apiUrl` must be `http`/`https` and resolve to a non-loopback,
+  non-link-local, non-reserved address (`422` otherwise). RFC 1918 and IPv6
+  unique-local VCS endpoints stay allowed for self-hosted GitLab/GitHub
+  Enterprise; `TERRAKUBE_VCS_ALLOW_LOCAL=true` also permits loopback and
+  link-local provider URLs for a development stack.
 
 Our initial implementation targets the resources needed by the CLI workflow and
 the UI's core screens. Anything missing is filled in against the upstream spec.
@@ -980,7 +987,13 @@ unreachable host) with the provider's message, where upstream logs and answers
 answer `422` with a message (upstream answers `422` with an empty page), so the
 wizard falls back to entering the repository URL by hand.
 `GITHUB_APP` connections (a private key and no access token) answer `501`:
-installation-token exchange is not implemented yet.
+installation-token exchange is not implemented yet. A stored `apiUrl` is
+checked before any provider request: a non-`http(s)` scheme or an address that
+resolves to loopback, link-local (cloud metadata), CGNAT or another reserved
+range answers `422` instead of issuing the request. Private RFC 1918 and IPv6
+unique-local endpoints remain allowed for self-hosted providers, and
+`TERRAKUBE_VCS_ALLOW_LOCAL=true` opts a development stack into loopback
+endpoints.
 
 Two extensions the wizard's issue (#156) asked for, absent upstream:
 `GET /vcs/v1/:vcsId/branches?repository=<full name>&page=<n>` returns

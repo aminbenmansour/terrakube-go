@@ -41,7 +41,7 @@ func gitlabRoutes(t *testing.T) map[string]func(http.ResponseWriter, *http.Reque
 
 func TestGitLabDiscovery(t *testing.T) {
 	server := newFakeProvider(t, gitlabRoutes(t))
-	connection := Connection{Type: TypeGitLab, APIURL: server.URL, AccessToken: "gl-token"}
+	connection := Connection{AllowLocal: true, Type: TypeGitLab, APIURL: server.URL, AccessToken: "gl-token"}
 
 	groups, err := Groups(context.Background(), connection)
 	if err != nil {
@@ -88,7 +88,7 @@ func TestGitLabDiscovery(t *testing.T) {
 }
 
 func TestGitLabConnectionWithoutAToken(t *testing.T) {
-	_, err := Groups(context.Background(), Connection{Type: TypeGitLab, APIURL: "https://gitlab.com"})
+	_, err := Groups(context.Background(), Connection{AllowLocal: true, Type: TypeGitLab, APIURL: "https://gitlab.com"})
 	var discoveryErr *Error
 	if !errors.As(err, &discoveryErr) || discoveryErr.Status != http.StatusBadRequest {
 		t.Fatalf("error = %v, want 400", err)
