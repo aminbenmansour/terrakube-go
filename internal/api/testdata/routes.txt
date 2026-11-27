@@ -60,6 +60,8 @@ GET /organization/{organizationID}/workspace/{workspaceID}/schedule
 GET /organization/{organizationID}/workspace/{workspaceID}/schedule/{scheduleID}/
 GET /organization/{organizationID}/workspace/{workspaceID}/variable
 GET /organization/{organizationID}/workspace/{workspaceID}/variable/{variableID}/
+GET /organization/{organizationID}/workspace/{workspaceID}/webhook/{webhookID}/
+GET /organization/{organizationID}/workspace/{workspaceID}/webhook/{webhookID}/events
 GET /organization/{organizationID}/workspace/{workspaceID}/workspaceTag
 GET /project/{projectID}/
 GET /project/{projectID}/workspace

@@ -473,6 +473,25 @@ Divergence: upstream applies every `access` row of a workspace to every caller
 (see the permission endpoint note above); this API only applies rows naming one
 of the caller's groups, and enforces with the same filtered set.
 
+### Workspace webhooks — `/api/v1`
+
+Source: `rs/webhook/Webhook.java`, `WebhookEvent.java` and
+`plugin/vcs/WebhookService.java` in 2.34.3. Tables mirror upstream
+(`webhook`, `webhook_event`; see Database).
+
+Reads: `GET /organization/:org/workspace/:ws/webhook/:id` returns the
+`webhook` resource (`remoteHookId`, `migratedV2`, `syncError`, audit fields) and
+`GET .../webhook/:id/events` its `webhook_event` rows in ascending `priority`,
+the order upstream checks triggers in. An event carries `branch`, `path`,
+`pathType` (`PATTERN|REGEX`), `event` (`PUSH|PULL_REQUEST|PR_COMMENT|PING|
+RELEASE|UNKNOWN`), `templateId`, `priority`, `prWorkflowEnabled` and
+`prApplyEnabled`. An id belonging to another workspace is `404`, as Elide
+answers for an id outside the relationship. The workspace GET with
+`include=webhook` adds `relationships.webhook` (`{"data":null}` when the
+workspace has none) and the resource in `included`; without that include the
+relationship is omitted rather than guessed (upstream always emits it, but only
+the workspace details request reads it).
+
 ### Terraform login — `/oauth`
 
 Source: `api/.../plugin/token/login/OAuthBrokerController.java`,
