@@ -523,6 +523,54 @@ implemented). A failed provider update on an existing webhook keeps the saved
 trigger rows rather than rolling back (upstream runs the whole save in one
 transaction).
 
+### Webhook receiver — `/webhook/v1`
+
+Source: `plugin/vcs/controller/WebHookController.java`, `WebhookService.java`,
+`WebhookEventMatcher.java`, `WebhookServiceBase.java` and the GitHub/GitLab
+webhook services in 2.34.3.
+
+`POST /webhook/v1/:webhookId` is public and is the callback registered for the
+per-workspace hook. The caller is authenticated by the provider signature over
+the raw body, using `base64(workspace id)` as the secret (the value `#147`
+registers): GitHub sends `X-Hub-Signature-256: sha256=<hex HMAC-SHA256>`;
+GitLab sends `X-Gitlab-Token: <secret>`. A missing or wrong signature is `401`
+and creates nothing.
+
+A verified delivery is reduced to `PUSH`, `PULL_REQUEST` or `RELEASE` from the
+`X-GitHub-Event` header or GitLab's `object_kind` (push/tag_push, merge_request
+open/update/reopen, release create); `ping` and events we do not model are
+acknowledged without a run. The payload repository (`repository.clone_url` /
+`html_url`, `project.git_http_url` / `web_url`) must match the workspace
+`source` after normalising scheme, credentials and `.git`, otherwise the
+delivery is acknowledged without a run. Triggers are checked in ascending
+`priority`: the event must equal the trigger's `event`, the branch must fully
+match one of its comma-separated regular expressions, and a changed file must
+match one of its comma-separated `path` patterns (`REGEX` full match, `PATTERN`
+with `*` spanning directories and `?` one character). A pull request payload
+carries no file list, so its branch alone decides.
+
+A matching trigger starts the normal run: `via` is `Github` or `Gitlab`,
+`status=pending`, `refresh`, `plan_changes`, the trigger template and its `tcl`,
+the delivery commit in `commit_id` and the branch in `override_branch`
+(`refs/tags/:tag` for a release), followed by the plan, approval and apply
+steps and the executor queue. The provider delivery id (`X-GitHub-Delivery`,
+`X-Gitlab-Event-UUID`, `Idempotency-Key`, or the SHA-256 of the body when none
+is sent) is stored in `webhook_delivery`; a repeat is answered `200` without a
+second run, matching upstream's v2 delivery dedupe. Accepted deliveries are
+pruned after 30 days. Internal failures answer `500` and forget the delivery id
+so the provider's retry is processed.
+
+Divergence: upstream's v1 receiver does not compare the payload repository, does
+not deduplicate, and reports an unknown webhook as `500`; this receiver
+acknowledges unknown ids and mismatches with `200` for the provider's sake, as
+the issue requires. GitHub pull-request changed files are not fetched from the
+API, so only the branch and path patterns present in the payload are used; PR
+comment commands (`terrakube plan`/`apply`) are not handled yet, and
+`pr_number`/`pr_apply_enabled` are not stored on the run because the Go `job`
+table does not model them. Bitbucket and Azure DevOps deliveries are
+acknowledged without a run, and the `/webhook/v2` shared repository endpoint is
+not implemented.
+
 ### Terraform login — `/oauth`
 
 Source: `api/.../plugin/token/login/OAuthBrokerController.java`,

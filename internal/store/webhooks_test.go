@@ -96,6 +96,23 @@ func TestWebhookQueries(t *testing.T) {
 		t.Fatalf("updated trigger = %+v", updated)
 	}
 
+	delivery := RecordWebhookDeliveryParams{WebhookID: hook.ID, DeliveryID: "delivery-1"}
+	if rows, err := q.RecordWebhookDelivery(ctx, delivery); err != nil || rows != 1 {
+		t.Fatalf("record delivery = %d/%v, want one row", rows, err)
+	}
+	if rows, err := q.RecordWebhookDelivery(ctx, delivery); err != nil || rows != 0 {
+		t.Fatalf("replayed delivery = %d/%v, want the conflict ignored", rows, err)
+	}
+	if err := q.DeleteWebhookDelivery(ctx, DeleteWebhookDeliveryParams(delivery)); err != nil {
+		t.Fatalf("delete delivery: %v", err)
+	}
+	if rows, err := q.RecordWebhookDelivery(ctx, delivery); err != nil || rows != 1 {
+		t.Fatalf("record after compensation = %d/%v", rows, err)
+	}
+	if err := q.PruneWebhookDeliveries(ctx); err != nil {
+		t.Fatalf("prune deliveries: %v", err)
+	}
+
 	if err := q.DeleteWebhook(ctx, hook.ID); err != nil {
 		t.Fatalf("delete webhook: %v", err)
 	}

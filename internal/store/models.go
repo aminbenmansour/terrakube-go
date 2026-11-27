@@ -403,6 +403,12 @@ type Webhook struct {
 	UpdatedBy    *string            `json:"updated_by"`
 }
 
+type WebhookDelivery struct {
+	WebhookID   string             `json:"webhook_id"`
+	DeliveryID  string             `json:"delivery_id"`
+	CreatedDate pgtype.Timestamptz `json:"created_date"`
+}
+
 type WebhookEvent struct {
 	ID                string             `json:"id"`
 	WebhookID         string             `json:"webhook_id"`

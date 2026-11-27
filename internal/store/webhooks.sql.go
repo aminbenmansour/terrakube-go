@@ -106,6 +106,22 @@ func (q *Queries) DeleteWebhook(ctx context.Context, id string) error {
 	return err
 }
 
+const deleteWebhookDelivery = `-- name: DeleteWebhookDelivery :exec
+DELETE FROM webhook_delivery WHERE webhook_id = $1 AND delivery_id = $2
+`
+
+type DeleteWebhookDeliveryParams struct {
+	WebhookID  string `json:"webhook_id"`
+	DeliveryID string `json:"delivery_id"`
+}
+
+// Compensates a recorded delivery whose run could not be created, so the
+// provider's retry is processed instead of being mistaken for a replay.
+func (q *Queries) DeleteWebhookDelivery(ctx context.Context, arg DeleteWebhookDeliveryParams) error {
+	_, err := q.db.Exec(ctx, deleteWebhookDelivery, arg.WebhookID, arg.DeliveryID)
+	return err
+}
+
 const deleteWebhookEvent = `-- name: DeleteWebhookEvent :exec
 DELETE FROM webhook_event WHERE id = $1
 `
@@ -220,6 +236,36 @@ func (q *Queries) ListWebhookEvents(ctx context.Context, webhookID string) ([]We
 		return nil, err
 	}
 	return items, nil
+}
+
+const pruneWebhookDeliveries = `-- name: PruneWebhookDeliveries :exec
+DELETE FROM webhook_delivery WHERE created_date < now() - interval '30 days'
+`
+
+func (q *Queries) PruneWebhookDeliveries(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, pruneWebhookDeliveries)
+	return err
+}
+
+const recordWebhookDelivery = `-- name: RecordWebhookDelivery :execrows
+INSERT INTO webhook_delivery (webhook_id, delivery_id, created_date)
+VALUES ($1, $2, now())
+ON CONFLICT (webhook_id, delivery_id) DO NOTHING
+`
+
+type RecordWebhookDeliveryParams struct {
+	WebhookID  string `json:"webhook_id"`
+	DeliveryID string `json:"delivery_id"`
+}
+
+// The composite key makes a provider retry a no-op: zero rows means this
+// delivery id was already accepted for this webhook.
+func (q *Queries) RecordWebhookDelivery(ctx context.Context, arg RecordWebhookDeliveryParams) (int64, error) {
+	result, err := q.db.Exec(ctx, recordWebhookDelivery, arg.WebhookID, arg.DeliveryID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const updateWebhook = `-- name: UpdateWebhook :one
