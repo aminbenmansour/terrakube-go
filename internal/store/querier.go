@@ -12,6 +12,9 @@ type Querier interface {
 	AddNotificationConfigurationTemplate(ctx context.Context, arg AddNotificationConfigurationTemplateParams) error
 	ApproveJob(ctx context.Context, arg ApproveJobParams) (Job, error)
 	ClaimCliAuthCode(ctx context.Context, id string) (int64, error)
+	// One due row per call, oldest first. SKIP LOCKED lets every API replica drain
+	// the outbox without a leader lock; the update itself is the claim.
+	ClaimNotificationOutbox(ctx context.Context) (NotificationOutbox, error)
 	ClaimRunTriggerEvent(ctx context.Context) (RunTriggerEvent, error)
 	// Deleting a provider in use unlinks its workspaces instead of failing, which
 	// is what upstream does through the mapped relationship.
@@ -78,6 +81,7 @@ type Querier interface {
 	DeleteWorkspaceTag(ctx context.Context, id string) error
 	DenyCliAuthSession(ctx context.Context, id string) error
 	FailCliAuthSession(ctx context.Context, id string) error
+	FailStuckNotificationOutbox(ctx context.Context, arg FailStuckNotificationOutboxParams) (int64, error)
 	FailStuckRunTriggerEvents(ctx context.Context, arg FailStuckRunTriggerEventsParams) (int64, error)
 	GetAccess(ctx context.Context, id string) (Access, error)
 	GetAction(ctx context.Context, id string) (Action, error)
@@ -143,6 +147,7 @@ type Querier interface {
 	ListNotificationConfigurationTemplateIDs(ctx context.Context, configurationID string) ([]string, error)
 	ListNotificationConfigurationsByOrganization(ctx context.Context, organizationID string) ([]NotificationConfiguration, error)
 	ListNotificationConfigurationsByWorkspace(ctx context.Context, workspaceID *string) ([]NotificationConfiguration, error)
+	ListNotificationDeliveriesByWorkspace(ctx context.Context, arg ListNotificationDeliveriesByWorkspaceParams) ([]ListNotificationDeliveriesByWorkspaceRow, error)
 	ListNotificationSecrets(ctx context.Context) ([]ListNotificationSecretsRow, error)
 	ListNotificationSecretsAfter(ctx context.Context, arg ListNotificationSecretsAfterParams) ([]ListNotificationSecretsAfterRow, error)
 	ListNotificationTriggersByConfiguration(ctx context.Context, configurationID string) ([]NotificationTrigger, error)
@@ -173,7 +178,13 @@ type Querier interface {
 	ListWorkspaceTagsByWorkspace(ctx context.Context, workspaceID string) ([]Workspacetag, error)
 	ListWorkspacesByOrganization(ctx context.Context, organizationID string) ([]Workspace, error)
 	ListWorkspacesByProject(ctx context.Context, projectID *string) ([]Workspace, error)
+	NotificationOutboxExistsForWorkspace(ctx context.Context, arg NotificationOutboxExistsForWorkspaceParams) (bool, error)
+	RearmNotificationOutbox(ctx context.Context, id string) (int64, error)
+	ReclaimStuckNotificationOutbox(ctx context.Context, arg ReclaimStuckNotificationOutboxParams) (int64, error)
 	ReclaimStuckRunTriggerEvents(ctx context.Context, arg ReclaimStuckRunTriggerEventsParams) (int64, error)
+	// Keyed on the attempt's own last_attempt_at so a result from an attempt that
+	// outlived the stuck-row sweep cannot overwrite the newer attempt.
+	RecordNotificationOutbox(ctx context.Context, arg RecordNotificationOutboxParams) (int64, error)
 	RecordRunTriggerEvent(ctx context.Context, arg RecordRunTriggerEventParams) (int64, error)
 	SetCliAuthSessionIdentity(ctx context.Context, arg SetCliAuthSessionIdentityParams) error
 	SetGlobalVariableSecret(ctx context.Context, arg SetGlobalVariableSecretParams) error
@@ -196,10 +207,18 @@ type Querier interface {
 	UpdateItem(ctx context.Context, arg UpdateItemParams) (Item, error)
 	UpdateJobOutput(ctx context.Context, arg UpdateJobOutputParams) error
 	UpdateJobPlanChanges(ctx context.Context, arg UpdateJobPlanChangesParams) (Job, error)
-	// Completing a job and recording its run trigger event are one statement, so a
-	// crash between them cannot lose the dispatch. The event row is only written
+	// Completing a job and recording its dispatch work are one statement, so a
+	// crash between them cannot lose either. The run trigger event is only written
 	// for a completed job with an enabled edge to a live destination; the unique
 	// job_id makes a repeated completion a no-op.
+	//
+	// A notification row is written for every active configuration in scope (the
+	// workspace's own, or an organization-wide one) whose trigger names the new
+	// status and whose template filter matches. The payload is rendered at
+	// dispatch time, so the row carries only the status it was written for. A
+	// "failed" row is held for a short grace period: a lost API-to-executor
+	// response flips the job to failed briefly before the executor's own callback
+	// corrects it, and the dispatcher drops the row if the live status moved on.
 	UpdateJobStatus(ctx context.Context, arg UpdateJobStatusParams) (Job, error)
 	UpdateNotificationConfiguration(ctx context.Context, arg UpdateNotificationConfigurationParams) (NotificationConfiguration, error)
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) (Organization, error)

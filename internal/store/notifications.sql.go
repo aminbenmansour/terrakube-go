@@ -7,6 +7,8 @@ package store
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const addNotificationConfigurationTemplate = `-- name: AddNotificationConfigurationTemplate :exec
@@ -21,6 +23,47 @@ type AddNotificationConfigurationTemplateParams struct {
 func (q *Queries) AddNotificationConfigurationTemplate(ctx context.Context, arg AddNotificationConfigurationTemplateParams) error {
 	_, err := q.db.Exec(ctx, addNotificationConfigurationTemplate, arg.ConfigurationID, arg.TemplateID)
 	return err
+}
+
+const claimNotificationOutbox = `-- name: ClaimNotificationOutbox :one
+UPDATE notification_outbox
+SET status = 'SENDING',
+    attempt_count = attempt_count + 1,
+    last_attempt_at = now(),
+    updated_date = now()
+WHERE id = (
+    SELECT id FROM notification_outbox
+    WHERE status = 'PENDING'
+      AND (next_attempt_at IS NULL OR next_attempt_at <= now())
+    ORDER BY created_date, id
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED
+)
+RETURNING id, job_id, configuration_id, payload, status, job_status, attempt_count, last_attempt_at, next_attempt_at, last_error, created_date, updated_date, created_by, updated_by
+`
+
+// One due row per call, oldest first. SKIP LOCKED lets every API replica drain
+// the outbox without a leader lock; the update itself is the claim.
+func (q *Queries) ClaimNotificationOutbox(ctx context.Context) (NotificationOutbox, error) {
+	row := q.db.QueryRow(ctx, claimNotificationOutbox)
+	var i NotificationOutbox
+	err := row.Scan(
+		&i.ID,
+		&i.JobID,
+		&i.ConfigurationID,
+		&i.Payload,
+		&i.Status,
+		&i.JobStatus,
+		&i.AttemptCount,
+		&i.LastAttemptAt,
+		&i.NextAttemptAt,
+		&i.LastError,
+		&i.CreatedDate,
+		&i.UpdatedDate,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+	)
+	return i, err
 }
 
 const createNotificationConfiguration = `-- name: CreateNotificationConfiguration :one
@@ -128,6 +171,26 @@ DELETE FROM notification_trigger WHERE id = $1
 func (q *Queries) DeleteNotificationTrigger(ctx context.Context, id string) error {
 	_, err := q.db.Exec(ctx, deleteNotificationTrigger, id)
 	return err
+}
+
+const failStuckNotificationOutbox = `-- name: FailStuckNotificationOutbox :execrows
+UPDATE notification_outbox
+SET status = 'FAILED', last_error = $3, updated_date = now()
+WHERE status = 'SENDING' AND last_attempt_at < $1 AND attempt_count >= $2
+`
+
+type FailStuckNotificationOutboxParams struct {
+	LastAttemptAt pgtype.Timestamptz `json:"last_attempt_at"`
+	AttemptCount  int32              `json:"attempt_count"`
+	LastError     *string            `json:"last_error"`
+}
+
+func (q *Queries) FailStuckNotificationOutbox(ctx context.Context, arg FailStuckNotificationOutboxParams) (int64, error) {
+	result, err := q.db.Exec(ctx, failStuckNotificationOutbox, arg.LastAttemptAt, arg.AttemptCount, arg.LastError)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getNotificationConfiguration = `-- name: GetNotificationConfiguration :one
@@ -277,6 +340,77 @@ func (q *Queries) ListNotificationConfigurationsByWorkspace(ctx context.Context,
 	return items, nil
 }
 
+const listNotificationDeliveriesByWorkspace = `-- name: ListNotificationDeliveriesByWorkspace :many
+SELECT o.id, o.job_id, o.configuration_id, o.payload, o.status, o.job_status, o.attempt_count, o.last_attempt_at, o.next_attempt_at, o.last_error, o.created_date, o.updated_date, o.created_by, o.updated_by, c.name AS configuration_name, c.channel_type
+FROM notification_outbox o
+JOIN notification_configuration c ON c.id = o.configuration_id
+JOIN job j ON j.id = o.job_id
+WHERE j.workspace_id = $1
+ORDER BY o.created_date DESC, o.id
+LIMIT $2
+`
+
+type ListNotificationDeliveriesByWorkspaceParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	Limit       int32  `json:"limit"`
+}
+
+type ListNotificationDeliveriesByWorkspaceRow struct {
+	ID                string             `json:"id"`
+	JobID             int64              `json:"job_id"`
+	ConfigurationID   string             `json:"configuration_id"`
+	Payload           *string            `json:"payload"`
+	Status            string             `json:"status"`
+	JobStatus         *string            `json:"job_status"`
+	AttemptCount      int32              `json:"attempt_count"`
+	LastAttemptAt     pgtype.Timestamptz `json:"last_attempt_at"`
+	NextAttemptAt     pgtype.Timestamptz `json:"next_attempt_at"`
+	LastError         *string            `json:"last_error"`
+	CreatedDate       pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate       pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy         *string            `json:"created_by"`
+	UpdatedBy         *string            `json:"updated_by"`
+	ConfigurationName string             `json:"configuration_name"`
+	ChannelType       string             `json:"channel_type"`
+}
+
+func (q *Queries) ListNotificationDeliveriesByWorkspace(ctx context.Context, arg ListNotificationDeliveriesByWorkspaceParams) ([]ListNotificationDeliveriesByWorkspaceRow, error) {
+	rows, err := q.db.Query(ctx, listNotificationDeliveriesByWorkspace, arg.WorkspaceID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListNotificationDeliveriesByWorkspaceRow{}
+	for rows.Next() {
+		var i ListNotificationDeliveriesByWorkspaceRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.JobID,
+			&i.ConfigurationID,
+			&i.Payload,
+			&i.Status,
+			&i.JobStatus,
+			&i.AttemptCount,
+			&i.LastAttemptAt,
+			&i.NextAttemptAt,
+			&i.LastError,
+			&i.CreatedDate,
+			&i.UpdatedDate,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.ConfigurationName,
+			&i.ChannelType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listNotificationSecrets = `-- name: ListNotificationSecrets :many
 SELECT id, signing_secret FROM notification_configuration
 `
@@ -371,6 +505,98 @@ func (q *Queries) ListNotificationTriggersByConfiguration(ctx context.Context, c
 		return nil, err
 	}
 	return items, nil
+}
+
+const notificationOutboxExistsForWorkspace = `-- name: NotificationOutboxExistsForWorkspace :one
+SELECT EXISTS (
+    SELECT 1 FROM notification_outbox o
+    JOIN job j ON j.id = o.job_id
+    WHERE o.id = $1 AND j.workspace_id = $2
+)
+`
+
+type NotificationOutboxExistsForWorkspaceParams struct {
+	ID          string `json:"id"`
+	WorkspaceID string `json:"workspace_id"`
+}
+
+func (q *Queries) NotificationOutboxExistsForWorkspace(ctx context.Context, arg NotificationOutboxExistsForWorkspaceParams) (bool, error) {
+	row := q.db.QueryRow(ctx, notificationOutboxExistsForWorkspace, arg.ID, arg.WorkspaceID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const rearmNotificationOutbox = `-- name: RearmNotificationOutbox :execrows
+UPDATE notification_outbox
+SET status = 'PENDING',
+    attempt_count = 0,
+    last_error = NULL,
+    next_attempt_at = NULL,
+    updated_date = now()
+WHERE id = $1 AND status = 'FAILED'
+`
+
+func (q *Queries) RearmNotificationOutbox(ctx context.Context, id string) (int64, error) {
+	result, err := q.db.Exec(ctx, rearmNotificationOutbox, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const reclaimStuckNotificationOutbox = `-- name: ReclaimStuckNotificationOutbox :execrows
+UPDATE notification_outbox
+SET status = 'PENDING', updated_date = now()
+WHERE status = 'SENDING' AND last_attempt_at < $1 AND attempt_count < $2
+`
+
+type ReclaimStuckNotificationOutboxParams struct {
+	LastAttemptAt pgtype.Timestamptz `json:"last_attempt_at"`
+	AttemptCount  int32              `json:"attempt_count"`
+}
+
+func (q *Queries) ReclaimStuckNotificationOutbox(ctx context.Context, arg ReclaimStuckNotificationOutboxParams) (int64, error) {
+	result, err := q.db.Exec(ctx, reclaimStuckNotificationOutbox, arg.LastAttemptAt, arg.AttemptCount)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const recordNotificationOutbox = `-- name: RecordNotificationOutbox :execrows
+UPDATE notification_outbox
+SET status = $3,
+    last_error = $4,
+    next_attempt_at = $5,
+    updated_date = now()
+WHERE id = $1
+  AND status = 'SENDING'
+  AND last_attempt_at = $2
+`
+
+type RecordNotificationOutboxParams struct {
+	ID            string             `json:"id"`
+	LastAttemptAt pgtype.Timestamptz `json:"last_attempt_at"`
+	Status        string             `json:"status"`
+	LastError     *string            `json:"last_error"`
+	NextAttemptAt pgtype.Timestamptz `json:"next_attempt_at"`
+}
+
+// Keyed on the attempt's own last_attempt_at so a result from an attempt that
+// outlived the stuck-row sweep cannot overwrite the newer attempt.
+func (q *Queries) RecordNotificationOutbox(ctx context.Context, arg RecordNotificationOutboxParams) (int64, error) {
+	result, err := q.db.Exec(ctx, recordNotificationOutbox,
+		arg.ID,
+		arg.LastAttemptAt,
+		arg.Status,
+		arg.LastError,
+		arg.NextAttemptAt,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const setNotificationSecret = `-- name: SetNotificationSecret :exec
