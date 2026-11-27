@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "docs/compat.md": {
-    "mtime": 1795785148.5171995,
-    "seen": 1795785160.381679,
-    "ast_hash": "6e23a05ef6819f613abd26b123cc60ac",
+    "mtime": 1795785181.3083577,
+    "seen": 1795785186.1832345,
+    "ast_hash": "50fb6a935b1925d692796a32ba57d93b",
     "semantic_hash": ""
   },
   "internal/executor/executor.go": {
@@ -2913,6 +2913,24 @@
     "mtime": 1795785066.4588015,
     "seen": 1795785160.3799675,
     "ast_hash": "aa254c203f69ef0e3f251f499d907bb2",
+    "semantic_hash": ""
+  },
+  "internal/notification/deliver.go": {
+    "mtime": 1795785027.922834,
+    "seen": 1795785186.1813898,
+    "ast_hash": "dd46c991a5c70486a323c0dd2a9b9879",
+    "semantic_hash": ""
+  },
+  "internal/notification/deliver_test.go": {
+    "mtime": 1795785092.7159302,
+    "seen": 1795785186.1813917,
+    "ast_hash": "9fc1874b40134341eb68c2bb903926c6",
+    "semantic_hash": ""
+  },
+  "internal/notification/ssrf.go": {
+    "mtime": 1795785033.3316288,
+    "seen": 1795785186.181448,
+    "ast_hash": "9c94fd282f31cc8c8becb6bd6e96ea22",
     "semantic_hash": ""
   }
 }

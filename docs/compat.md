@@ -664,7 +664,14 @@ gets a flat JSON body (`organization`, `workspace`, `jobId`, `status`, `runUrl`,
 `workspaceUrl`, `commitId`, `failureReason`, `configurationName`, absent values
 null), signed with
 `X-Terrakube-Signature: <lowercase hex HMAC-SHA256 of the raw body>` when
-`signingSecret` is set. Writes need `manageWorkspace`, as upstream.
+`signingSecret` is set. Sends time out after 30s (10s to connect), never follow
+redirects, treat 2xx as success, 4xx other than 429 as terminal, and 429/5xx or
+network failures as retryable while honouring `Retry-After` (delta seconds or
+HTTP-date); Slack additionally treats a 2xx body other than `ok` as terminal.
+Destinations resolving to loopback, link-local, private, CGNAT
+`100.64.0.0/10`, unspecified or multicast space are refused on every send
+(upstream's `blockPrivateNetworks` default). Writes need `manageWorkspace`, as
+upstream.
 
 
 `template` is the Settings > Templates screen and the source of the workspace's
