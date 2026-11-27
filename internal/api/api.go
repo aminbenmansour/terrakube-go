@@ -41,6 +41,9 @@ type Deps struct {
 	PATs PATService
 	// AccessTokens backs /access-token/v1. Nil answers 503 there.
 	AccessTokens AccessTokenStore
+	// TeamTokens backs the team token routes under /access-token/v1. Nil
+	// answers 503 there.
+	TeamTokens TeamTokenService
 	// AdminGroup is the instance owner group. Empty means TERRAKUBE_ADMIN.
 	AdminGroup string
 	// CORSOrigins lists the origins allowed to call the API from a browser.

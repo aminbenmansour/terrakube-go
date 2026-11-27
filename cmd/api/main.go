@@ -31,6 +31,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/secretstore"
 	"github.com/aminbenmansour/terrakube-go/internal/storage"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
+	"github.com/aminbenmansour/terrakube-go/internal/teamtoken"
 	"github.com/aminbenmansour/terrakube-go/internal/tfe"
 	"github.com/aminbenmansour/terrakube-go/internal/tfoutput"
 	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
@@ -135,13 +136,20 @@ func run() error {
 		logger.Info("dex token validation enabled", "issuer", cfg.DexIssuerURL)
 	}
 	var pats *pat.Service
+	var teamTokens *teamtoken.Service
 	if cfg.PATSecret != "" {
 		pats, err = pat.New(querier, cfg.PATSecret, cfg.AdminGroup)
 		if err != nil {
 			return fmt.Errorf("configure personal access tokens: %w", err)
 		}
 		verifiers = append(verifiers, pats)
-		logger.Info("personal access tokens enabled")
+		// Team tokens share the PAT secret, as upstream does.
+		teamTokens, err = teamtoken.New(querier, cfg.PATSecret, cfg.AdminGroup)
+		if err != nil {
+			return fmt.Errorf("configure team tokens: %w", err)
+		}
+		verifiers = append(verifiers, teamTokens)
+		logger.Info("personal and team access tokens enabled")
 	}
 
 	metrics := httpapi.NewMetrics()
@@ -181,6 +189,7 @@ func run() error {
 		CORSOrigins:  cfg.CORSOrigins,
 		AdminGroup:   cfg.AdminGroup,
 		AccessTokens: querier,
+		TeamTokens:   teamTokens,
 	}))
 	handler.Mount("/notification/v1", api.NewNotification(api.Deps{
 		Store:       querier,

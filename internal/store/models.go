@@ -336,6 +336,21 @@ type Team struct {
 	OrganizationID   string  `json:"organization_id"`
 }
 
+type TeamToken struct {
+	ID          string             `json:"id"`
+	Days        *int32             `json:"days"`
+	Hours       *int32             `json:"hours"`
+	Minutes     *int32             `json:"minutes"`
+	Description *string            `json:"description"`
+	GroupName   *string            `json:"group_name"`
+	Deleted     bool               `json:"deleted"`
+	LastUsedAt  pgtype.Timestamptz `json:"last_used_at"`
+	CreatedDate pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy   *string            `json:"created_by"`
+	UpdatedBy   *string            `json:"updated_by"`
+}
+
 type TempArchive struct {
 	ID        string  `json:"id"`
 	Type      *string `json:"type"`

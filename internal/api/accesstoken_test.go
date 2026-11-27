@@ -8,12 +8,14 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/aminbenmansour/terrakube-go/internal/auth"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
+	"github.com/aminbenmansour/terrakube-go/internal/teamtoken"
 )
 
 // fakeAccessTokenStore records the parameters it receives and returns rows by
@@ -339,5 +341,141 @@ func TestAccessTokenWithoutStore(t *testing.T) {
 	router.ServeHTTP(permissions, request)
 	if permissions.Code != http.StatusServiceUnavailable {
 		t.Errorf("permissions without a store = %d, want 503", permissions.Code)
+	}
+}
+
+type stubTeamTokens struct {
+	createToken     string
+	createErr       error
+	lastGroup       string
+	lastDescription string
+	lastDays        int
+	lastHours       int
+	lastMinutes     int
+	tokens          []teamtoken.Token
+	listErr         error
+	deleteErr       error
+	lastDeleteID    string
+}
+
+func (s *stubTeamTokens) Verify(context.Context, string) (*auth.Identity, error) {
+	return nil, errors.New("not used")
+}
+
+func (s *stubTeamTokens) Create(_ context.Context, _ auth.Identity, group string, days, hours, minutes int, description string) (string, error) {
+	s.lastGroup, s.lastDays, s.lastHours, s.lastMinutes, s.lastDescription = group, days, hours, minutes, description
+	return s.createToken, s.createErr
+}
+
+func (s *stubTeamTokens) List(context.Context, auth.Identity) ([]teamtoken.Token, error) {
+	return s.tokens, s.listErr
+}
+
+func (s *stubTeamTokens) Delete(_ context.Context, id string, _ auth.Identity) error {
+	s.lastDeleteID = id
+	return s.deleteErr
+}
+
+func serveTeamTokens(t *testing.T, teamTokens TeamTokenService, method, path, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	verifier := stubIdentityVerifier{token: "user-token", identity: auth.Identity{Email: "user@example.com", Groups: []string{"platform"}}}
+	router := NewAccessToken(Deps{
+		Logger:       slog.New(slog.NewTextHandler(io.Discard, nil)),
+		AuthToken:    "dev-token",
+		Verifiers:    []auth.Verifier{verifier},
+		AdminGroup:   "TERRAKUBE_ADMIN",
+		AccessTokens: &fakeAccessTokenStore{},
+		TeamTokens:   teamTokens,
+	})
+	request := httptest.NewRequest(method, path, strings.NewReader(body))
+	request.Header.Set("Authorization", "Bearer "+verifier.token)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, request)
+	return rec
+}
+
+func TestTeamTokenCreatePassesTheRequestAndReturnsTheToken(t *testing.T) {
+	service := &stubTeamTokens{createToken: "signed-token"}
+	rec := serveTeamTokens(t, service, http.MethodPost, "/teams",
+		`{"group":"platform","description":"ci","days":1,"hours":2,"minutes":30}`)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201: %s", rec.Code, rec.Body.String())
+	}
+	if service.lastGroup != "platform" || service.lastDescription != "ci" ||
+		service.lastDays != 1 || service.lastHours != 2 || service.lastMinutes != 30 {
+		t.Errorf("service got %+v", service)
+	}
+	var body struct {
+		Token string `json:"token"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil || body.Token != "signed-token" {
+		t.Fatalf("body = %s/%v", rec.Body.String(), err)
+	}
+}
+
+func TestTeamTokenCreateRejectsNonMembersAndBadInput(t *testing.T) {
+	for name, testCase := range map[string]struct {
+		body   string
+		err    error
+		status int
+	}{
+		"non-member":        {`{"group":"platform"}`, teamtoken.ErrForbidden, http.StatusForbidden},
+		"token token":       {`{"group":"platform"}`, teamtoken.ErrNonInteractive, http.StatusForbidden},
+		"negative lifetime": {`{"group":"platform","days":-1}`, teamtoken.ErrInvalidLifetime, http.StatusBadRequest},
+		"invalid json":      {"{", nil, http.StatusBadRequest},
+	} {
+		t.Run(name, func(t *testing.T) {
+			rec := serveTeamTokens(t, &stubTeamTokens{createErr: testCase.err}, http.MethodPost, "/teams", testCase.body)
+			if rec.Code != testCase.status {
+				t.Fatalf("status = %d, want %d: %s", rec.Code, testCase.status, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestTeamTokenListIsAccepted(t *testing.T) {
+	description := "ci"
+	service := &stubTeamTokens{tokens: []teamtoken.Token{{ID: "token-1", Description: &description}}}
+	rec := serveTeamTokens(t, service, http.MethodGet, "/teams", "")
+
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202: %s", rec.Code, rec.Body.String())
+	}
+	var body []map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(body) != 1 || body[0]["id"] != "token-1" || body[0]["description"] != "ci" {
+		t.Fatalf("body = %s", rec.Body.String())
+	}
+}
+
+func TestTeamTokenDeleteMapsErrors(t *testing.T) {
+	for name, testCase := range map[string]struct {
+		err    error
+		status int
+	}{
+		"unknown token": {teamtoken.ErrNotFound, http.StatusBadRequest},
+		"foreign team":  {teamtoken.ErrForbidden, http.StatusForbidden},
+		"revoked":       {nil, http.StatusAccepted},
+	} {
+		t.Run(name, func(t *testing.T) {
+			service := &stubTeamTokens{deleteErr: testCase.err}
+			rec := serveTeamTokens(t, service, http.MethodDelete, "/teams/token-1", "")
+			if rec.Code != testCase.status {
+				t.Fatalf("status = %d, want %d: %s", rec.Code, testCase.status, rec.Body.String())
+			}
+			if testCase.err == nil && service.lastDeleteID != "token-1" {
+				t.Errorf("deleted %q, want token-1", service.lastDeleteID)
+			}
+		})
+	}
+}
+
+func TestTeamTokensAnswer503WithoutAService(t *testing.T) {
+	rec := serveTeamTokens(t, nil, http.MethodGet, "/teams", "")
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503", rec.Code)
 	}
 }
