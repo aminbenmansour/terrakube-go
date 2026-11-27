@@ -81,6 +81,9 @@ type Querier interface {
 	DeleteVCS(ctx context.Context, id string) error
 	DeleteVariable(ctx context.Context, id string) error
 	DeleteWebhook(ctx context.Context, id string) error
+	// Compensates a recorded delivery whose run could not be created, so the
+	// provider's retry is processed instead of being mistaken for a replay.
+	DeleteWebhookDelivery(ctx context.Context, arg DeleteWebhookDeliveryParams) error
 	DeleteWebhookEvent(ctx context.Context, id string) error
 	DeleteWorkspaceTag(ctx context.Context, id string) error
 	DenyCliAuthSession(ctx context.Context, id string) error
@@ -187,6 +190,7 @@ type Querier interface {
 	ListWorkspacesByOrganization(ctx context.Context, organizationID string) ([]Workspace, error)
 	ListWorkspacesByProject(ctx context.Context, projectID *string) ([]Workspace, error)
 	NotificationOutboxExistsForWorkspace(ctx context.Context, arg NotificationOutboxExistsForWorkspaceParams) (bool, error)
+	PruneWebhookDeliveries(ctx context.Context) error
 	RearmNotificationOutbox(ctx context.Context, id string) (int64, error)
 	ReclaimStuckNotificationOutbox(ctx context.Context, arg ReclaimStuckNotificationOutboxParams) (int64, error)
 	ReclaimStuckRunTriggerEvents(ctx context.Context, arg ReclaimStuckRunTriggerEventsParams) (int64, error)
@@ -194,6 +198,9 @@ type Querier interface {
 	// outlived the stuck-row sweep cannot overwrite the newer attempt.
 	RecordNotificationOutbox(ctx context.Context, arg RecordNotificationOutboxParams) (int64, error)
 	RecordRunTriggerEvent(ctx context.Context, arg RecordRunTriggerEventParams) (int64, error)
+	// The composite key makes a provider retry a no-op: zero rows means this
+	// delivery id was already accepted for this webhook.
+	RecordWebhookDelivery(ctx context.Context, arg RecordWebhookDeliveryParams) (int64, error)
 	SetCliAuthSessionIdentity(ctx context.Context, arg SetCliAuthSessionIdentityParams) error
 	SetGlobalVariableSecret(ctx context.Context, arg SetGlobalVariableSecretParams) error
 	SetJobOverrideSource(ctx context.Context, arg SetJobOverrideSourceParams) (Job, error)
