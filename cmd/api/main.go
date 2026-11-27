@@ -35,6 +35,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/tfoutput"
 	"github.com/aminbenmansour/terrakube-go/internal/tfstate"
 	"github.com/aminbenmansour/terrakube-go/internal/ui"
+	"github.com/aminbenmansour/terrakube-go/internal/webhook"
 	"github.com/aminbenmansour/terrakube-go/migrations"
 )
 
@@ -187,6 +188,11 @@ func run() error {
 		AuthToken:   cfg.AuthToken,
 		Verifiers:   verifiers,
 		CORSOrigins: cfg.CORSOrigins,
+	}))
+	handler.Mount("/webhook/v1", webhook.New(webhook.Deps{
+		Store:  querier,
+		Queue:  q,
+		Logger: logger,
 	}))
 	handler.Mount("/vcs/v1", api.NewVCS(api.Deps{
 		Store:       querier,
