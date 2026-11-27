@@ -152,7 +152,7 @@ func TestCreateWebhookEventRegistersProvider(t *testing.T) {
 	hooks := &fakeHooks{}
 	server := hooks.server(t)
 	stub := webhookWriteStub(server.URL)
-	h := New(Deps{Store: stub, PublicURL: "https://terrakube.example.com"})
+	h := New(Deps{Store: stub, PublicURL: "https://terrakube.example.com", VCSAllowLocal: true})
 	base := "/organization/" + vcsOrgID + "/workspace/" + vcsWSID + "/webhook"
 
 	rec := httptest.NewRecorder()
@@ -216,7 +216,7 @@ func TestDeleteWebhookRemovesProviderHook(t *testing.T) {
 	remote := "55"
 	stub := webhookWriteStub(server.URL)
 	stub.webhooks = []store.Webhook{{ID: webhookID, WorkspaceID: vcsWSID, RemoteHookID: &remote}}
-	h := New(Deps{Store: stub, PublicURL: "https://terrakube.example.com"})
+	h := New(Deps{Store: stub, PublicURL: "https://terrakube.example.com", VCSAllowLocal: true})
 
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodDelete,
@@ -236,7 +236,7 @@ func TestAtomicWebhookSaveRegistersFinalTriggers(t *testing.T) {
 	hooks := &fakeHooks{}
 	server := hooks.server(t)
 	stub := webhookWriteStub(server.URL)
-	h := New(Deps{Store: stub, PublicURL: "https://terrakube.example.com"})
+	h := New(Deps{Store: stub, PublicURL: "https://terrakube.example.com", VCSAllowLocal: true})
 
 	body := `{"atomic:operations":[
 		{"op":"add","href":"/organization/` + vcsOrgID + `/workspace/` + vcsWSID + `/webhook",
@@ -274,7 +274,7 @@ func TestAtomicWebhookInvalidTriggerChangesNothing(t *testing.T) {
 	hooks := &fakeHooks{}
 	server := hooks.server(t)
 	stub := webhookWriteStub(server.URL)
-	h := New(Deps{Store: stub, PublicURL: "https://terrakube.example.com"})
+	h := New(Deps{Store: stub, PublicURL: "https://terrakube.example.com", VCSAllowLocal: true})
 
 	body := `{"atomic:operations":[
 		{"op":"add","href":"/organization/` + vcsOrgID + `/workspace/` + vcsWSID + `/webhook",
@@ -306,7 +306,7 @@ func TestWebhookEventTemplateOutsideOrganizationIsRejected(t *testing.T) {
 	stub := webhookWriteStub(server.URL)
 	stub.templates = []store.Template{{ID: webhookTemplateID, OrganizationID: "other-org"}}
 	stub.webhooks = []store.Webhook{{ID: webhookID, WorkspaceID: vcsWSID}}
-	h := New(Deps{Store: stub, PublicURL: "https://terrakube.example.com"})
+	h := New(Deps{Store: stub, PublicURL: "https://terrakube.example.com", VCSAllowLocal: true})
 
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost,

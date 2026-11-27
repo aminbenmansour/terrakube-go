@@ -547,6 +547,7 @@ func (a *API) webhookConnection(ctx context.Context, ws store.Workspace) (vcspro
 		AccessToken:    strValue(provider.AccessToken),
 		PrivateKey:     strValue(provider.PrivateKey),
 		ConnectionType: strValue(provider.ConnectionType),
+		AllowLocal:     a.deps.VCSAllowLocal,
 	}, nil
 }
 

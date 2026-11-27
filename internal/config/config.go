@@ -67,6 +67,10 @@ type Config struct {
 	RateLimit int
 	// RateBurst is the token bucket size; zero uses RateLimit.
 	RateBurst int
+	// VCSAllowLocal permits VCS API URLs on loopback or link-local addresses.
+	// Off by default so a connection cannot reach cloud metadata or a service
+	// on the API host; development stacks with a local provider set it.
+	VCSAllowLocal bool
 	// MetricsToken guards /metrics. Empty leaves the endpoint disabled.
 	MetricsToken string
 
@@ -138,6 +142,7 @@ func Load() (Config, error) {
 		CORSOrigins:               envList("TERRAKUBE_CORS_ORIGINS"),
 		RateLimit:                 int(envInt64([]string{"TERRAKUBE_RATE_LIMIT"}, 0)),
 		RateBurst:                 int(envInt64([]string{"TERRAKUBE_RATE_BURST"}, 0)),
+		VCSAllowLocal:             envBool("TERRAKUBE_VCS_ALLOW_LOCAL", false),
 		MetricsToken:              env("TERRAKUBE_METRICS_TOKEN", ""),
 		HTTPAddr:                  env("TERRAKUBE_HTTP_ADDR", ":8080"),
 		ExecutorHTTPAddr:          env("TERRAKUBE_EXECUTOR_HTTP_ADDR", ":8081"),

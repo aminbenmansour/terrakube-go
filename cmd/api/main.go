@@ -166,15 +166,16 @@ func run() error {
 		MetricsToken: cfg.MetricsToken,
 	})
 	handler.Mount(api.MountPrefix, api.New(api.Deps{
-		Store:       querier,
-		Lists:       base,
-		Logger:      logger,
-		PublicURL:   cfg.PublicURL,
-		AuthToken:   cfg.AuthToken,
-		Verifiers:   verifiers,
-		PATs:        pats,
-		AdminGroup:  cfg.AdminGroup,
-		CORSOrigins: cfg.CORSOrigins,
+		Store:         querier,
+		Lists:         base,
+		Logger:        logger,
+		PublicURL:     cfg.PublicURL,
+		AuthToken:     cfg.AuthToken,
+		Verifiers:     verifiers,
+		PATs:          pats,
+		AdminGroup:    cfg.AdminGroup,
+		CORSOrigins:   cfg.CORSOrigins,
+		VCSAllowLocal: cfg.VCSAllowLocal,
 	}))
 	handler.Mount("/pat/v1", api.NewPAT(api.Deps{
 		Logger:    logger,

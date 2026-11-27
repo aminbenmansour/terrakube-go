@@ -67,7 +67,7 @@ func (a *API) vcsDiscoveryScope(next http.Handler) http.Handler {
 }
 
 func (a *API) listVCSGroups(w http.ResponseWriter, r *http.Request) {
-	groups, err := vcsprovider.Groups(r.Context(), discoveryConnection(r.Context()))
+	groups, err := vcsprovider.Groups(r.Context(), a.discoveryConnection(r.Context()))
 	if err != nil {
 		a.writeVCSDiscoveryError(w, err)
 		return
@@ -85,7 +85,7 @@ func (a *API) listVCSRepositories(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	repositories, err := vcsprovider.Repositories(r.Context(), discoveryConnection(r.Context()),
+	repositories, err := vcsprovider.Repositories(r.Context(), a.discoveryConnection(r.Context()),
 		group, r.URL.Query().Get("search"), page)
 	if err != nil {
 		a.writeVCSDiscoveryError(w, err)
@@ -99,7 +99,7 @@ func (a *API) listVCSBranches(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	branches, err := vcsprovider.Branches(r.Context(), discoveryConnection(r.Context()),
+	branches, err := vcsprovider.Branches(r.Context(), a.discoveryConnection(r.Context()),
 		r.URL.Query().Get("repository"), page)
 	if err != nil {
 		a.writeVCSDiscoveryError(w, err)
@@ -109,7 +109,7 @@ func (a *API) listVCSBranches(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) testVCSConnection(w http.ResponseWriter, r *http.Request) {
-	message, err := vcsprovider.Test(r.Context(), discoveryConnection(r.Context()))
+	message, err := vcsprovider.Test(r.Context(), a.discoveryConnection(r.Context()))
 	if err != nil {
 		a.writeVCSDiscoveryError(w, err)
 		return
@@ -117,7 +117,7 @@ func (a *API) testVCSConnection(w http.ResponseWriter, r *http.Request) {
 	writeRawJSON(w, http.StatusOK, map[string]any{"ok": true, "message": message})
 }
 
-func discoveryConnection(ctx context.Context) vcsprovider.Connection {
+func (a *API) discoveryConnection(ctx context.Context) vcsprovider.Connection {
 	provider := ctx.Value(vcsProviderKey{}).(store.Vc)
 	return vcsprovider.Connection{
 		Type:           provider.VcsType,
@@ -125,6 +125,7 @@ func discoveryConnection(ctx context.Context) vcsprovider.Connection {
 		AccessToken:    strValue(provider.AccessToken),
 		PrivateKey:     strValue(provider.PrivateKey),
 		ConnectionType: strValue(provider.ConnectionType),
+		AllowLocal:     a.deps.VCSAllowLocal,
 	}
 }
 
