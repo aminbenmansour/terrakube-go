@@ -20,6 +20,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/auth"
 	"github.com/aminbenmansour/terrakube-go/internal/httpapi"
 	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
+	"github.com/aminbenmansour/terrakube-go/internal/notification"
 	"github.com/aminbenmansour/terrakube-go/internal/rsql"
 	"github.com/aminbenmansour/terrakube-go/internal/store"
 )
@@ -46,6 +47,9 @@ type Deps struct {
 	// Empty allows any origin, which is the historical behaviour; a UI served
 	// by this API shares its origin and needs no entry.
 	CORSOrigins []string
+	// Deliverer posts notification test sends. Nil uses the SSRF-blocking
+	// deliverer the HTTP senders default to.
+	Deliverer *notification.Deliverer
 }
 
 // API holds the HTTP handlers.

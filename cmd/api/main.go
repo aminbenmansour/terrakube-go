@@ -180,6 +180,13 @@ func run() error {
 		AdminGroup:   cfg.AdminGroup,
 		AccessTokens: querier,
 	}))
+	handler.Mount("/notification/v1", api.NewNotification(api.Deps{
+		Store:       querier,
+		Logger:      logger,
+		AuthToken:   cfg.AuthToken,
+		Verifiers:   verifiers,
+		CORSOrigins: cfg.CORSOrigins,
+	}))
 	if cfg.TerraformLogin {
 		if pats == nil {
 			return fmt.Errorf("terraform login requires TERRAKUBE_PAT_SECRET")

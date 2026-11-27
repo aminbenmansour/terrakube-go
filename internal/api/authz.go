@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/aminbenmansour/terrakube-go/internal/auth"
@@ -261,6 +262,10 @@ func (a *API) variableScope(next http.Handler) http.Handler {
 
 func (a *API) notificationScope(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := uuid.Parse(param(r, "configurationID")); err != nil {
+			jsonapi.WriteError(w, http.StatusBadRequest, "Invalid Value", "Invalid value: "+param(r, "configurationID"))
+			return
+		}
 		config, err := a.deps.Store.GetNotificationConfiguration(r.Context(), param(r, "configurationID"))
 		if err != nil {
 			if !a.writeStoreError(w, "get notification configuration", err) {

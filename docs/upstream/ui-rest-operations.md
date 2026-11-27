@@ -27,7 +27,7 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `team` | 5 (list, get, create, patch, delete) | implemented |
 | `provider`, `module` | 19 (versions, implementations, module versions) | **missing** |
 | `policy_set`, `policy_exemption` | 19 (attachments, parameters, parameters CRUD) | **missing** |
-| `notificationConfiguration`, `notification_trigger` | 7 (config CRUD, triggers create/delete, templates relationship) | implemented; the two `/notification/v1/.../test` sends are **missing** (delivery, #52) |
+| `notificationConfiguration`, `notification_trigger` | 7 (config CRUD, triggers create/delete, templates relationship) plus the two `/notification/v1/.../test` sends | implemented |
 | `federated` (OIDC credentials) | 9 | **missing** |
 | registry `/registry/v1/providers` | 4 | separate service (`cmd/registry`, M6) |
 | `/remote/tfe/v2/runs/:id/policy-checks` | 1 | implemented |
