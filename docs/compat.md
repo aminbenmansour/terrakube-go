@@ -492,6 +492,37 @@ workspace has none) and the resource in `included`; without that include the
 relationship is omitted rather than guessed (upstream always emits it, but only
 the workspace details request reads it).
 
+Writes: `POST .../workspace/:ws/webhook` (client id required, as Elide allows)
+creates the one webhook a workspace may have, `PATCH`/`DELETE
+.../webhook/:id` update it, and `POST`/`PATCH`/`DELETE
+.../webhook/:id/events[/:eventId]` manage its triggers. The UI's save sends
+these as JSON:API atomic operations to `/operations`; the hrefs are the same
+paths and the webhook update addresses its collection href with the id in
+`data`. Creating or changing a trigger registers the repository hook with the
+GitHub or GitLab API in the connection's `api_url` (default
+`https://api.github.com` or `https://gitlab.com/api/v4`) using the stored
+access token: GitHub `POST/PATCH /repos/:owner/:repo/hooks`, GitLab
+`POST/PUT /projects/:id/hooks` after resolving the id by encoded path. The
+callback is `<TERRAKUBE_PUBLIC_URL>/webhook/v1/:webhookId`; the secret is
+`base64(workspace id)`, upstream's derivation, and is sent to the provider
+only, never returned. GitHub subscribes every trigger's event plus
+`issue_comment` when PR workflow is on; GitLab enables push, merge request and
+release events, plus note events for PR workflow. The provider's id is stored
+in `remoteHookId` and deleting the webhook deletes the hook. A trigger needs a
+`branch`, `path`, `templateId` from the workspace's organization and a known
+`event`/`pathType`, else `400` (a template from another organization is `403`,
+upstream's permission check). A provider refusal answers `424` with its
+message (the UI's "VCS connection can't manage webhooks" copy), and a batch
+that fails this way leaves no newly created webhook behind.
+
+Divergence: `migratedV2=true` is stored and clears any per-workspace hook, as
+upstream does, but the shared repository webhook and its sync job are not
+implemented yet, so no shared hook is registered. Bitbucket and Azure DevOps
+connections answer `422` instead of registering (GitHub and GitLab are
+implemented). A failed provider update on an existing webhook keeps the saved
+trigger rows rather than rolling back (upstream runs the whole save in one
+transaction).
+
 ### Terraform login — `/oauth`
 
 Source: `api/.../plugin/token/login/OAuthBrokerController.java`,

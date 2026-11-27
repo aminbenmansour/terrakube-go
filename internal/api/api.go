@@ -273,9 +273,17 @@ func New(deps Deps) http.Handler {
 			r.With(a.requireWrite(canManageWorkspace)).Delete("/", a.deleteSchedule)
 		})
 		// Webhook: the workspace Webhook settings screen (#147).
+		r.With(a.requireWrite(canManageWorkspace)).Post("/webhook", a.createWebhook)
 		r.Route("/webhook/{webhookID}", func(r chi.Router) {
 			r.Get("/", a.getWebhook)
+			r.With(a.requireWrite(canManageWorkspace)).Patch("/", a.updateWebhook)
+			r.With(a.requireWrite(canManageWorkspace)).Delete("/", a.deleteWebhook)
 			r.Get("/events", a.listWebhookEvents)
+			r.With(a.requireWrite(canManageWorkspace)).Post("/events", a.createWebhookEvent)
+			r.Route("/events/{eventID}", func(r chi.Router) {
+				r.With(a.requireWrite(canManageWorkspace)).Patch("/", a.updateWebhookEvent)
+				r.With(a.requireWrite(canManageWorkspace)).Delete("/", a.deleteWebhookEvent)
+			})
 		})
 		r.With(a.requireWrite(canManageWorkspace)).Patch("/relationships/{relation}", a.updateWorkspaceRelationship)
 		// Workspace access grants: Settings > Workspace > Access.
