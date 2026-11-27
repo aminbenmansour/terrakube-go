@@ -23,6 +23,7 @@ import (
 	"github.com/aminbenmansour/terrakube-go/internal/jobstatus"
 	"github.com/aminbenmansour/terrakube-go/internal/jsonapi"
 	"github.com/aminbenmansour/terrakube-go/internal/logging"
+	"github.com/aminbenmansour/terrakube-go/internal/notification"
 	"github.com/aminbenmansour/terrakube-go/internal/pat"
 	"github.com/aminbenmansour/terrakube-go/internal/queue"
 	"github.com/aminbenmansour/terrakube-go/internal/runtrigger"
@@ -274,6 +275,9 @@ func run() error {
 	if cfg.MetricsToken != "" {
 		go metrics.Sample(ctx, logger, metricsSource{store: querier, queue: q}, 30*time.Second)
 	}
+	// Every replica drains the notification outbox; the claim is a conditional
+	// update with SKIP LOCKED, so no leader lock is needed.
+	go notification.NewDispatcher(querier, notification.NewDeliverer(true), cfg.PublicURL, logger).Run(ctx)
 	startScheduler(ctx, logger, pool, querier, q)
 
 	return httpapi.Serve(ctx, logger, cfg.HTTPAddr, handler, cfg.ShutdownTimeout)
