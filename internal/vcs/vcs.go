@@ -17,6 +17,7 @@ import (
 // Upstream's VcsType values this package can discover.
 const (
 	TypeGitHub = "GITHUB"
+	TypeGitLab = "GITLAB"
 )
 
 const (
@@ -149,6 +150,12 @@ func providerFor(connection Connection) (provider, error) {
 				"This GitHub connection has no access token; connect it with OAuth or store a token")
 		}
 		return &github{base: base, token: connection.AccessToken}, nil
+	case TypeGitLab:
+		if strings.TrimSpace(connection.AccessToken) == "" {
+			return nil, failed(http.StatusBadRequest,
+				"This GitLab connection has no access token; connect it with OAuth or store a token")
+		}
+		return &gitlab{base: base, token: connection.AccessToken}, nil
 	default:
 		return nil, failed(http.StatusUnprocessableEntity,
 			"Repository discovery is not supported for this VCS connection type")
@@ -160,7 +167,12 @@ func baseURL(connection Connection) string {
 	if base != "" {
 		return base
 	}
-	return "https://api.github.com"
+	switch connection.Type {
+	case TypeGitLab:
+		return "https://gitlab.com/api/v4"
+	default:
+		return "https://api.github.com"
+	}
 }
 
 // getJSON performs one authenticated GET and decodes a 2xx body into target.
