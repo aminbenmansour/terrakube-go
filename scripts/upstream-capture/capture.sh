@@ -460,6 +460,80 @@ request organization-template-delete "/api/v1/organization/${rel_org}/template/$
 request organization-template-get-after-delete "/api/v1/organization/${rel_org}/template/${template_new}"
 request organization-template-delete-empty "/api/v1/organization/${rel_org}/template/${template_empty}" -X DELETE
 
+# Providers and modules: Settings > Registry and the provider/module pickers.
+# A provider owns versions and each version owns platform implementations; a
+# module owns the versions its refresh poller discovers.
+pg "delete from provider where name like 'capture-provider%' and organization_id = '${rel_org}';
+    delete from module where name like 'capture-module%' and organization_id = '${rel_org}'" >/dev/null
+request organization-provider-create "/api/v1/organization/${rel_org}/provider" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"provider","attributes":{"name":"capture-provider","description":"capture","imported":true,"registryNamespace":"acme"}}}'
+provider_new="$(python3 -c "import json;print(json.load(open('$out/organization-provider-create.json'))['data']['id'])")"
+request organization-provider-list "/api/v1/organization/${rel_org}/provider"
+request organization-provider-get "/api/v1/organization/${rel_org}/provider/${provider_new}"
+request organization-provider-get-include "/api/v1/organization/${rel_org}/provider/${provider_new}?include=version,version.implementation"
+request organization-provider-patch "/api/v1/organization/${rel_org}/provider/${provider_new}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"provider\",\"id\":\"${provider_new}\",\"attributes\":{\"description\":\"after\"}}}"
+request organization-provider-duplicate "/api/v1/organization/${rel_org}/provider" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"provider","attributes":{"name":"capture-provider","description":"capture"}}}'
+request organization-provider-missing "/api/v1/organization/${rel_org}/provider/00000000-0000-4000-8000-000000000096"
+request organization-provider-bad-id "/api/v1/organization/${rel_org}/provider/not-a-uuid"
+request organization-provider-version-create "/api/v1/organization/${rel_org}/provider/${provider_new}/version" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"version","attributes":{"versionNumber":"1.2.3","protocols":"5.0"}}}'
+provider_version="$(python3 -c "import json;print(json.load(open('$out/organization-provider-version-create.json'))['data']['id'])")"
+request organization-provider-version-duplicate "/api/v1/organization/${rel_org}/provider/${provider_new}/version" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"version","attributes":{"versionNumber":"1.2.3","protocols":"5.0"}}}'
+request organization-provider-version-patch "/api/v1/organization/${rel_org}/provider/${provider_new}/version/${provider_version}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"version\",\"id\":\"${provider_version}\",\"attributes\":{\"status\":\"deprecated\",\"deprecationMessage\":\"use 2.x\"}}}"
+request organization-provider-version-invalid-status "/api/v1/organization/${rel_org}/provider/${provider_new}/version/${provider_version}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"version\",\"id\":\"${provider_version}\",\"attributes\":{\"status\":\"nonsense\"}}}"
+request organization-provider-version-missing "/api/v1/organization/${rel_org}/provider/${provider_new}/version/00000000-0000-4000-8000-000000000097"
+request organization-provider-implementation-create "/api/v1/organization/${rel_org}/provider/${provider_new}/version/${provider_version}/implementation" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"implementation","attributes":{"os":"linux","arch":"amd64","filename":"terraform-provider-capture_1.2.3_linux_amd64.zip","downloadUrl":"https://example.com/p.zip","shasumsUrl":"https://example.com/SHA256SUMS","shasumsSignatureUrl":"https://example.com/SHA256SUMS.sig","shasum":"abc","keyId":"key","asciiArmor":"armor","trustSignature":"trust","source":"https://github.com/example/p","sourceUrl":"https://github.com/example/p"}}}'
+provider_implementation="$(python3 -c "import json;print(json.load(open('$out/organization-provider-implementation-create.json'))['data']['id'])")"
+request organization-provider-get-populated "/api/v1/organization/${rel_org}/provider/${provider_new}?include=version,version.implementation"
+request organization-provider-implementation-delete "/api/v1/organization/${rel_org}/provider/${provider_new}/version/${provider_version}/implementation/${provider_implementation}" -X DELETE
+request organization-provider-version-delete "/api/v1/organization/${rel_org}/provider/${provider_new}/version/${provider_version}" -X DELETE
+request organization-provider-delete "/api/v1/organization/${rel_org}/provider/${provider_new}" -X DELETE
+request organization-provider-get-after-delete "/api/v1/organization/${rel_org}/provider/${provider_new}"
+
+request organization-module-create "/api/v1/organization/${rel_org}/module" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"module","attributes":{"name":"capture-module","description":"capture","provider":"aws","source":"https://github.com/example/terraform-aws-capture","folder":null,"tagPrefix":null}}}'
+module_new="$(python3 -c "import json;print(json.load(open('$out/organization-module-create.json'))['data']['id'])")"
+module_version='bbbbbbbb-0000-4000-8000-000000000001'
+pg "insert into module_version (id, module_id, version, commit_info, git_tag, status)
+    values ('${module_version}', '${module_new}', '1.0.0', 'abc123', 'v1.0.0', 'active')
+    on conflict (id) do nothing" >/dev/null
+request organization-module-include "/api/v1/organization/${rel_org}?include=module"
+request organization-module-list "/api/v1/organization/${rel_org}/module"
+request organization-module-list-fields "/api/v1/organization/${rel_org}/module?fields[module]=name,description,provider,latestVersion,downloadQuantity,createdDate,updatedDate"
+request organization-module-get "/api/v1/organization/${rel_org}/module/${module_new}"
+request organization-module-get-include "/api/v1/organization/${rel_org}/module/${module_new}?include=vcs,version"
+request organization-module-patch "/api/v1/organization/${rel_org}/module/${module_new}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"module\",\"id\":\"${module_new}\",\"attributes\":{\"description\":\"after\"}}}"
+request organization-module-duplicate "/api/v1/organization/${rel_org}/module" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"module","attributes":{"name":"capture-module","provider":"aws","source":"https://github.com/example/terraform-aws-capture"}}}'
+request organization-module-missing "/api/v1/organization/${rel_org}/module/00000000-0000-4000-8000-000000000098"
+request organization-module-bad-id "/api/v1/organization/${rel_org}/module/not-a-uuid"
+request organization-module-version-patch "/api/v1/organization/${rel_org}/module/${module_new}/version/${module_version}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"module_version\",\"id\":\"${module_version}\",\"attributes\":{\"status\":\"deprecated\",\"deprecationMessage\":\"use 2.x\"}}}"
+request organization-module-version-invalid-status "/api/v1/organization/${rel_org}/module/${module_new}/version/${module_version}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"module_version\",\"id\":\"${module_version}\",\"attributes\":{\"status\":\"nonsense\"}}}"
+request organization-module-delete "/api/v1/organization/${rel_org}/module/${module_new}" -X DELETE
+request organization-module-get-after-delete "/api/v1/organization/${rel_org}/module/${module_new}"
+
 # Notifications: Settings > Notifications. A configuration is org-wide (no
 # workspace) or workspace-scoped, gets triggers per job status, and may narrow
 # itself to a set of templates.
@@ -560,5 +634,6 @@ pg "delete from template where name like 'capture-template%' and organization_id
 pg "delete from team where name like 'capture-team%' and organization_id = '${rel_org}'" >/dev/null
 pg "delete from workspace where name in ('capture-atomic', 'capture-rel-workspace')" >/dev/null
 pg "delete from job where commit_id = 'deaDBEEF'" >/dev/null
+pg "delete from provider where name like 'capture-provider%' and organization_id = '${rel_org}'; delete from module where name like 'capture-module%' and organization_id = '${rel_org}'" >/dev/null
 
 echo "wrote $(wc -l < "$out/index.tsv") captures to $out"

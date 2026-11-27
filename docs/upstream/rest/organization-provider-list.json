@@ -1,0 +1,1 @@
+{"data":[{"type":"provider","id":"28e3b949-eadc-4b3a-8d06-a3463831d89b","attributes":{"description":"capture","imported":true,"name":"capture-provider","registryNamespace":"acme"},"relationships":{"organization":{"data":{"type":"organization","id":"70000000-0000-0000-0000-000000000001"}},"version":{"data":[]}}}]}
