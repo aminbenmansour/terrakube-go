@@ -9,7 +9,7 @@ from `ui/src` and regenerated with `scripts/ui-rest-inventory.sh`.
 
 ## Where we stand
 
-`internal/api` currently answers 100 routes. Everything marked *missing* below
+`internal/api` currently answers 151 routes. Everything marked *missing* below
 returns 404, and the page that calls it shows an error or an empty state.
 
 | Resource | Operations | Status |
@@ -25,7 +25,7 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `ssh`, `agent` | 5 | implemented |
 | `vcs` | 5 (list, get, create, patch, delete) plus the root `/vcs/v1/:id/groups` and `/repositories` the workspace wizard reads (and the `/branches` and `/test` extensions) | implemented |
 | `team` | 5 (list, get, create, patch, delete) | implemented |
-| `provider`, `module` | 19 (versions, implementations, module versions) | **missing** |
+| `provider`, `module` | 19 (versions, implementations, module versions) | implemented |
 | `policy_set`, `policy_exemption` | 19 (attachments, parameters, parameters CRUD) | **missing** |
 | `notificationConfiguration`, `notification_trigger` | 7 (config CRUD, triggers create/delete, templates relationship) plus the two `/notification/v1/.../test` sends and the delivery history/retry | implemented |
 | `federated` (OIDC credentials) | 9 | **missing** |
@@ -37,13 +37,13 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `/organization/:id/operations`, `/doc` | 2 | **missing** — the vocabulary endpoint the filter builder reads |
 
 Consequence: the UI can load and browse organizations, projects, workspaces and
-the workspace page's GraphQL data, but the variable editor, run details, the
-registry and policy screens do not work against this API yet. That is the bulk of M5 and it is REST work, not GraphQL work.
+the workspace page's GraphQL data, but the variable editor, run details and the
+policy screens do not work against this API yet. That is the bulk of M5 and it is REST work, not GraphQL work.
 
 ## Order that unblocks the most UI
 
 1. `job` get/patch and the workspace relationship patches (lock, project, VCS).
-2. `provider`, `module` and the registry service.
+2. The registry service (`cmd/registry`); the provider and module REST routes are done.
 3. `policy_set`, `policy_exemption`, `federated`.
 4. The legacy `/workspace/:id/variable` editor routes are served; the collection
    screens are done.
