@@ -188,6 +188,13 @@ func run() error {
 		Verifiers:   verifiers,
 		CORSOrigins: cfg.CORSOrigins,
 	}))
+	handler.Mount("/vcs/v1", api.NewVCS(api.Deps{
+		Store:       querier,
+		Logger:      logger,
+		AuthToken:   cfg.AuthToken,
+		Verifiers:   verifiers,
+		CORSOrigins: cfg.CORSOrigins,
+	}))
 	if cfg.TerraformLogin {
 		if pats == nil {
 			return fmt.Errorf("terraform login requires TERRAKUBE_PAT_SECRET")

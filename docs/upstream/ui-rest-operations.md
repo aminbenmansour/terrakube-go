@@ -23,7 +23,7 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `tag`, `workspaceTag` | 10 (tag CRUD, workspace bindings list/create/patch/delete) | implemented |
 | `template` | 5 (list, get, create, patch, delete) | implemented |
 | `ssh`, `agent` | 5 | implemented |
-| `vcs` | 5 (list, get, create, patch, delete) | implemented |
+| `vcs` | 5 (list, get, create, patch, delete) plus the root `/vcs/v1/:id/groups` and `/repositories` the workspace wizard reads (and the `/branches` and `/test` extensions) | implemented |
 | `team` | 5 (list, get, create, patch, delete) | implemented |
 | `provider`, `module` | 19 (versions, implementations, module versions) | **missing** |
 | `policy_set`, `policy_exemption` | 19 (attachments, parameters, parameters CRUD) | **missing** |
