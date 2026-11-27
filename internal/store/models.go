@@ -178,6 +178,23 @@ type NotificationConfigurationTemplate struct {
 	TemplateID      string `json:"template_id"`
 }
 
+type NotificationOutbox struct {
+	ID              string             `json:"id"`
+	JobID           int64              `json:"job_id"`
+	ConfigurationID string             `json:"configuration_id"`
+	Payload         *string            `json:"payload"`
+	Status          string             `json:"status"`
+	JobStatus       *string            `json:"job_status"`
+	AttemptCount    int32              `json:"attempt_count"`
+	LastAttemptAt   pgtype.Timestamptz `json:"last_attempt_at"`
+	NextAttemptAt   pgtype.Timestamptz `json:"next_attempt_at"`
+	LastError       *string            `json:"last_error"`
+	CreatedDate     pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate     pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy       *string            `json:"created_by"`
+	UpdatedBy       *string            `json:"updated_by"`
+}
+
 type NotificationTrigger struct {
 	ID              string             `json:"id"`
 	JobStatus       string             `json:"job_status"`
