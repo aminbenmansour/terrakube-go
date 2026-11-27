@@ -45,7 +45,31 @@ func (a *API) atomicOperations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	results := make([]atomicResult, 0, len(doc.Operations))
+	var webhookRefs []webhookSyncRef
+	var createdWebhooks []string
+	committed := false
+	// A failed batch must not leave the webhook rows it created; the UI
+	// promises that a failed save changes nothing.
+	defer func() {
+		if !committed {
+			a.rollbackWebhooks(r, createdWebhooks)
+		}
+	}()
 	for _, operation := range doc.Operations {
+		if isWebhookAtomicHref(operation.Href) {
+			data, ref, ok := a.atomicWebhook(w, r, operation)
+			if !ok {
+				return
+			}
+			if ref.id != "" {
+				webhookRefs = append(webhookRefs, ref)
+				if ref.created {
+					createdWebhooks = append(createdWebhooks, ref.id)
+				}
+			}
+			results = append(results, atomicResult{Data: data})
+			continue
+		}
 		switch operation.Op {
 		case "add":
 			orgID, _, ok := atomicWorkspaceHref(operation.Href, false)
@@ -98,6 +122,11 @@ func (a *API) atomicOperations(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	if !a.syncAtomicWebhooks(w, r, webhookRefs) {
+		return
+	}
+	committed = true
 
 	w.Header().Set("Content-Type", jsonapi.MediaType+"; charset=utf-8")
 	w.WriteHeader(http.StatusOK)

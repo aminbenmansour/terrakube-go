@@ -42,9 +42,9 @@
     "semantic_hash": ""
   },
   "internal/api/api.go": {
-    "mtime": 1795794229.069253,
-    "seen": 1795794399.9780142,
-    "ast_hash": "5620b51ede0fb7268031eec19c103824",
+    "mtime": 1795794815.4921453,
+    "seen": 1795795023.79637,
+    "ast_hash": "050d9c66cb3aa911254637d0ba6346ed",
     "semantic_hash": ""
   },
   "internal/api/api_test.go": {
@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "docs/compat.md": {
-    "mtime": 1795794387.1863024,
-    "seen": 1795794399.98172,
-    "ast_hash": "63702ff332baba6286eb6a1d5f652bfd",
+    "mtime": 1795794969.585168,
+    "seen": 1795795023.7999666,
+    "ast_hash": "2dc6620dd71b1faeabe2cafafbbe6f5f",
     "semantic_hash": ""
   },
   "internal/executor/executor.go": {
@@ -894,9 +894,9 @@
     "semantic_hash": ""
   },
   "internal/api/testdata/routes.txt": {
-    "mtime": 1795794332.0019362,
-    "seen": 1795794399.981927,
-    "ast_hash": "41770a086ca4b9c896b78d288e91575f",
+    "mtime": 1795794948.1010253,
+    "seen": 1795795023.800181,
+    "ast_hash": "cfd5567b6b4296df748022b607ef7805",
     "semantic_hash": ""
   },
   "internal/httpapi/cors.go": {
@@ -1350,9 +1350,9 @@
     "semantic_hash": ""
   },
   "internal/api/operations.go": {
-    "mtime": 1795562698.5585003,
-    "seen": 1795563030.130017,
-    "ast_hash": "da356bcc13dc5a3165250193b86ec7c3",
+    "mtime": 1795794900.6307104,
+    "seen": 1795795023.7966096,
+    "ast_hash": "4b246a9027f36cce39e92fdfe0b22dfb",
     "semantic_hash": ""
   },
   "internal/api/operations_test.go": {
@@ -3006,9 +3006,9 @@
     "semantic_hash": ""
   },
   "internal/vcs/vcs.go": {
-    "mtime": 1795793744.4938335,
-    "seen": 1795794399.9809518,
-    "ast_hash": "435280dc846174378c32276dd4ab8253",
+    "mtime": 1795794656.8940926,
+    "seen": 1795795023.7993908,
+    "ast_hash": "ff530ba6f787a652f64c26f9b8c5d334",
     "semantic_hash": ""
   },
   "internal/vcs/vcs_test.go": {
@@ -3039,6 +3039,36 @@
     "mtime": 1795793876.7075868,
     "seen": 1795794399.9804173,
     "ast_hash": "5b092de96e5fc4d8a83527364ef39870",
+    "semantic_hash": ""
+  },
+  "internal/api/webhook_atomic.go": {
+    "mtime": 1795794904.9727392,
+    "seen": 1795795023.796947,
+    "ast_hash": "4e8d47226d43844932e7a9e1c9359234",
+    "semantic_hash": ""
+  },
+  "internal/api/webhook_write.go": {
+    "mtime": 1795794978.609228,
+    "seen": 1795795023.7969484,
+    "ast_hash": "0a60e5eab551fae3c424af9bfaa094e8",
+    "semantic_hash": ""
+  },
+  "internal/api/webhook_write_test.go": {
+    "mtime": 1795794939.8379705,
+    "seen": 1795795023.7969494,
+    "ast_hash": "e8e08f27f75bcd7bd48736460d0ed171",
+    "semantic_hash": ""
+  },
+  "internal/vcs/webhook.go": {
+    "mtime": 1795794978.609228,
+    "seen": 1795795023.7994044,
+    "ast_hash": "013e2d90b01838337ecdb081a83c9783",
+    "semantic_hash": ""
+  },
+  "internal/vcs/webhook_test.go": {
+    "mtime": 1795794870.7955122,
+    "seen": 1795795023.7994056,
+    "ast_hash": "d137c08a96b2638a42389debee996922",
     "semantic_hash": ""
   }
 }
