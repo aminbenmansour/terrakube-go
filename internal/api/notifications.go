@@ -437,6 +437,11 @@ func NewNotification(deps Deps) http.Handler {
 		r.Use(a.notificationTestOrganization)
 		r.With(a.requireWrite(canManageWorkspace)).Post("/configuration/test", a.sendAdHocNotificationTest)
 	})
+	r.Route("/workspace/{workspaceID}", func(r chi.Router) {
+		r.Use(a.workspaceScope)
+		r.Get("/deliveries", a.listNotificationDeliveries)
+		r.With(a.requireWrite(canManageWorkspace)).Post("/deliveries/{deliveryID}/retry", a.retryNotificationDelivery)
+	})
 	return r
 }
 
