@@ -49,3 +49,18 @@ RETURNING *;
 
 -- name: DeleteWebhookEvent :exec
 DELETE FROM webhook_event WHERE id = $1;
+
+-- name: RecordWebhookDelivery :execrows
+-- The composite key makes a provider retry a no-op: zero rows means this
+-- delivery id was already accepted for this webhook.
+INSERT INTO webhook_delivery (webhook_id, delivery_id, created_date)
+VALUES ($1, $2, now())
+ON CONFLICT (webhook_id, delivery_id) DO NOTHING;
+
+-- name: DeleteWebhookDelivery :exec
+-- Compensates a recorded delivery whose run could not be created, so the
+-- provider's retry is processed instead of being mistaken for a replay.
+DELETE FROM webhook_delivery WHERE webhook_id = $1 AND delivery_id = $2;
+
+-- name: PruneWebhookDeliveries :exec
+DELETE FROM webhook_delivery WHERE created_date < now() - interval '30 days';

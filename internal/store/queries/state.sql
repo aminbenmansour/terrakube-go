@@ -48,8 +48,8 @@ RETURNING *;
 
 -- name: CreateJob :one
 INSERT INTO job (organization_id, workspace_id, command, status, output, via, auto_apply, refresh, plan_changes, created_by, tcl, template_reference,
-                 triggered_by_job_id, cascade_depth)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                 triggered_by_job_id, cascade_depth, commit_id, override_branch)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 RETURNING *;
 
 -- name: GetJobByWorkspaceAndTrigger :one
