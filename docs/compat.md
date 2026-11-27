@@ -303,9 +303,9 @@ Query conventions:
 - `include=step`, `fields[workspace]=name`.
 - Content type `application/vnd.api+json`; errors use a JSON:API `errors`
   array. `DELETE` must not send a body or content type.
-- JSON:API and GraphQL request bodies are limited to 8 MiB and answer `413`
-  with a JSON:API error above it. Configuration tarballs and state uploads
-  each allow 100 MiB.
+- JSON:API, GraphQL, `/pat/v1`, `/access-token/v1` and the webhook receiver
+  limit request bodies to 8 MiB and answer `413` with a JSON:API error above
+  it. Configuration tarballs and state uploads each allow 100 MiB.
 - `TERRAKUBE_RATE_LIMIT` caps requests per second per caller and answers `429`
   with `Retry-After`; unset means no limit, as upstream.
 - Responses carry `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
