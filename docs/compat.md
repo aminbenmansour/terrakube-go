@@ -816,6 +816,46 @@ Current M1 limitations (tracked for later milestones):
 - `tag` and `workspacetag` are served both through the TFE tag-binding
   endpoints and through the Elide-style management routes.
 
+### VCS repository discovery — `/vcs/v1`
+
+Upstream mounts repository discovery at the root (`VcsRepositoryController`,
+`@RequestMapping("/vcs/v1")`), not under `/api/v1`, and the workspace wizard
+calls it directly (`Workspaces/Create.tsx`). We mount the same two routes.
+
+- `GET /vcs/v1/:vcsId/groups` returns a raw (non-JSON:API) array of
+  `{id, name}`. GitHub lists `@me` (`"<login> (personal)"`) then `/user/orgs`;
+  GitLab lists `@me` (`"My Projects"`) then its groups (`membership=true`).
+- `GET /vcs/v1/:vcsId/repositories?group=<g>&search=<s>&page=<n>` returns
+  `{items, hasMore, page}` with
+  `{name, fullName, group, url, privateRepo, defaultBranch}`. `group` is
+  required (`400` when absent) and `page` defaults to 1. Page size is 50.
+  For GitHub, `@me` reads `/user/repos?affiliation=owner` and any other group
+  reads `/orgs/:group/repos`; a search goes to `/search/repositories` with
+  `"<s> in:name"` (plus `user:<group>`), and `hasMore` comes from
+  `total_count`. For GitLab, `@me` reads `/projects?owned=true` and any other
+  group reads `/groups/:group/projects?include_subgroups=true`; `hasMore`
+  comes from `X-Next-Page`. `defaultBranch` is null when the provider omits it.
+- Reads require `manageVcs` or `manageWorkspace` in the connection's
+  organization, which is what upstream's
+  `VcsRepositoryAccessService.hasViewPermission` checks. A malformed id is
+  `400`.
+
+Divergences and limits: a rejected or revoked credential answers the useful
+status the provider gave (`401`, `403`, `404`, `429`, `502` for a 5xx or an
+unreachable host) with the provider's message, where upstream logs and answers
+`500` or an empty list. `BITBUCKET`, `AZURE_DEVOPS`, `AZURE_SP_MI` and `PUBLIC`
+answer `422` with a message (upstream answers `422` with an empty page), so the
+wizard falls back to entering the repository URL by hand.
+`GITHUB_APP` connections (a private key and no access token) answer `501`:
+installation-token exchange is not implemented yet.
+
+Two extensions the wizard's issue (#156) asked for, absent upstream:
+`GET /vcs/v1/:vcsId/branches?repository=<full name>&page=<n>` returns
+`{items: [{name}], hasMore, page}` and `POST /vcs/v1/:vcsId/test` returns
+`{"ok": true, "message": "Connected as <login>"}` (or the provider error
+status). The access token is decrypted by the store for the provider call and
+never returned or logged.
+
 ## Compatibility tests
 
 - `internal/tfe/contract_test.go` pins the JSON:API media type, success and
