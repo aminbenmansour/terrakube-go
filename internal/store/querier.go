@@ -41,6 +41,10 @@ type Querier interface {
 	CreateNotificationTrigger(ctx context.Context, arg CreateNotificationTriggerParams) (NotificationTrigger, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreatePat(ctx context.Context, arg CreatePatParams) (Pat, error)
+	CreatePolicyAttachment(ctx context.Context, arg CreatePolicyAttachmentParams) (PolicyAttachment, error)
+	CreatePolicyExemption(ctx context.Context, arg CreatePolicyExemptionParams) (PolicyExemption, error)
+	CreatePolicySet(ctx context.Context, arg CreatePolicySetParams) (PolicySet, error)
+	CreatePolicySetParameter(ctx context.Context, arg CreatePolicySetParameterParams) (PolicySetParameter, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateProjectAccess(ctx context.Context, arg CreateProjectAccessParams) (ProjectAccess, error)
 	CreateProvider(ctx context.Context, arg CreateProviderParams) (Provider, error)
@@ -77,6 +81,10 @@ type Querier interface {
 	DeleteNotificationConfigurationTemplates(ctx context.Context, configurationID string) error
 	DeleteNotificationTrigger(ctx context.Context, id string) error
 	DeleteOrganization(ctx context.Context, id string) error
+	DeletePolicyAttachment(ctx context.Context, id string) error
+	DeletePolicyExemption(ctx context.Context, id string) error
+	DeletePolicySet(ctx context.Context, id string) error
+	DeletePolicySetParameter(ctx context.Context, id string) error
 	DeleteProject(ctx context.Context, id string) error
 	DeleteProjectAccess(ctx context.Context, id string) error
 	DeleteProvider(ctx context.Context, id string) error
@@ -127,6 +135,10 @@ type Querier interface {
 	// "running" is included so an executor that reclaims a crashed job resumes the
 	// interrupted step instead of treating the job as finished.
 	GetPendingStepByJob(ctx context.Context, jobID int64) (Step, error)
+	GetPolicyAttachment(ctx context.Context, id string) (PolicyAttachment, error)
+	GetPolicyExemption(ctx context.Context, id string) (PolicyExemption, error)
+	GetPolicySet(ctx context.Context, id string) (PolicySet, error)
+	GetPolicySetParameter(ctx context.Context, id string) (PolicySetParameter, error)
 	GetProject(ctx context.Context, id string) (Project, error)
 	GetProjectAccess(ctx context.Context, id string) (ProjectAccess, error)
 	GetProjectByName(ctx context.Context, arg GetProjectByNameParams) (Project, error)
@@ -183,6 +195,13 @@ type Querier interface {
 	ListNotificationTriggersByConfiguration(ctx context.Context, configurationID string) ([]NotificationTrigger, error)
 	ListOrganizationIDsByGroupNames(ctx context.Context, names []string) ([]string, error)
 	ListPatsByCreator(ctx context.Context, createdBy *string) ([]Pat, error)
+	ListPolicyAttachments(ctx context.Context, policySetID string) ([]PolicyAttachment, error)
+	ListPolicyExemptionsByOrganization(ctx context.Context, organizationID string) ([]PolicyExemption, error)
+	ListPolicyExemptionsByPolicySet(ctx context.Context, policySetID string) ([]PolicyExemption, error)
+	ListPolicySetParameters(ctx context.Context, policySetID string) ([]PolicySetParameter, error)
+	ListPolicySets(ctx context.Context) ([]PolicySet, error)
+	ListPolicySetsByOrganization(ctx context.Context, organizationID string) ([]PolicySet, error)
+	ListPolicySetsByOrganizations(ctx context.Context, organizationIds []string) ([]PolicySet, error)
 	ListProjectAccessByProject(ctx context.Context, projectID string) ([]ProjectAccess, error)
 	ListProjectAccessByProjectAndNames(ctx context.Context, arg ListProjectAccessByProjectAndNamesParams) ([]ProjectAccess, error)
 	ListProjectsByOrganization(ctx context.Context, organizationID string) ([]Project, error)
@@ -266,6 +285,10 @@ type Querier interface {
 	UpdateModuleVersion(ctx context.Context, arg UpdateModuleVersionParams) (ModuleVersion, error)
 	UpdateNotificationConfiguration(ctx context.Context, arg UpdateNotificationConfigurationParams) (NotificationConfiguration, error)
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) (Organization, error)
+	UpdatePolicyAttachment(ctx context.Context, arg UpdatePolicyAttachmentParams) (PolicyAttachment, error)
+	UpdatePolicyExemption(ctx context.Context, arg UpdatePolicyExemptionParams) (PolicyExemption, error)
+	UpdatePolicySet(ctx context.Context, arg UpdatePolicySetParams) (PolicySet, error)
+	UpdatePolicySetParameter(ctx context.Context, arg UpdatePolicySetParameterParams) (PolicySetParameter, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 	UpdateProjectAccess(ctx context.Context, arg UpdateProjectAccessParams) (ProjectAccess, error)
 	UpdateProvider(ctx context.Context, arg UpdateProviderParams) (Provider, error)
