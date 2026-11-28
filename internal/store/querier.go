@@ -30,6 +30,8 @@ type Querier interface {
 	CreateCliAuthSession(ctx context.Context, arg CreateCliAuthSessionParams) (CliAuthSession, error)
 	CreateCollection(ctx context.Context, arg CreateCollectionParams) (Collection, error)
 	CreateContent(ctx context.Context, arg CreateContentParams) (Content, error)
+	CreateFederated(ctx context.Context, arg CreateFederatedParams) (Federated, error)
+	CreateFederatedClaim(ctx context.Context, arg CreateFederatedClaimParams) (FederatedClaim, error)
 	CreateGlobalVariable(ctx context.Context, arg CreateGlobalVariableParams) (Globalvar, error)
 	CreateHistory(ctx context.Context, arg CreateHistoryParams) (History, error)
 	CreateImplementation(ctx context.Context, arg CreateImplementationParams) (Implementation, error)
@@ -70,6 +72,8 @@ type Querier interface {
 	DeleteArchive(ctx context.Context, id string) error
 	DeleteCollection(ctx context.Context, id string) error
 	DeleteExpiredCliAuthSessions(ctx context.Context) (int64, error)
+	DeleteFederated(ctx context.Context, id string) error
+	DeleteFederatedClaim(ctx context.Context, id string) error
 	DeleteGlobalVariable(ctx context.Context, id string) error
 	DeleteImplementation(ctx context.Context, id string) error
 	DeleteItem(ctx context.Context, id string) error
@@ -116,6 +120,8 @@ type Querier interface {
 	GetCliAuthSessionByCodeHash(ctx context.Context, authCodeHash *string) (CliAuthSession, error)
 	GetCollection(ctx context.Context, id string) (Collection, error)
 	GetContent(ctx context.Context, id string) (Content, error)
+	GetFederated(ctx context.Context, id string) (Federated, error)
+	GetFederatedClaim(ctx context.Context, id string) (FederatedClaim, error)
 	GetGlobalVariable(ctx context.Context, id string) (Globalvar, error)
 	GetHistory(ctx context.Context, id string) (History, error)
 	GetHistoryBefore(ctx context.Context, arg GetHistoryBeforeParams) (History, error)
@@ -172,10 +178,13 @@ type Querier interface {
 	ListActiveJobsByOrganization(ctx context.Context, name string) ([]Job, error)
 	ListActiveJobsByWorkspace(ctx context.Context, workspaceID string) ([]Job, error)
 	ListAgentsByOrganization(ctx context.Context, organizationID string) ([]Agent, error)
+	ListAllFederatedClaims(ctx context.Context) ([]FederatedClaim, error)
 	ListArchivesByHistory(ctx context.Context, historyID string) ([]TempArchive, error)
 	ListCollectionsByOrganization(ctx context.Context, organizationID string) ([]Collection, error)
 	ListEnabledRunTriggersBySource(ctx context.Context, sourceWorkspaceID string) ([]WorkspaceRunTrigger, error)
 	ListEnabledSchedules(ctx context.Context) ([]Schedule, error)
+	ListFederated(ctx context.Context) ([]Federated, error)
+	ListFederatedClaims(ctx context.Context, federatedID string) ([]FederatedClaim, error)
 	ListGlobalVariableSecrets(ctx context.Context) ([]ListGlobalVariableSecretsRow, error)
 	ListGlobalVariableSecretsAfter(ctx context.Context, arg ListGlobalVariableSecretsAfterParams) ([]ListGlobalVariableSecretsAfterRow, error)
 	ListGlobalVariablesByOrganization(ctx context.Context, organizationID string) ([]Globalvar, error)
@@ -262,6 +271,8 @@ type Querier interface {
 	UpdateAction(ctx context.Context, arg UpdateActionParams) (Action, error)
 	UpdateCollection(ctx context.Context, arg UpdateCollectionParams) (Collection, error)
 	UpdateContentStatus(ctx context.Context, arg UpdateContentStatusParams) (Content, error)
+	UpdateFederated(ctx context.Context, arg UpdateFederatedParams) (Federated, error)
+	UpdateFederatedClaim(ctx context.Context, arg UpdateFederatedClaimParams) (FederatedClaim, error)
 	UpdateGlobalVariable(ctx context.Context, arg UpdateGlobalVariableParams) (Globalvar, error)
 	UpdateHistoryOutput(ctx context.Context, arg UpdateHistoryOutputParams) error
 	UpdateImplementation(ctx context.Context, arg UpdateImplementationParams) (Implementation, error)
