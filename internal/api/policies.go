@@ -597,6 +597,14 @@ func (a *API) createPolicySetParameter(w http.ResponseWriter, r *http.Request) {
 	jsonapi.WriteResource(w, http.StatusCreated, policySetParameterResource(parameter), jsonapi.ParseFieldsets(r))
 }
 
+func (a *API) getPolicySetParameter(w http.ResponseWriter, r *http.Request) {
+	parameter, ok := a.policySetParameterInSet(w, r)
+	if !ok {
+		return
+	}
+	jsonapi.WriteResource(w, http.StatusOK, policySetParameterResource(parameter), jsonapi.ParseFieldsets(r))
+}
+
 func (a *API) updatePolicySetParameter(w http.ResponseWriter, r *http.Request) {
 	parameter, ok := a.policySetParameterInSet(w, r)
 	if !ok {
