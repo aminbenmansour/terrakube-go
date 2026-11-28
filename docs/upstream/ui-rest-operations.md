@@ -9,7 +9,7 @@ from `ui/src` and regenerated with `scripts/ui-rest-inventory.sh`.
 
 ## Where we stand
 
-`internal/api` currently answers 172 routes. Everything marked *missing* below
+`internal/api` currently answers 182 routes. Everything marked *missing* below
 returns 404, and the page that calls it shows an error or an empty state.
 
 | Resource | Operations | Status |
@@ -28,7 +28,7 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `provider`, `module` | 19 (versions, implementations, module versions) | implemented |
 | `policy_set`, `policy_exemption` | 20 (policy sets, attachments, parameters, exemptions) | implemented |
 | `notificationConfiguration`, `notification_trigger` | 7 (config CRUD, triggers create/delete, templates relationship) plus the two `/notification/v1/.../test` sends and the delivery history/retry | implemented |
-| `federated` (OIDC credentials) | 9 | **missing** |
+| `federated` (OIDC credentials) | 9 | implemented (token exchange pending #46) |
 | registry `/registry/v1/providers` | 4 | separate service (`cmd/registry`, M6) |
 | `/remote/tfe/v2/runs/:id/policy-checks` | 1 | implemented |
 | `/organization/:id/globalvar` | 4 | implemented |
@@ -37,15 +37,15 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `/organization/:id/operations`, `/doc` | 2 | **missing** — the vocabulary endpoint the filter builder reads |
 
 Consequence: the UI can load and browse organizations, projects, workspaces and
-the workspace page's GraphQL data, but the variable editor, run details and the
-federated credential screens do not work against this API yet. That is the bulk
-of M5 and it is REST work, not GraphQL work.
+the workspace page's GraphQL data, but the variable editor and run details do
+not work against this API yet. That is the bulk of M5 and it is REST work, not
+GraphQL work.
 
 ## Order that unblocks the most UI
 
 1. `job` get/patch and the workspace relationship patches (lock, project, VCS).
 2. The registry service (`cmd/registry`); the provider and module REST routes are done.
-3. `federated` (OIDC credentials).
+3. The federated token exchange, once the Dex login (#46) lands.
 4. The legacy `/workspace/:id/variable` editor routes are served; the collection
    screens are done.
 
