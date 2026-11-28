@@ -273,6 +273,67 @@ type Pat struct {
 	UpdatedBy   *string            `json:"updated_by"`
 }
 
+type PolicyAttachment struct {
+	ID          string             `json:"id"`
+	PolicySetID string             `json:"policy_set_id"`
+	WorkspaceID *string            `json:"workspace_id"`
+	ProjectID   *string            `json:"project_id"`
+	TagID       *string            `json:"tag_id"`
+	CreatedDate pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy   *string            `json:"created_by"`
+	UpdatedBy   *string            `json:"updated_by"`
+}
+
+type PolicyExemption struct {
+	ID              string             `json:"id"`
+	PolicySetID     string             `json:"policy_set_id"`
+	RuleID          string             `json:"rule_id"`
+	WorkspaceID     *string            `json:"workspace_id"`
+	ProjectID       *string            `json:"project_id"`
+	TicketReference string             `json:"ticket_reference"`
+	Justification   string             `json:"justification"`
+	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
+	OrganizationID  string             `json:"organization_id"`
+	CreatedDate     pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate     pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy       *string            `json:"created_by"`
+	UpdatedBy       *string            `json:"updated_by"`
+}
+
+type PolicySet struct {
+	ID                          string             `json:"id"`
+	Name                        string             `json:"name"`
+	Description                 *string            `json:"description"`
+	EnforcementLevel            string             `json:"enforcement_level"`
+	ShadowEnforcementLevel      *string            `json:"shadow_enforcement_level"`
+	OverrideTeam                *string            `json:"override_team"`
+	Global                      bool               `json:"global"`
+	Repository                  *string            `json:"repository"`
+	Branch                      *string            `json:"branch"`
+	Folder                      *string            `json:"folder"`
+	VcsID                       *string            `json:"vcs_id"`
+	OrganizationID              string             `json:"organization_id"`
+	NotificationConfigurationID *string            `json:"notification_configuration_id"`
+	CreatedDate                 pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate                 pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy                   *string            `json:"created_by"`
+	UpdatedBy                   *string            `json:"updated_by"`
+	OpaVersion                  *string            `json:"opa_version"`
+}
+
+type PolicySetParameter struct {
+	ID             string             `json:"id"`
+	PolicySetID    string             `json:"policy_set_id"`
+	ParameterKey   string             `json:"parameter_key"`
+	ParameterValue string             `json:"parameter_value"`
+	Description    *string            `json:"description"`
+	CreatedDate    pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate    pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy      *string            `json:"created_by"`
+	UpdatedBy      *string            `json:"updated_by"`
+}
+
 type Project struct {
 	ID             string  `json:"id"`
 	Name           string  `json:"name"`

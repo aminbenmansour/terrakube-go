@@ -24,6 +24,10 @@ DELETE /organization/{organizationID}/workspace/{workspaceID}/variable/{variable
 DELETE /organization/{organizationID}/workspace/{workspaceID}/webhook/{webhookID}/
 DELETE /organization/{organizationID}/workspace/{workspaceID}/webhook/{webhookID}/events/{eventID}/
 DELETE /organization/{organizationID}/workspace/{workspaceID}/workspaceTag/{workspaceTagID}/
+DELETE /policy_exemption/{exemptionID}/
+DELETE /policy_set/{policySetID}/
+DELETE /policy_set/{policySetID}/attachments/{attachmentID}/
+DELETE /policy_set/{policySetID}/parameters/{parameterID}/
 DELETE /project/{projectID}/
 DELETE /runTrigger/{runTriggerID}/
 DELETE /variable/{variableID}/
@@ -48,6 +52,8 @@ GET /organization/{organizationID}/module/{moduleID}/version
 GET /organization/{organizationID}/module/{moduleID}/version/{versionID}/
 GET /organization/{organizationID}/notificationConfiguration
 GET /organization/{organizationID}/notificationConfiguration/{configurationID}
+GET /organization/{organizationID}/policyExemption
+GET /organization/{organizationID}/policySet
 GET /organization/{organizationID}/project
 GET /organization/{organizationID}/project/{projectID}/projectAccess
 GET /organization/{organizationID}/project/{projectID}/projectAccess/{projectAccessID}/
@@ -79,6 +85,12 @@ GET /organization/{organizationID}/workspace/{workspaceID}/variable/{variableID}
 GET /organization/{organizationID}/workspace/{workspaceID}/webhook/{webhookID}/
 GET /organization/{organizationID}/workspace/{workspaceID}/webhook/{webhookID}/events
 GET /organization/{organizationID}/workspace/{workspaceID}/workspaceTag
+GET /policy_exemption/{exemptionID}/
+GET /policy_set
+GET /policy_set/{policySetID}/
+GET /policy_set/{policySetID}/attachments
+GET /policy_set/{policySetID}/attachments/{attachmentID}/
+GET /policy_set/{policySetID}/parameters
 GET /project/{projectID}/
 GET /project/{projectID}/workspace
 GET /reference/{referenceID}/collection
@@ -114,6 +126,10 @@ PATCH /organization/{organizationID}/workspace/{workspaceID}/variable/{variableI
 PATCH /organization/{organizationID}/workspace/{workspaceID}/webhook/{webhookID}/
 PATCH /organization/{organizationID}/workspace/{workspaceID}/webhook/{webhookID}/events/{eventID}/
 PATCH /organization/{organizationID}/workspace/{workspaceID}/workspaceTag/{workspaceTagID}/
+PATCH /policy_exemption/{exemptionID}/
+PATCH /policy_set/{policySetID}/
+PATCH /policy_set/{policySetID}/attachments/{attachmentID}/
+PATCH /policy_set/{policySetID}/parameters/{parameterID}/
 PATCH /project/{projectID}/
 PATCH /runTrigger/{runTriggerID}/
 PATCH /variable/{variableID}/
@@ -147,5 +163,9 @@ POST /organization/{organizationID}/workspace/{workspaceID}/variable
 POST /organization/{organizationID}/workspace/{workspaceID}/webhook
 POST /organization/{organizationID}/workspace/{workspaceID}/webhook/{webhookID}/events
 POST /organization/{organizationID}/workspace/{workspaceID}/workspaceTag
+POST /policy_exemption
+POST /policy_set
+POST /policy_set/{policySetID}/attachments
+POST /policy_set/{policySetID}/parameters
 POST /runTrigger
 POST /workspace/{workspaceID}/variable

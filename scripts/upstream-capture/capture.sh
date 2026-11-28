@@ -628,6 +628,69 @@ request organization-tag-duplicate "/api/v1/organization/${rel_org}/tag" -X POST
 request organization-tag-delete "/api/v1/organization/${rel_org}/tag/${tag_new}" -X DELETE
 request organization-tag-delete-unnamed "/api/v1/organization/${rel_org}/tag/${tag_unnamed}" -X DELETE
 
+request organization-policy-set-list "/api/v1/organization/${rel_org}/policySet"
+request policy-exemption-list "/api/v1/organization/${rel_org}/policyExemption"
+
+# Policy sets: Settings > Policies. A set owns attachments, parameters and
+# exemptions; deleting it cascades all three. The UI addresses the set at the
+# root, not under the organization.
+pg "delete from policy_set where name like 'capture-policy%' and organization_id = '${rel_org}'" >/dev/null
+request policy-set-list "/api/v1/policy_set"
+request policy-set-list-include "/api/v1/policy_set?include=attachments,notificationConfiguration"
+request policy-set-create "/api/v1/policy_set" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"policy_set\",\"attributes\":{\"name\":\"capture-policy\",\"description\":\"capture\",\"enforcementLevel\":\"SOFT_MANDATORY\",\"shadowEnforcementLevel\":null,\"overrideTeam\":\"TERRAKUBE_ADMIN\",\"global\":false,\"repository\":\"https://github.com/example/policies\",\"branch\":\"main\",\"folder\":\"/\",\"opaVersion\":\"0.68.0\"},\"relationships\":{\"organization\":{\"data\":{\"type\":\"organization\",\"id\":\"${rel_org}\"}}}}}"
+policy_new="$(python3 -c "import json;print(json.load(open('$out/policy-set-create.json'))['data']['id'])")"
+request policy-set-get "/api/v1/policy_set/${policy_new}"
+request policy-set-patch "/api/v1/policy_set/${policy_new}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"policy_set\",\"id\":\"${policy_new}\",\"attributes\":{\"description\":\"after\"}}}"
+request policy-set-missing-name "/api/v1/policy_set" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"policy_set","attributes":{"enforcementLevel":"ADVISORY"}}}'
+request policy-set-bad-enforcement "/api/v1/policy_set" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"policy_set","attributes":{"name":"capture-policy-bad","enforcementLevel":"NOPE"}}}'
+request policy-set-missing "/api/v1/policy_set/00000000-0000-4000-8000-000000000099"
+request policy-set-bad-id "/api/v1/policy_set/not-a-uuid"
+request policy-set-attachment-create "/api/v1/policy_set/${policy_new}/attachments" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"policy_attachment\",\"relationships\":{\"workspace\":{\"data\":{\"type\":\"workspace\",\"id\":\"${rel_ws}\"}}}}}"
+policy_attachment="$(python3 -c "import json;print(json.load(open('$out/policy-set-attachment-create.json'))['data']['id'])")"
+request policy-set-attachment-list "/api/v1/policy_set/${policy_new}/attachments"
+request policy-set-attachment-get "/api/v1/policy_set/${policy_new}/attachments/${policy_attachment}"
+request policy-set-attachment-patch "/api/v1/policy_set/${policy_new}/attachments/${policy_attachment}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"policy_attachment\",\"id\":\"${policy_attachment}\",\"relationships\":{\"project\":{\"data\":{\"type\":\"project\",\"id\":\"${rel_p1}\"}}}}}"
+request policy-set-parameter-create "/api/v1/policy_set/${policy_new}/parameters" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"policy_set_parameter","attributes":{"key":"max_length","value":"8","description":"maximum password length"}}}'
+policy_parameter="$(python3 -c "import json;print(json.load(open('$out/policy-set-parameter-create.json'))['data']['id'])")"
+request policy-set-parameter-list "/api/v1/policy_set/${policy_new}/parameters"
+request policy-set-parameter-patch "/api/v1/policy_set/${policy_new}/parameters/${policy_parameter}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"policy_set_parameter\",\"id\":\"${policy_parameter}\",\"attributes\":{\"value\":\"12\"}}}"
+request policy-set-parameter-missing-key "/api/v1/policy_set/${policy_new}/parameters" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"policy_set_parameter","attributes":{"value":"1"}}}'
+request policy-exemption-create "/api/v1/policy_exemption" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"policy_exemption\",\"attributes\":{\"ruleId\":\"rule-1\",\"ticketReference\":\"CAPTURE-1\",\"justification\":\"testing\",\"expiresAt\":\"2030-01-01T00:00:00Z\"},\"relationships\":{\"organization\":{\"data\":{\"type\":\"organization\",\"id\":\"${rel_org}\"}},\"policySet\":{\"data\":{\"type\":\"policy_set\",\"id\":\"${policy_new}\"}},\"workspace\":{\"data\":{\"type\":\"workspace\",\"id\":\"${rel_ws}\"}}}}}"
+policy_exemption="$(python3 -c "import json;print(json.load(open('$out/policy-exemption-create.json'))['data']['id'])")"
+request policy-exemption-get "/api/v1/policy_exemption/${policy_exemption}"
+request policy-exemption-patch "/api/v1/policy_exemption/${policy_exemption}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"policy_exemption\",\"id\":\"${policy_exemption}\",\"attributes\":{\"justification\":\"after\"}}}"
+request policy-exemption-missing-rule "/api/v1/policy_exemption" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"policy_exemption\",\"attributes\":{\"ticketReference\":\"CAPTURE-2\",\"justification\":\"x\"},\"relationships\":{\"organization\":{\"data\":{\"type\":\"organization\",\"id\":\"${rel_org}\"}},\"policySet\":{\"data\":{\"type\":\"policy_set\",\"id\":\"${policy_new}\"}}}}}"
+request policy-set-attachment-delete "/api/v1/policy_set/${policy_new}/attachments/${policy_attachment}" -X DELETE
+request policy-set-parameter-delete "/api/v1/policy_set/${policy_new}/parameters/${policy_parameter}" -X DELETE
+request policy-exemption-delete "/api/v1/policy_exemption/${policy_exemption}" -X DELETE
+request policy-set-delete "/api/v1/policy_set/${policy_new}" -X DELETE
+request policy-set-get-after-delete "/api/v1/policy_set/${policy_new}"
+pg "delete from policy_set where name like 'capture-policy%' and organization_id = '${rel_org}'" >/dev/null
+
 # Leave the disposable database as it was: these rows exist only for captures.
 pg "delete from vcs where id = '${rel_vcs}'; delete from ssh where id = '${rel_ssh}'; delete from agent where id = '${rel_agent}'" >/dev/null
 pg "delete from template where name like 'capture-template%' and organization_id = '${rel_org}'" >/dev/null

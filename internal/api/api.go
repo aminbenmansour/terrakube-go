@@ -214,6 +214,10 @@ func New(deps Deps) http.Handler {
 			})
 		})
 
+		// Policy sets and exemptions: Settings > Policies.
+		r.Get("/policySet", a.listOrganizationPolicySets)
+		r.Get("/policyExemption", a.listPolicyExemptions)
+
 		// SSH keys and self-hosted agent pools for workspace connections.
 		r.Get("/ssh", a.listSSHKeys)
 		r.With(a.requireWrite(canManageVcs)).Post("/ssh", a.createSSHKey)
@@ -234,6 +238,37 @@ func New(deps Deps) http.Handler {
 			r.With(a.requireOwner).Patch("/", a.updateGlobalVariable)
 			r.With(a.requireOwner).Delete("/", a.deleteGlobalVariable)
 		})
+	})
+
+	// Policy sets and exemptions are addressed at the root because the
+	// Settings > Policies screens call /policy_set and /policy_exemption.
+	r.Get("/policy_set", a.listPolicySets)
+	r.Post("/policy_set", a.createPolicySet)
+	r.Route("/policy_set/{policySetID}", func(r chi.Router) {
+		r.Use(a.policySetScope)
+		r.Get("/", a.getPolicySet)
+		r.With(a.requireWrite(canManagePolicies)).Patch("/", a.updatePolicySet)
+		r.With(a.requireWrite(canManagePolicies)).Delete("/", a.deletePolicySet)
+		r.Get("/attachments", a.listPolicyAttachments)
+		r.With(a.requireWrite(canManagePolicies)).Post("/attachments", a.createPolicyAttachment)
+		r.Route("/attachments/{attachmentID}", func(r chi.Router) {
+			r.Get("/", a.getPolicyAttachment)
+			r.With(a.requireWrite(canManagePolicies)).Patch("/", a.updatePolicyAttachment)
+			r.With(a.requireWrite(canManagePolicies)).Delete("/", a.deletePolicyAttachment)
+		})
+		r.Get("/parameters", a.listPolicySetParameters)
+		r.With(a.requireWrite(canManagePolicies)).Post("/parameters", a.createPolicySetParameter)
+		r.Route("/parameters/{parameterID}", func(r chi.Router) {
+			r.With(a.requireWrite(canManagePolicies)).Patch("/", a.updatePolicySetParameter)
+			r.With(a.requireWrite(canManagePolicies)).Delete("/", a.deletePolicySetParameter)
+		})
+	})
+	r.Post("/policy_exemption", a.createPolicyExemption)
+	r.Route("/policy_exemption/{exemptionID}", func(r chi.Router) {
+		r.Use(a.policyExemptionScope)
+		r.Get("/", a.getPolicyExemption)
+		r.With(a.requireWrite(canManagePolicies)).Patch("/", a.updatePolicyExemption)
+		r.With(a.requireWrite(canManagePolicies)).Delete("/", a.deletePolicyExemption)
 	})
 
 	// Projects
