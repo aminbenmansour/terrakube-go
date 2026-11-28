@@ -9,7 +9,7 @@ from `ui/src` and regenerated with `scripts/ui-rest-inventory.sh`.
 
 ## Where we stand
 
-`internal/api` currently answers 171 routes. Everything marked *missing* below
+`internal/api` currently answers 172 routes. Everything marked *missing* below
 returns 404, and the page that calls it shows an error or an empty state.
 
 | Resource | Operations | Status |
@@ -26,7 +26,7 @@ returns 404, and the page that calls it shows an error or an empty state.
 | `vcs` | 5 (list, get, create, patch, delete) plus the root `/vcs/v1/:id/groups` and `/repositories` the workspace wizard reads (and the `/branches` and `/test` extensions) | implemented |
 | `team` | 5 (list, get, create, patch, delete) | implemented |
 | `provider`, `module` | 19 (versions, implementations, module versions) | implemented |
-| `policy_set`, `policy_exemption` | 19 (policy sets, attachments, parameters, exemptions) | implemented |
+| `policy_set`, `policy_exemption` | 20 (policy sets, attachments, parameters, exemptions) | implemented |
 | `notificationConfiguration`, `notification_trigger` | 7 (config CRUD, triggers create/delete, templates relationship) plus the two `/notification/v1/.../test` sends and the delivery history/retry | implemented |
 | `federated` (OIDC credentials) | 9 | **missing** |
 | registry `/registry/v1/providers` | 4 | separate service (`cmd/registry`, M6) |
