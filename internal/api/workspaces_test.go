@@ -57,10 +57,11 @@ func (s *workspaceStub) GetProject(_ context.Context, id string) (store.Project,
 func (s *workspaceStub) CreateWorkspace(_ context.Context, arg store.CreateWorkspaceParams) (store.Workspace, error) {
 	s.created = &arg
 	return store.Workspace{
-		ID:             arg.ID,
-		Name:           arg.Name,
-		OrganizationID: arg.OrganizationID,
-		ProjectID:      arg.ProjectID,
+		ID:              arg.ID,
+		Name:            arg.Name,
+		OrganizationID:  arg.OrganizationID,
+		ProjectID:       arg.ProjectID,
+		DefaultTemplate: arg.DefaultTemplate,
 	}, nil
 }
 
@@ -292,6 +293,23 @@ func TestCreateWorkspaceStoresLinksAndSSHSettings(t *testing.T) {
 	}
 	if s.created.SharedIds == nil || *s.created.SharedIds != relWorkspace {
 		t.Errorf("sharedIds = %v, want %s", s.created.SharedIds, relWorkspace)
+	}
+}
+
+func TestCreateWorkspaceCarriesTheDefaultTemplate(t *testing.T) {
+	s := newWorkspaceStub()
+	const template = "00000000-0000-4000-8000-000000000099"
+	rec := serveWorkspace(t, s, http.MethodPost, "/organization/"+relOrgID+"/workspace",
+		`{"data":{"type":"workspace","attributes":{"name":"from-template","source":"https://github.com/example/repo.git","branch":"main","terraformVersion":"1.9.0","defaultTemplate":"`+template+`"}}}`)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201; body = %s", rec.Code, rec.Body.String())
+	}
+	if s.created == nil || s.created.DefaultTemplate == nil || *s.created.DefaultTemplate != template {
+		t.Fatalf("defaultTemplate = %v, want %s", s.created, template)
+	}
+	if !strings.Contains(rec.Body.String(), `"defaultTemplate":"`+template+`"`) {
+		t.Errorf("body = %s, want the template echoed", rec.Body.String())
 	}
 }
 

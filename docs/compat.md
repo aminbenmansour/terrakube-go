@@ -852,7 +852,11 @@ upstream.
 JSON:API `type`, so an empty `attributes` object answers `201` with nulls; an
 unknown id is `404` and a malformed one `400 Invalid value: x`. Deleting a
 template leaves `workspace.default_template` alone, as upstream does (no foreign
-key). Upstream gates writes on a team's `manageTemplate` permission, and this
+key). Creating a workspace carries its `defaultTemplate` (the template id) and
+nothing else: upstream does not validate the id, so a nonexistent template is
+stored and echoed, and upstream has no template versions at all. This API
+behaves the same; changing the template is an ordinary workspace PATCH, never
+automatic. Upstream gates writes on a team's `manageTemplate` permission, and this
 API enforces the same one. One divergence: an unknown attribute in a PATCH is ignored
 here, while upstream answers `404 Unknown attribute`.
 

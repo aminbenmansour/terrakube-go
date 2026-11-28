@@ -212,6 +212,12 @@ var replayedCaptures = map[string]replay{
 		body:    `{"data":{"type":"workspace","attributes":{"name":"from-vcs","source":"https://github.com/terrakube-io/terrakube.git","branch":"main","terraformVersion":"1.9.0"},"relationships":{"project":{"data":{"type":"project","id":"` + capturedRelForeign + `"}}}}}`,
 		querier: captureWorkspaceStore(),
 	},
+	"workspace-create-template": {
+		target:  "workspace-collection",
+		method:  http.MethodPost,
+		body:    `{"data":{"type":"workspace","attributes":{"name":"capture-ws-template","source":"https://github.com/example/repo.git","branch":"main","terraformVersion":"1.9.0","defaultTemplate":"00000000-0000-4000-8000-000000000099"}}}`,
+		querier: captureWorkspaceStore(),
+	},
 	"workspace-relationship-project-set": {
 		target:  "resource-query",
 		method:  http.MethodPatch,
@@ -1611,6 +1617,7 @@ func (s *stubQuerier) GetProject(_ context.Context, id string) (store.Project, e
 func (s *stubQuerier) CreateWorkspace(_ context.Context, arg store.CreateWorkspaceParams) (store.Workspace, error) {
 	return store.Workspace{
 		ID: arg.ID, Name: arg.Name, OrganizationID: arg.OrganizationID, ProjectID: arg.ProjectID,
+		DefaultTemplate: arg.DefaultTemplate,
 	}, s.err
 }
 
