@@ -1,0 +1,1 @@
+{"data":{"type":"federated_claim","id":"890d1ae3-87a4-448d-b96c-3ceaf92b5d1e","attributes":{"claimKey":"repository","claimValue":"acme/*"},"relationships":{"federated":{"data":{"type":"federated","id":"e64abe8f-5ffd-4d0a-9887-adbd9e14ad10"}}}}}

@@ -81,10 +81,12 @@ type Document struct {
 
 // Error is a JSON:API error object.
 type Error struct {
-	Status string       `json:"status,omitempty"`
-	Title  string       `json:"title,omitempty"`
-	Detail string       `json:"detail,omitempty"`
-	Source *ErrorSource `json:"source,omitempty"`
+	Status string         `json:"status,omitempty"`
+	Title  string         `json:"title,omitempty"`
+	Detail string         `json:"detail,omitempty"`
+	Source *ErrorSource   `json:"source,omitempty"`
+	Code   string         `json:"code,omitempty"`
+	Meta   map[string]any `json:"meta,omitempty"`
 }
 
 // ErrorSource points at the offending document location.

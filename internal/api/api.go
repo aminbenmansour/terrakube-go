@@ -240,6 +240,26 @@ func New(deps Deps) http.Handler {
 		})
 	})
 
+	// Federated (OIDC) credentials are instance-level and superuser-only, which
+	// is how upstream gates both reads and writes.
+	r.Group(func(r chi.Router) {
+		r.Use(a.requireOwner)
+		r.Get("/federated", a.listFederated)
+		r.Post("/federated", a.createFederated)
+		r.Route("/federated/{federatedID}", func(r chi.Router) {
+			r.Get("/", a.getFederated)
+			r.Patch("/", a.updateFederated)
+			r.Delete("/", a.deleteFederated)
+			r.Get("/claims", a.listFederatedClaims)
+			r.Post("/claims", a.createFederatedClaim)
+			r.Route("/claims/{claimID}", func(r chi.Router) {
+				r.Get("/", a.getFederatedClaim)
+				r.Patch("/", a.updateFederatedClaim)
+				r.Delete("/", a.deleteFederatedClaim)
+			})
+		})
+	})
+
 	// Policy sets and exemptions are addressed at the root because the
 	// Settings > Policies screens call /policy_set and /policy_exemption.
 	r.Get("/policy_set", a.listPolicySets)

@@ -1,0 +1,1 @@
+{"errors":[{"code":"NotBlank","source":{"pointer":"/data/attributes/issuerUrl"},"detail":"issuerUrl is required","meta":{"type":"ConstraintViolation","property":"issuerUrl"}}]}

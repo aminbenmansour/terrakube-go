@@ -268,7 +268,7 @@ object key.
 
 ## Management API — `/api/v1`
 
-Elide-generated JSON:API. This API implements 172 routes (organization, project,
+Elide-generated JSON:API. This API implements 182 routes (organization, project,
 workspace, variable, globalvar, job, action, collection/item/reference,
 ssh, agent, vcs, template, team, notification configuration/trigger,
 tag/workspacetag, policy set/exemption and the atomic extension); the 106
@@ -922,6 +922,31 @@ relationships are `organization`, `policySet`, `workspace` and `project`.
 `ticketReference`, `justification`, `organization` and `policySet` are required
 (`409` when missing); the workspace and project must belong to the exemption's
 organization (`403` otherwise).
+
+`federated` is the Settings > Federated credentials screen: list and create at
+`/federated`, get, patch and delete at `/federated/:id`, and the claim
+conditions at `/federated/:id/claims[/:claimID]`. A credential carries `name`,
+`issuerUrl` and `audience`, all required; a claim carries `claimKey` and
+`claimValue`. There is no organization relationship: upstream makes the
+credential's `name` the team a matching token acts as, and the claims narrow the
+match. Both resources are instance-level and superuser-only, which this API
+enforces with the owner check on every method. A missing attribute answers
+upstream's Elide constraint violation (`400`, `code: NotBlank`,
+`source.pointer: /data/attributes/<name>`) rather than the policy resources'
+generic `409`. Deleting a credential that still has claims answers `409 This
+operation conflicts with data that already exists.`, as upstream's foreign key
+does, so the UI deletes the claims first. An unknown id is `404 Unknown
+identifier <id> for federated`, a claim addressed through the wrong credential
+is `404 Unknown identifier [<id>] for claims`, and a malformed id is `400
+Invalid value: x`.
+
+The token exchange itself is not wired: upstream verifies an external OIDC token
+against every credential whose issuer and audience match, then treats it as the
+credential's team. This API only accepts its own bearer tokens (the development
+token, PATs and the Dex verifier configured by `TERRAKUBE_DEX_ENABLED`), so a
+token from a registered issuer answers `401` until the per-credential verifier
+lands with the Dex/SSO work (#46). Revocation is therefore immediate by
+construction: nothing consults the table yet.
 
 `schedule` is the workspace Schedules tab: list and create under
 `/organization/:id/workspace/:id/schedule`, get, patch and delete under

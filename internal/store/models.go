@@ -88,6 +88,24 @@ type Content struct {
 	WorkspaceID   *string `json:"workspace_id"`
 }
 
+type Federated struct {
+	ID          string             `json:"id"`
+	Name        string             `json:"name"`
+	IssuerUrl   *string            `json:"issuer_url"`
+	Audience    *string            `json:"audience"`
+	CreatedDate pgtype.Timestamptz `json:"created_date"`
+	UpdatedDate pgtype.Timestamptz `json:"updated_date"`
+	CreatedBy   *string            `json:"created_by"`
+	UpdatedBy   *string            `json:"updated_by"`
+}
+
+type FederatedClaim struct {
+	ID          string `json:"id"`
+	ClaimKey    string `json:"claim_key"`
+	ClaimValue  string `json:"claim_value"`
+	FederatedID string `json:"federated_id"`
+}
+
 type Globalvar struct {
 	ID                  string `json:"id"`
 	VariableKey         string `json:"variable_key"`
