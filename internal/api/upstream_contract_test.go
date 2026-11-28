@@ -1011,6 +1011,9 @@ var replayedCaptures = map[string]replay{
 	"policy-set-parameter-list": {
 		target: "policy-query",
 	},
+	"policy-set-parameter-get": {
+		target: "policy-query",
+	},
 	"policy-set-parameter-patch": {
 		target: "policy-query",
 		idFrom: "policy-set-parameter-create",

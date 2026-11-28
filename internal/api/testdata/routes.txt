@@ -91,6 +91,7 @@ GET /policy_set/{policySetID}/
 GET /policy_set/{policySetID}/attachments
 GET /policy_set/{policySetID}/attachments/{attachmentID}/
 GET /policy_set/{policySetID}/parameters
+GET /policy_set/{policySetID}/parameters/{parameterID}/
 GET /project/{projectID}/
 GET /project/{projectID}/workspace
 GET /reference/{referenceID}/collection

@@ -384,6 +384,10 @@ func TestPolicyAttachmentAndParameterRoutes(t *testing.T) {
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"key":"max_length"`) {
 		t.Fatalf("list parameters = %d/%s", rec.Code, rec.Body.String())
 	}
+	rec = policyServe(t, q, http.MethodGet, base+"/parameters/"+policyParamID, "")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"key":"max_length"`) {
+		t.Fatalf("get parameter = %d/%s", rec.Code, rec.Body.String())
+	}
 	rec = policyServe(t, q, http.MethodPatch, base+"/parameters/"+policyParamID,
 		`{"data":{"type":"policy_set_parameter","id":"`+policyParamID+`","attributes":{"value":"12"}}}`)
 	if rec.Code != http.StatusNoContent {
@@ -441,7 +445,7 @@ func policyCaptureStore(captures map[string]upstreamCapture) *policyStub {
 	deletedAttachmentID := capturePathLastID(captures["policy-set-attachment-delete"].path)
 	tagID := "0d7e4a6a-560e-40f1-a6dd-c7433a04f088"
 	org := store.Organization{ID: capturedRelOrg, Name: "simple-governance"}
-	return &policyStub{
+	q := &policyStub{
 		org: org,
 		sets: []store.PolicySet{{
 			ID: setID, Name: "capture-policy", EnforcementLevel: "SOFT_MANDATORY",
@@ -463,6 +467,21 @@ func policyCaptureStore(captures map[string]upstreamCapture) *policyStub {
 		workspaces: []store.Workspace{{ID: workspaceID, OrganizationID: capturedRelOrg, Name: "sample_cosmosdb"}},
 		tags:       []store.Tag{{ID: tagID, OrganizationID: capturedRelOrg, Name: strPtr("staging")}},
 	}
+	// The single-parameter capture was recorded against its own set, so both
+	// rows come from that path.
+	if capture, ok := captures["policy-set-parameter-get"]; ok {
+		parts := strings.Split(strings.Trim(capture.path, "/"), "/")
+		setID, parameterID := parts[len(parts)-3], parts[len(parts)-1]
+		q.sets = append(q.sets, store.PolicySet{
+			ID: setID, Name: "capture-policy", EnforcementLevel: "SOFT_MANDATORY",
+			OrganizationID: capturedRelOrg,
+		})
+		q.parameters = append(q.parameters, store.PolicySetParameter{
+			ID: parameterID, PolicySetID: setID, ParameterKey: "max_length",
+			ParameterValue: "8", Description: strPtr("maximum password length"),
+		})
+	}
+	return q
 }
 
 func emptyPolicyStore() *policyStub {

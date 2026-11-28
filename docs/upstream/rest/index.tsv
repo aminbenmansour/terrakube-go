@@ -248,3 +248,4 @@ policy-exemption-patch	204	/api/v1/policy_exemption/ec16d57c-14d3-45ef-9385-1b7f
 policy-exemption-missing-rule	409	/api/v1/policy_exemption
 policy-exemption-delete	204	/api/v1/policy_exemption/ec16d57c-14d3-45ef-9385-1b7fd511e7a6
 organization-policy-set-list	200	/api/v1/organization/70000000-0000-0000-0000-000000000001/policySet
+policy-set-parameter-get	200	/api/v1/policy_set/b3d3c1ec-426f-4a2c-b463-8cc559acb10a/parameters/14571e99-42db-476c-8b5e-1616b260138b
