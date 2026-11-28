@@ -667,6 +667,7 @@ request policy-set-parameter-create "/api/v1/policy_set/${policy_new}/parameters
   --data '{"data":{"type":"policy_set_parameter","attributes":{"key":"max_length","value":"8","description":"maximum password length"}}}'
 policy_parameter="$(python3 -c "import json;print(json.load(open('$out/policy-set-parameter-create.json'))['data']['id'])")"
 request policy-set-parameter-list "/api/v1/policy_set/${policy_new}/parameters"
+request policy-set-parameter-get "/api/v1/policy_set/${policy_new}/parameters/${policy_parameter}"
 request policy-set-parameter-patch "/api/v1/policy_set/${policy_new}/parameters/${policy_parameter}" -X PATCH \
   -H 'Content-Type: application/vnd.api+json' \
   --data "{\"data\":{\"type\":\"policy_set_parameter\",\"id\":\"${policy_parameter}\",\"attributes\":{\"value\":\"12\"}}}"

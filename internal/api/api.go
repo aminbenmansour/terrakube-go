@@ -259,6 +259,7 @@ func New(deps Deps) http.Handler {
 		r.Get("/parameters", a.listPolicySetParameters)
 		r.With(a.requireWrite(canManagePolicies)).Post("/parameters", a.createPolicySetParameter)
 		r.Route("/parameters/{parameterID}", func(r chi.Router) {
+			r.Get("/", a.getPolicySetParameter)
 			r.With(a.requireWrite(canManagePolicies)).Patch("/", a.updatePolicySetParameter)
 			r.With(a.requireWrite(canManagePolicies)).Delete("/", a.deletePolicySetParameter)
 		})

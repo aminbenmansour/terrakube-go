@@ -268,7 +268,7 @@ object key.
 
 ## Management API — `/api/v1`
 
-Elide-generated JSON:API. This API implements 171 routes (organization, project,
+Elide-generated JSON:API. This API implements 172 routes (organization, project,
 workspace, variable, globalvar, job, action, collection/item/reference,
 ssh, agent, vcs, template, team, notification configuration/trigger,
 tag/workspacetag, policy set/exemption and the atomic extension); the 106
