@@ -382,6 +382,7 @@ func canManageTemplate(p rbac.Permissions) bool   { return p.ManageTemplate }
 func canManageProvider(p rbac.Permissions) bool   { return p.ManageProvider }
 func canManageModule(p rbac.Permissions) bool     { return p.ManageModule }
 func canManageCollection(p rbac.Permissions) bool { return p.ManageCollection }
+func canManagePolicies(p rbac.Permissions) bool   { return p.ManagePolicies }
 
 // authorizeWorkspaceWrite guards the atomic operations document, which carries
 // its organization in the href rather than in the route.
