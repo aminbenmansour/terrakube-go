@@ -269,3 +269,4 @@ federated-claim-missing-key	400	/api/v1/federated/e64abe8f-5ffd-4d0a-9887-adbd9e
 federated-claim-foreign	404	/api/v1/federated/5b4851d8-a8b3-4379-bdaa-b66e3fe6c2b3/claims/5f718b1a-1618-4bcb-9414-7d6ab07122f5
 federated-claims-missing	404	/api/v1/federated/00000000-0000-4000-8000-000000000099/claims
 federated-patch-null-name	400	/api/v1/federated/5b4851d8-a8b3-4379-bdaa-b66e3fe6c2b3
+workspace-create-template	201	/api/v1/organization/70000000-0000-0000-0000-000000000001/workspace
