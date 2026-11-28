@@ -268,10 +268,10 @@ object key.
 
 ## Management API — `/api/v1`
 
-Elide-generated JSON:API. This API implements 100 routes (organization, project,
+Elide-generated JSON:API. This API implements 171 routes (organization, project,
 workspace, variable, globalvar, job, action, collection/item/reference,
 ssh, agent, vcs, template, team, notification configuration/trigger,
-tag/workspacetag and the atomic extension); the 106
+tag/workspacetag, policy set/exemption and the atomic extension); the 106
 REST operations the UI actually sends are listed in
 `docs/upstream/ui-rest-operations.md`, with what is missing. Reference
 specification (upstream, v2.27.0) is at
@@ -891,6 +891,37 @@ a team's `manageModule` permission, as upstream. Divergence: upstream's
 `module.github_app_token_id` column is omitted because this implementation has
 no GitHub App credentials table; nothing in the UI or the registry service reads
 it.
+
+`policy_set` is the Settings > Policies list and editor: list, get, create,
+patch and delete at `/policy_set` (root-level, as the UI calls it), with
+attachments at `.../policy_set/:id/attachments[/:attachmentID]` and parameters
+at `.../policy_set/:id/parameters[/:parameterID]`. Attributes are `name`,
+`description`, `enforcementLevel` (`ADVISORY|SOFT_MANDATORY|HARD_MANDATORY`,
+default `HARD_MANDATORY`), `shadowEnforcementLevel`, `overrideTeam`, `global`,
+`repository`, `branch` (default `main`), `folder` (default `/`), `opaVersion`
+and the audit fields; relationships are `organization`, `vcs`,
+`notificationConfiguration`, `attachments`, `parameters` and `exemptions`.
+`include=attachments,parameters,exemptions,vcs,notificationConfiguration` fills
+`included`. `GET /organization/:id/policySet` lists one organization's sets;
+the root list is restricted to the caller's organizations. Deleting a set
+cascades its attachments, parameters and exemptions, as upstream's JPA
+orphanRemoval does. Writes need `managePolicies`; a `vcs` or notification
+configuration from another organization is `403`. Missing required attributes
+answer `409`, an invalid enforcement level `400 Invalid value: x`, an unknown id
+`404`, and a malformed one `400 Invalid value: x`. The VCS usage count the UI
+makes with `GET /policy_set?filter[policy_set]=vcs.id==...` is not filtered: the
+root list ignores list parameters whole, the same caveat as the other
+collections.
+
+`policy_exemption` is the Settings > Policies exemption list and modal: list at
+`/organization/:id/policyExemption`, create at `/policy_exemption`, and get,
+patch and delete at `/policy_exemption/:id`. Attributes are `ruleId`,
+`ticketReference`, `justification`, `expiresAt` and the audit fields;
+relationships are `organization`, `policySet`, `workspace` and `project`.
+`include=policySet,workspace,project` fills `included`. `ruleId`,
+`ticketReference`, `justification`, `organization` and `policySet` are required
+(`409` when missing); the workspace and project must belong to the exemption's
+organization (`403` otherwise).
 
 `schedule` is the workspace Schedules tab: list and create under
 `/organization/:id/workspace/:id/schedule`, get, patch and delete under
