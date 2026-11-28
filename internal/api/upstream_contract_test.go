@@ -935,6 +935,129 @@ var replayedCaptures = map[string]replay{
 		target:  "resource-query",
 		querier: emptyRegistryStore(),
 	},
+	"policy-set-list": {
+		target: "policy-query",
+	},
+	"policy-set-list-include": {
+		target: "policy-query",
+	},
+	"policy-set-create": {
+		target: "policy-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"policy_set","attributes":{"name":"capture-policy","description":"capture","enforcementLevel":"SOFT_MANDATORY","shadowEnforcementLevel":null,"overrideTeam":"TERRAKUBE_ADMIN","global":false,"repository":"https://github.com/example/policies","branch":"main","folder":"/","opaVersion":"0.68.0"},"relationships":{"organization":{"data":{"type":"organization","id":"` + capturedRelOrg + `"}}}}}`,
+	},
+	"policy-set-get": {
+		target: "policy-query",
+	},
+	"policy-set-patch": {
+		target: "policy-query",
+		idFrom: "policy-set-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"policy_set","id":"{id}","attributes":{"description":"after"}}}`,
+	},
+	"policy-set-delete": {
+		target: "policy-query",
+		idFrom: "policy-set-create",
+		method: http.MethodDelete,
+	},
+	"policy-set-get-after-delete": {
+		target:  "resource-query",
+		querier: emptyPolicyStore(),
+	},
+	"policy-set-missing": {
+		target:  "resource-query",
+		querier: emptyPolicyStore(),
+	},
+	"policy-set-bad-id": {
+		target:  "resource-query",
+		querier: emptyPolicyStore(),
+	},
+	"policy-set-missing-name": {
+		target: "policy-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"policy_set","attributes":{"enforcementLevel":"ADVISORY"}}}`,
+	},
+	"policy-set-bad-enforcement": {
+		target: "policy-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"policy_set","attributes":{"name":"capture-policy-bad","enforcementLevel":"NOPE"}}}`,
+	},
+	"policy-set-attachment-create": {
+		target: "policy-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"policy_attachment","relationships":{"workspace":{"data":{"type":"workspace","id":"0beb7db4-b073-4bd4-9a98-94fe7e2d9939"}}}}}`,
+	},
+	"policy-set-attachment-list": {
+		target: "policy-query",
+	},
+	"policy-set-attachment-get": {
+		target: "policy-query",
+	},
+	"policy-set-attachment-patch": {
+		target: "policy-query",
+		idFrom: "policy-set-attachment-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"policy_attachment","id":"{id}","relationships":{"tag":{"data":{"type":"tag","id":"0d7e4a6a-560e-40f1-a6dd-c7433a04f088"}}}}}`,
+	},
+	"policy-set-attachment-delete": {
+		target: "policy-query",
+		method: http.MethodDelete,
+	},
+	"policy-set-parameter-create": {
+		target: "policy-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"policy_set_parameter","attributes":{"key":"max_length","value":"8","description":"maximum password length"}}}`,
+	},
+	"policy-set-parameter-list": {
+		target: "policy-query",
+	},
+	"policy-set-parameter-patch": {
+		target: "policy-query",
+		idFrom: "policy-set-parameter-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"policy_set_parameter","id":"{id}","attributes":{"value":"12"}}}`,
+	},
+	"policy-set-parameter-missing-key": {
+		target: "policy-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"policy_set_parameter","attributes":{"value":"1"}}}`,
+	},
+	"policy-set-parameter-delete": {
+		target: "policy-query",
+		method: http.MethodDelete,
+	},
+	"policy-exemption-create": {
+		target: "policy-query",
+		idFrom: "policy-set-create",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"policy_exemption","attributes":{"ruleId":"rule-1","ticketReference":"CAPTURE-1","justification":"testing","expiresAt":"2030-01-01T00:00:00Z"},"relationships":{"organization":{"data":{"type":"organization","id":"` + capturedRelOrg + `"}},"policySet":{"data":{"type":"policy_set","id":"{id}"}},"workspace":{"data":{"type":"workspace","id":"0beb7db4-b073-4bd4-9a98-94fe7e2d9939"}}}}}`,
+	},
+	"policy-exemption-list": {
+		target: "policy-query",
+	},
+	"policy-exemption-get": {
+		target: "policy-query",
+	},
+	"policy-exemption-patch": {
+		target: "policy-query",
+		idFrom: "policy-exemption-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"policy_exemption","id":"{id}","attributes":{"justification":"after"}}}`,
+	},
+	"policy-exemption-missing-rule": {
+		target: "policy-query",
+		idFrom: "policy-set-create",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"policy_exemption","attributes":{"ticketReference":"CAPTURE-2","justification":"x"},"relationships":{"organization":{"data":{"type":"organization","id":"` + capturedRelOrg + `"}},"policySet":{"data":{"type":"policy_set","id":"{id}"}}}}}`,
+	},
+	"policy-exemption-delete": {
+		target: "policy-query",
+		idFrom: "policy-exemption-create",
+		method: http.MethodDelete,
+	},
+	"organization-policy-set-list": {
+		target: "policy-query",
+	},
 	"organization-tag-list": {
 		target: "tag-query",
 		// The recording predates the create, so the list is empty.
@@ -1533,6 +1656,11 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 			case "registry-provider-query":
 				target = strings.TrimPrefix(capture.path, "/api/v1")
 				querier = registryProviderStore(t, captures)
+			case "policy-query":
+				target = strings.TrimPrefix(capture.path, "/api/v1")
+				if querier == nil {
+					querier = policyCaptureStore(captures)
+				}
 			}
 			if querier == nil {
 				querier = &stubQuerier{}
