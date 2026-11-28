@@ -1061,6 +1061,87 @@ var replayedCaptures = map[string]replay{
 	"organization-policy-set-list": {
 		target: "policy-query",
 	},
+	"federated-list": {
+		target: "federated-query-empty",
+	},
+	"federated-create": {
+		target: "federated-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"federated","attributes":{"name":"capture-fed","issuerUrl":"https://token.actions.githubusercontent.com","audience":"terrakube"}}}`,
+	},
+	"federated-get": {
+		target: "federated-query",
+	},
+	"federated-patch": {
+		target: "federated-query",
+		idFrom: "federated-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"federated","id":"{id}","attributes":{"audience":"terrakube-ci"}}}`,
+	},
+	"federated-claim-create": {
+		target: "federated-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"federated_claim","attributes":{"claimKey":"repository","claimValue":"acme/infra"}}}`,
+	},
+	"federated-claim-list": {
+		target: "federated-query",
+	},
+	"federated-claim-get": {
+		target: "federated-query",
+	},
+	"federated-claim-patch": {
+		target: "federated-query",
+		idFrom: "federated-claim-create",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"federated_claim","id":"{id}","attributes":{"claimValue":"acme/*"}}}`,
+	},
+	"federated-claim-delete": {
+		target: "federated-query",
+		method: http.MethodDelete,
+	},
+	"federated-delete": {
+		target: "federated-query-no-claims",
+		method: http.MethodDelete,
+	},
+	"federated-get-after-delete": {
+		target: "federated-query-empty",
+	},
+	"federated-missing": {
+		target: "federated-query-empty",
+	},
+	"federated-bad-id": {
+		target: "federated-query-empty",
+	},
+	"federated-missing-name": {
+		target: "federated-query-empty",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"federated","attributes":{"issuerUrl":"https://example.test","audience":"a"}}}`,
+	},
+	"federated-missing-issuer": {
+		target: "federated-query-empty",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"federated","attributes":{"name":"x","audience":"a"}}}`,
+	},
+	"federated-delete-with-claims": {
+		target: "federated-query",
+		method: http.MethodDelete,
+	},
+	"federated-claim-missing-key": {
+		target: "federated-query",
+		method: http.MethodPost,
+		body:   `{"data":{"type":"federated_claim","attributes":{"claimValue":"x"}}}`,
+	},
+	"federated-claim-foreign": {
+		target: "federated-query",
+	},
+	"federated-claims-missing": {
+		target: "federated-query-empty",
+	},
+	"federated-patch-null-name": {
+		target: "federated-query",
+		method: http.MethodPatch,
+		body:   `{"data":{"type":"federated","attributes":{"name":null}}}`,
+	},
 	"organization-tag-list": {
 		target: "tag-query",
 		// The recording predates the create, so the list is empty.
@@ -1659,6 +1740,15 @@ func TestCapturedShapesAreWhatWeReturn(t *testing.T) {
 			case "registry-provider-query":
 				target = strings.TrimPrefix(capture.path, "/api/v1")
 				querier = registryProviderStore(t, captures)
+			case "federated-query":
+				target = strings.TrimPrefix(capture.path, "/api/v1")
+				querier = federatedCaptureStore(captures, true)
+			case "federated-query-no-claims":
+				target = strings.TrimPrefix(capture.path, "/api/v1")
+				querier = federatedCaptureStore(captures, false)
+			case "federated-query-empty":
+				target = strings.TrimPrefix(capture.path, "/api/v1")
+				querier = &federatedStub{}
 			case "policy-query":
 				target = strings.TrimPrefix(capture.path, "/api/v1")
 				if querier == nil {

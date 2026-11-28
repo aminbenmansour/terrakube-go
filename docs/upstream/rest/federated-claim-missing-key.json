@@ -1,0 +1,1 @@
+{"errors":[{"code":"NotBlank","source":{"pointer":"/data/attributes/claimKey"},"detail":"claimKey is required","meta":{"type":"ConstraintViolation","property":"claimKey"}}]}

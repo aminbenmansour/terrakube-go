@@ -692,6 +692,63 @@ request policy-set-delete "/api/v1/policy_set/${policy_new}" -X DELETE
 request policy-set-get-after-delete "/api/v1/policy_set/${policy_new}"
 pg "delete from policy_set where name like 'capture-policy%' and organization_id = '${rel_org}'" >/dev/null
 
+# Federated (OIDC) credentials: Settings > Federated credentials. The name is
+# the team a matching token acts as and the claims narrow the match. A
+# credential that still has claims cannot be deleted (409), so the UI removes
+# them first. Two credentials are created to record the cross-credential claim.
+pg "delete from federated_claim where federated_id in (select id from federated where name like 'capture-fed%');
+    delete from federated where name like 'capture-fed%'" >/dev/null
+request federated-list "/api/v1/federated"
+request federated-create "/api/v1/federated" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"federated","attributes":{"name":"capture-fed","issuerUrl":"https://token.actions.githubusercontent.com","audience":"terrakube"}}}'
+federated_new="$(python3 -c "import json;print(json.load(open('$out/federated-create.json'))['data']['id'])")"
+request federated-create-other "/api/v1/federated" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"federated","attributes":{"name":"capture-fed-other","issuerUrl":"https://issuer.test/fed-a","audience":"a"}}}'
+federated_other="$(python3 -c "import json;print(json.load(open('$out/federated-create-other.json'))['data']['id'])")"
+request federated-get "/api/v1/federated/${federated_new}"
+request federated-patch "/api/v1/federated/${federated_new}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"federated\",\"id\":\"${federated_new}\",\"attributes\":{\"audience\":\"terrakube-ci\"}}}"
+request federated-missing-name "/api/v1/federated" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"federated","attributes":{"issuerUrl":"https://example.test","audience":"a"}}}'
+request federated-missing-issuer "/api/v1/federated" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"federated","attributes":{"name":"x","audience":"a"}}}'
+request federated-patch-null-name "/api/v1/federated/${federated_other}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"federated\",\"id\":\"${federated_other}\",\"attributes\":{\"name\":null}}}"
+request federated-missing "/api/v1/federated/00000000-0000-4000-8000-000000000099"
+request federated-bad-id "/api/v1/federated/not-a-uuid"
+request federated-claim-create "/api/v1/federated/${federated_new}/claims" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"federated_claim","attributes":{"claimKey":"repository","claimValue":"acme/infra"}}}'
+federated_claim="$(python3 -c "import json;print(json.load(open('$out/federated-claim-create.json'))['data']['id'])")"
+request federated-claim-other "/api/v1/federated/${federated_other}/claims" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"federated_claim","attributes":{"claimKey":"k","claimValue":"v"}}}'
+federated_claim_other="$(python3 -c "import json;print(json.load(open('$out/federated-claim-other.json'))['data']['id'])")"
+request federated-claim-list "/api/v1/federated/${federated_new}/claims"
+request federated-claim-get "/api/v1/federated/${federated_new}/claims/${federated_claim}"
+request federated-claim-patch "/api/v1/federated/${federated_new}/claims/${federated_claim}" -X PATCH \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data "{\"data\":{\"type\":\"federated_claim\",\"id\":\"${federated_claim}\",\"attributes\":{\"claimValue\":\"acme/*\"}}}"
+request federated-claim-foreign "/api/v1/federated/${federated_new}/claims/${federated_claim_other}"
+request federated-claim-missing-key "/api/v1/federated/${federated_new}/claims" -X POST \
+  -H 'Content-Type: application/vnd.api+json' \
+  --data '{"data":{"type":"federated_claim","attributes":{"claimValue":"x"}}}'
+request federated-delete-with-claims "/api/v1/federated/${federated_new}" -X DELETE
+request federated-claim-delete "/api/v1/federated/${federated_new}/claims/${federated_claim}" -X DELETE
+request federated-claims-missing "/api/v1/federated/00000000-0000-4000-8000-000000000099/claims"
+request federated-delete "/api/v1/federated/${federated_new}" -X DELETE
+request federated-get-after-delete "/api/v1/federated/${federated_new}"
+request federated-claim-delete-other "/api/v1/federated/${federated_other}/claims/${federated_claim_other}" -X DELETE
+request federated-delete-other "/api/v1/federated/${federated_other}" -X DELETE
+pg "delete from federated_claim where federated_id in (select id from federated where name like 'capture-fed%');
+    delete from federated where name like 'capture-fed%'" >/dev/null
+
 # Leave the disposable database as it was: these rows exist only for captures.
 pg "delete from vcs where id = '${rel_vcs}'; delete from ssh where id = '${rel_ssh}'; delete from agent where id = '${rel_agent}'" >/dev/null
 pg "delete from template where name like 'capture-template%' and organization_id = '${rel_org}'" >/dev/null

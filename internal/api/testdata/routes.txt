@@ -1,4 +1,6 @@
 DELETE /action/{actionID}/
+DELETE /federated/{federatedID}/
+DELETE /federated/{federatedID}/claims/{claimID}/
 DELETE /notification_configuration/{configurationID}/
 DELETE /notification_configuration/{configurationID}/triggers/{triggerID}
 DELETE /organization/{organizationID}/
@@ -34,6 +36,10 @@ DELETE /variable/{variableID}/
 DELETE /workspace/{workspaceID}/
 GET /action
 GET /action/{actionID}/
+GET /federated
+GET /federated/{federatedID}/
+GET /federated/{federatedID}/claims
+GET /federated/{federatedID}/claims/{claimID}/
 GET /notification_configuration/{configurationID}/
 GET /organization
 GET /organization/{organizationID}/
@@ -101,6 +107,8 @@ GET /variable/{variableID}/
 GET /workspace/{workspaceID}/
 GET /workspace/{workspaceID}/variable
 PATCH /action/{actionID}/
+PATCH /federated/{federatedID}/
+PATCH /federated/{federatedID}/claims/{claimID}/
 PATCH /notification_configuration/{configurationID}/
 PATCH /notification_configuration/{configurationID}/relationships/templates
 PATCH /organization/{organizationID}/
@@ -136,6 +144,8 @@ PATCH /runTrigger/{runTriggerID}/
 PATCH /variable/{variableID}/
 PATCH /workspace/{workspaceID}/
 POST /action
+POST /federated
+POST /federated/{federatedID}/claims
 POST /notification_configuration/{configurationID}/triggers
 POST /operations
 POST /organization
